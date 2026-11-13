@@ -781,6 +781,26 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media (hover:none) and (pointer:coarse),(max-width:720px){
   input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea{font-size:16px!important}
 }
+/* Redes sociais: linha compacta na carta e campos do perfil */
+.tc-social{display:flex;justify-content:center;gap:8px;min-width:0;margin:-1px 0}
+.tc-social[hidden]{display:none}
+.tc-soc{display:inline-flex;align-items:center;gap:3px;min-width:0;flex:0 1 auto;font-size:.55rem;font-weight:700;line-height:1.25;color:#22313c;text-decoration:none;border-radius:3px}
+.tc-soc svg{width:10px;height:10px;flex:none}
+.tc-soc span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tc-soc:hover span{text-decoration:underline}
+.tc-soc:focus-visible{outline:2px solid #08799b;outline-offset:1px}
+.tc-soc.soc-ig svg{color:#c13584}
+.tc-soc.soc-tt svg{color:#111}
+.social-legend{font-size:.85rem;font-weight:600}
+.social-legend small{font-weight:400;color:var(--muted)}
+.social-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.social-input{position:relative;display:block}
+.social-input .soc-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;display:grid;place-items:center;pointer-events:none}
+.social-input .soc-ico svg{width:16px;height:16px}
+.social-input .soc-ig{color:#c13584}
+.social-input input{width:100%;padding-left:34px!important}
+@media (max-width:720px){.social-grid{grid-template-columns:minmax(0,1fr)}}
+@media print{.tc-soc span{text-decoration:none!important}}
 </style>
 </head>
 <body>
@@ -1190,6 +1210,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                     <div><small>Carta</small><b id="tcNo" data-k="no">Nº 001</b></div>
                   </div>
                   <p class="tc-flavor" id="tcBio" data-k="bio">Conte em até 100 caracteres um pouco sobre você e sua relação com a pesca.</p>
+                  <div class="tc-social" data-k="social" hidden></div>
                   <footer class="tc-foot"><span class="logo-img" aria-hidden="true"></span>Ajing Game · Extreme Finesse</footer>
                 </div>
                 <div class="tc-holo" aria-hidden="true"></div>
@@ -1217,6 +1238,15 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                 <div class="field"><label for="profileName">Nome</label><input id="profileName" maxlength="70" placeholder="Como deseja ser chamado?" required></div>
                 <div class="field"><label for="profileLocation">Local</label><input id="profileLocation" maxlength="80" placeholder="Ex.: Vila Velha - ES"></div>
                 <div class="field full"><label for="profileBio">Breve descrição</label><textarea id="profileBio" rows="3" maxlength="100" placeholder="Conte um pouco sobre seu estilo de pesca"></textarea><span class="hint" id="bioCount">0 / 100 caracteres</span></div>
+                <div class="field full social-fields" role="group" aria-labelledby="socialLegend">
+                  <span class="social-legend" id="socialLegend">Redes sociais <small>(opcional)</small></span>
+                  <div class="social-grid">
+                    <label class="social-input"><span class="soc-ico soc-ig"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5h3.2L9 6h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13.3" r="3.4"/></svg></span><input id="profileInstagram" maxlength="150" placeholder="Instagram: @usuario ou link" aria-label="Instagram" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+                    <label class="social-input"><span class="soc-ico soc-yt"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#e62117"/><path d="M10 8.3v7.4l5.8-3.7z" fill="#fff"/></svg></span><input id="profileYoutube" maxlength="150" placeholder="YouTube: @canal ou link" aria-label="YouTube" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+                    <label class="social-input"><span class="soc-ico soc-tt"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3h3.2c.3 2.2 1.9 3.8 4.3 4v3.1c-1.6 0-3.1-.5-4.3-1.3v6.6A5.4 5.4 0 1 1 9.4 10v3.2a2.3 2.3 0 1 0 1.6 2.2z"/></svg></span><input id="profileTiktok" maxlength="150" placeholder="TikTok: @usuario ou link" aria-label="TikTok" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+                  </div>
+                  <span class="hint">Cole o link do perfil ou digite o @. Na carta aparecem o ícone da rede e o @; o clique abre o perfil.</span>
+                </div>
                 <div class="field full"><label for="profilePhoto">Foto</label><input id="profilePhoto" type="file" accept="image/*"><span class="hint">A foto aparece num quadro quadrado na carta.</span></div>
               <div class="field full crop-ctrl" id="cropCtrl" hidden>
                 <label for="cropZoom">Ajuste da foto</label>
@@ -2884,6 +2914,45 @@ await new Promise(resolve => {
     $('cropRemove').addEventListener('click', () => { stopCrop(); photoData = ''; photoInput.value = ''; renderCard(draftProfile()); });
     window.addEventListener('resize', () => cropState && applyCrop());
   })();
+  /* ===== Redes sociais do perfil ===== */
+  // Guardamos o @ (exibido na carta) e o endereço completo do perfil (aberto no clique)
+  const SOCIALS = {
+    instagram: { label: 'Instagram', input: 'profileInstagram', host: /(^|\.)instagram\.com$/i, re: /^[A-Za-z0-9._]{1,30}$/, url: h => `https://www.instagram.com/${h}/`, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5h3.2L9 6h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13.3" r="3.4"/></svg>', cls: 'soc-ig' },
+    youtube:   { label: 'YouTube',   input: 'profileYoutube',   host: /(^|\.)youtube\.com$/i,   re: /^[A-Za-z0-9._-]{3,30}$/, url: h => `https://www.youtube.com/@${h}`, icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#e62117"/><path d="M10 8.3v7.4l5.8-3.7z" fill="#fff"/></svg>', cls: 'soc-yt' },
+    tiktok:    { label: 'TikTok',    input: 'profileTiktok',    host: /(^|\.)tiktok\.com$/i,    re: /^[A-Za-z0-9._]{2,24}$/, url: h => `https://www.tiktok.com/@${h}`, icon: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3h3.2c.3 2.2 1.9 3.8 4.3 4v3.1c-1.6 0-3.1-.5-4.3-1.3v6.6A5.4 5.4 0 1 1 9.4 10v3.2a2.3 2.3 0 1 0 1.6 2.2z"/></svg>', cls: 'soc-tt' }
+  };
+  const SOCIAL_URL_OK = /^https:\/\/www\.(instagram|youtube|tiktok)\.com\/[A-Za-z0-9@._\/-]+$/;
+  // Devolve { handle, url }; null se o campo estiver vazio; undefined se não for reconhecido
+  const parseSocial = (net, raw) => {
+    const cfg = SOCIALS[net]; let v = String(raw || '').trim();
+    if (!v) return null;
+    if (/^(https?:\/\/|www\.)/i.test(v) || /\.(com|be)\//i.test(v)) {
+      let u; try { u = new URL(/^https?:\/\//i.test(v) ? v : 'https://' + v); } catch (_) { return undefined; }
+      if (!cfg.host.test(u.hostname)) return undefined;
+      const parts = u.pathname.split('/').filter(Boolean);
+      if (net === 'youtube') {
+        if (parts[0] && parts[0].startsWith('@')) v = parts[0];
+        else if (['channel', 'c', 'user'].includes(parts[0]) && /^[A-Za-z0-9_-]{2,64}$/.test(parts[1] || '')) return { handle: parts[0] === 'channel' ? '' : parts[1], url: `https://www.youtube.com/${parts[0]}/${parts[1]}` };
+        else return undefined;
+      } else if (net === 'tiktok') { if (!parts[0] || !parts[0].startsWith('@')) return undefined; v = parts[0]; }
+      else { if (!parts[0] || ['p', 'reel', 'reels', 'stories', 'explore', 'tv'].includes(parts[0])) return undefined; v = parts[0]; }
+      try { v = decodeURIComponent(v); } catch (_) {}
+    }
+    v = v.replace(/^@/, '');
+    return cfg.re.test(v) ? { handle: v, url: cfg.url(v) } : undefined;
+  };
+  const readSocialInputs = () => {
+    const social = {}, invalid = [];
+    Object.keys(SOCIALS).forEach(net => { const r = parseSocial(net, $(SOCIALS[net].input).value); if (r) social[net] = r; else if (r === undefined) invalid.push(net); });
+    return { social, invalid };
+  };
+  const socialLinks = p => Object.keys(SOCIALS).map(net => {
+    const s = p && p.social && p.social[net], cfg = SOCIALS[net];
+    if (!s || !SOCIAL_URL_OK.test(String(s.url || ''))) return '';
+    const label = s.handle ? '@' + s.handle : 'Canal';
+    return `<a class="tc-soc ${cfg.cls}" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer" title="${cfg.label}: ${esc(label)}" aria-label="${cfg.label} ${esc(label)} (abre em nova aba)">${cfg.icon}<span>${esc(label)}</span></a>`;
+  }).join('');
+
   // Preenche uma carta (a do perfil ou uma cópia) com os dados de um membro
   const fillCard = (root, u, p, own) => {
     const k = n => root.querySelector(`[data-k="${n}"]`), mine = posts.filter(x => x.user === u && isPostScored(x));
@@ -2896,6 +2965,7 @@ await new Promise(resolve => {
     k('type').textContent = (li.cur ? `Nível ${li.cur.n} · ${li.cur.name}` : 'Pescador finesse') + (p.location ? ' · ' + p.location : '');
     k('lvl').innerHTML = emblem(li.cur, 'md'); k('lvl').hidden = !li.cur;
     const bio = k('bio'); bio.textContent = p.bio || (own ? 'Conte em até 100 caracteres um pouco sobre você e sua relação com a pesca.' : ''); bio.hidden = !bio.textContent;
+    const soc = k('social'); if (soc) { soc.innerHTML = socialLinks(p); soc.hidden = !soc.innerHTML; }
     const img = k('photo');
     if (own && cropState) applyCrop();
     else if (p.photo) { img.removeAttribute('style'); img.src = p.photo; img.hidden = false; k('fallback').hidden = true; }
@@ -2970,8 +3040,8 @@ await new Promise(resolve => {
     $('lvlLadder').innerHTML = LEVELS.map(l => { const got = pts >= l.min;
       return `<li class="${got ? 'got' : ''} ${li.cur && li.cur.n === l.n ? 'now' : ''}">${emblem(l, 'sm', got ? '' : 'locked')}<span><b>${l.name}</b><small>${fmtNum(l.min)} pts</small></span>${got ? '<em>Conquistado</em>' : ''}</li>`; }).join('');
   }
-  const draftProfile = () => ({ name: $('profileName').value.trim(), location: $('profileLocation').value.trim(), bio: bioInput.value.trim(), photo: photoData });
-  ['profileName', 'profileLocation', 'profileBio'].forEach(id => $(id).addEventListener('input', () => renderCard(draftProfile())));
+  const draftProfile = () => ({ name: $('profileName').value.trim(), location: $('profileLocation').value.trim(), bio: bioInput.value.trim(), photo: photoData, social: readSocialInputs().social });
+  ['profileName', 'profileLocation', 'profileBio', 'profileInstagram', 'profileYoutube', 'profileTiktok'].forEach(id => $(id).addEventListener('input', () => renderCard(draftProfile())));
 
   // Efeito de inclinação e brilho holográfico ao passar o mouse
   (() => {
@@ -2991,6 +3061,7 @@ await new Promise(resolve => {
   $('editProfileBtn').addEventListener('click', () => {
     const p = readProfile();
     $('profileName').value = p.name || ''; $('profileLocation').value = p.location || '';
+    Object.keys(SOCIALS).forEach(net => { const s = p.social && p.social[net]; $(SOCIALS[net].input).value = s ? (s.handle ? '@' + s.handle : s.url) : ''; });
     bioInput.value = (p.bio || '').slice(0, 100); photoData = p.photo || ''; photoInput.value = '';
     profileError.textContent = ''; saved.textContent = ''; updateCount();
     card.hidden = true; passForm.hidden = true; form.hidden = false; softFocus($('profileName'));
@@ -3015,8 +3086,13 @@ await new Promise(resolve => {
     e.preventDefault();
     const name = $('profileName').value.trim();
     if (!name) { profileError.textContent = 'Informe um nome para o perfil.'; $('profileName').focus(); return; }
+    const { social, invalid } = readSocialInputs();
+    if (invalid.length) {
+      const net = SOCIALS[invalid[0]], hint = { instagram: 'instagram.com/usuario', youtube: 'youtube.com/@canal', tiktok: 'tiktok.com/@usuario' }[invalid[0]];
+      profileError.textContent = `Não reconheci o ${net.label} informado. Use o @ (ex.: @usuario) ou o link do perfil (${hint}).`; $(net.input).focus(); return;
+    }
     if (photoPending) await photoPending;
-    const p = { name, location: $('profileLocation').value.trim(), bio: bioInput.value.slice(0, 100).trim(), photo: '' };
+    const p = { name, location: $('profileLocation').value.trim(), bio: bioInput.value.slice(0, 100).trim(), photo: '', social };
     let source = null;
     if (cropState) {
       try { p.photo = await bakeCrop(); } catch(_) { profileError.textContent = 'Não foi possível processar a foto. Tente outra imagem.'; return; }
