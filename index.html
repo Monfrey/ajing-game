@@ -1134,7 +1134,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               <form class="user-form" id="userForm" hidden novalidate>
                 <h5 id="userFormTitle">Novo usuário</h5>
                 <div class="uf-grid">
-                  <div class="field"><label for="uName">Usuário</label><input id="uName" maxlength="30" autocomplete="off" required><span class="hint">Letras minúsculas, números, ponto, hífen ou sublinhado.</span></div>
+                  <div class="field"><label for="uName">Usuário</label><input id="uName" maxlength="30" autocomplete="off" autocapitalize="words" required><span class="hint">De 3 a 30 caracteres: letras (com ou sem acento), números, espaços, ponto, hífen ou sublinhado.</span></div>
                   <div class="field" id="uEmailField"><label for="uEmail">E-mail</label><input id="uEmail" type="email" maxlength="120" autocomplete="off"><span class="hint">Usado para entrar e para redefinir a senha.</span></div>
                   <div class="field"><label for="uRole">Perfil</label><select id="uRole"><option value="member">Membro</option><option value="admin">Administrador</option></select><span class="hint" id="uRoleHint"></span></div>
                   <div class="field" id="uPassField"><label for="uPass" id="uPassLabel">Senha</label><input id="uPass" type="password" maxlength="40" autocomplete="new-password"><span class="hint" id="uPassHint">Mínimo de 6 caracteres.</span></div>
@@ -2423,11 +2423,13 @@ await new Promise(resolve => {
 
   $('userForm').addEventListener('submit', async e => { if (!isAdmin()) return;
     e.preventDefault();
-    const err = $('userError'), username = $('uName').value.trim().toLowerCase(), role = $('uRole').value, seasonChampion = $('uSeasonChampion').checked, goldHooks = Number($('uGoldenHooks').value);
+    const err = $('userError'), username = $('uName').value.normalize('NFC').trim().replace(/\s+/g, ' '), role = $('uRole').value, seasonChampion = $('uSeasonChampion').checked, goldHooks = Number($('uGoldenHooks').value);
     const pass = $('uPass').value, pass2 = $('uPass2').value, users = getUsers();
-    if (!/^[a-z0-9._-]{3,30}$/.test(username)) { err.textContent = 'Usuário: 3 a 30 caracteres, apenas letras minúsculas, números, ponto, hífen ou sublinhado.'; $('uName').focus(); return; }
+    if (username.length < 3 || username.length > 30 || !/^[\p{L}\p{N}](?:[\p{L}\p{N} ._'-]*[\p{L}\p{N}.])?$/u.test(username)) { err.textContent = 'Usuário: de 3 a 30 caracteres, com letras (acentos são aceitos), números, espaços, ponto, hífen, apóstrofo ou sublinhado. Comece com letra ou número.'; $('uName').focus(); return; }
     if (!Number.isInteger(goldHooks) || goldHooks < 0 || goldHooks > 999) { err.textContent = 'As insígnias precisam ser um número inteiro de 0 a 999.'; $('uGoldenHooks').focus(); return; }
-    if (users.some(u => u.username === username && u.username !== editingUser)) { err.textContent = 'Esse nome de usuário já está em uso.'; $('uName').focus(); return; }
+    // Nomes iguais sem considerar maiúsculas e acentos ("Hudson" e "hudson") contam como repetidos
+    const userKey = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (users.some(u => userKey(u.username) === userKey(username) && u.username !== editingUser)) { err.textContent = 'Já existe um usuário com esse nome.'; $('uName').focus(); return; }
     if (!editingUser) {
       const email = $('uEmail').value.trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Informe um e-mail válido. Ele será usado para entrar no site.'; $('uEmail').focus(); return; }
