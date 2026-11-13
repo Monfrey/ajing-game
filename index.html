@@ -815,12 +815,56 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hab-salt{color:#7fd6ee}:root:not([data-theme="light"]) .hab-fresh{color:#86dba6}:root:not([data-theme="light"]) .hab-both{color:#8fe0d6}}
 :root[data-theme="dark"] .hab-salt{color:#7fd6ee}:root[data-theme="dark"] .hab-fresh{color:#86dba6}:root[data-theme="dark"] .hab-both{color:#8fe0d6}
 .hab-filter{margin:0 0 14px}
-.species-form{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}
-.species-form .pts-row{grid-column:span 2}
-.species-form .pts-row .pts-field{flex:0 0 120px;width:120px}
-@media (max-width:920px){.species-form .pts-row{grid-column:1/-1}}
 .req-card .rf{grid-template-columns:minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1fr) 110px}
 @media (max-width:920px){.req-card .rf{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+/* Administração › Espécies: cadastro compacto, busca e importação */
+.sp-head{align-items:flex-start}
+.sp-head .box-desc{max-width:62ch;margin:0}
+.sp-head .form-actions{flex-wrap:nowrap}
+.sp-head .btn svg,.file-btn svg{flex:none}
+.sp-form-card{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-2);padding:12px 14px;margin-bottom:12px}
+.sp-form-card h4{margin:0 0 10px;font-size:.92rem}
+#speciesForm.species-form{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1.35fr) minmax(150px,1fr) 84px minmax(140px,.9fr) auto;gap:10px;align-items:end}
+#speciesForm .field{min-width:0}
+#speciesForm input:not([type=file]),#speciesForm select,#speciesForm .file-btn,.sp-actions .btn{height:42px;box-sizing:border-box}
+.sp-form-card .form-error:empty{display:none}
+.sp-actions{display:flex;gap:8px}
+.sp-actions .btn{min-height:42px;white-space:nowrap}
+.file-btn{position:relative;display:flex;align-items:center;gap:7px;width:100%;min-height:42px;justify-content:flex-start;overflow:hidden;white-space:nowrap;font-weight:600}
+.file-btn>span{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.file-btn input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.file-btn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.sp-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:2px 0 8px}
+.sp-toolbar .feed-search{margin:0;width:min(100%,340px)}
+.sp-toolbar .feed-search input{padding-right:12px}
+.sp-toolbar select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font:inherit;font-size:.88rem}
+.sp-count{margin-left:auto;font-size:.82rem;color:var(--muted)}
+.sp-admin-list{max-height:min(62vh,600px)}
+.sp-import{scroll-margin-top:130px;border:1px solid var(--accent);border-radius:var(--radius);background:var(--surface);padding:14px;margin-bottom:12px}
+.sp-import-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.sp-import-head h4{margin:0 0 2px}
+.sp-import-head p{margin:0;font-size:.82rem}
+.imp-summary{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.imp-chip{display:inline-block;padding:2px 8px;border-radius:99px;font-size:.72rem;font-weight:700;line-height:1.5;white-space:nowrap;background:var(--surface-2);color:var(--muted)}
+.imp-chip.new{background:rgba(31,140,74,.14);color:#17663a}
+.imp-chip.update{background:rgba(8,121,155,.13);color:#06617c}
+.imp-chip.warn{background:rgba(245,124,1,.16);color:#8a4500}
+.imp-chip.error{background:rgba(196,13,24,.1);color:var(--danger)}
+.imp-wrap{max-height:min(55vh,460px);overflow:auto;border:1px solid var(--line);border-radius:var(--radius-sm)}
+.imp-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.imp-table th{position:sticky;top:0;z-index:1;background:var(--surface-2);text-align:left;padding:7px 8px;font-size:.7rem;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.imp-table td{padding:6px 8px;border-top:1px solid var(--line);vertical-align:top}
+.imp-table td small{display:block;margin-top:3px;color:var(--muted);line-height:1.35}
+.imp-table tr.is-error td{background:rgba(196,13,24,.05)}
+.imp-table tr.is-error td small{color:var(--danger)}
+.imp-table tr.is-same td{color:var(--muted)}
+.imp-check{width:34px;text-align:center}
+.imp-check input{width:16px;height:16px;accent-color:var(--accent)}
+.imp-line{color:var(--muted);font-variant-numeric:tabular-nums}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .imp-chip.new{color:#86dba6}:root:not([data-theme="light"]) .imp-chip.update{color:#7fd6ee}:root:not([data-theme="light"]) .imp-chip.warn{color:#ffb766}}
+:root[data-theme="dark"] .imp-chip.new{color:#86dba6}:root[data-theme="dark"] .imp-chip.update{color:#7fd6ee}:root[data-theme="dark"] .imp-chip.warn{color:#ffb766}
+@media (max-width:1100px){#speciesForm.species-form{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:720px){.sp-head{flex-direction:column}.sp-head .form-actions{flex-wrap:wrap}#speciesForm.species-form{grid-template-columns:repeat(2,minmax(0,1fr))}#speciesForm .field:first-child,#speciesForm .field:nth-child(2){grid-column:1/-1}.sp-actions{grid-column:1/-1}.sp-count{margin-left:0;width:100%}}
 </style>
 </head>
 <body>
@@ -1104,18 +1148,37 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
             </form>
           </div>
             <div class="admin-box" data-admin-panel="species" hidden>
-              <p class="box-desc">Espécies disponíveis para publicação no Social Fish e a pontuação de cada uma no ranking.</p>
-              <h4 id="speciesFormTitle">Adicionar espécie</h4>
-              <form class="species-form" id="speciesForm" novalidate>
-                <div class="field"><label for="spName">Nome popular</label><input id="spName" maxlength="60" placeholder="Ex.: Carapau" required></div>
-                <div class="field"><label for="spSci">Nome científico <span class="muted">(opcional)</span></label><input id="spSci" maxlength="80" placeholder="Ex.: Caranx crysos"></div>
-                <div class="field"><label for="spHabitat">Habitat</label><select id="spHabitat" required><option value="">Selecione</option><option value="salt">Água salgada</option><option value="fresh">Água doce</option><option value="both">Ambos (doce e salgada)</option></select></div>
-                <div class="field photo-field"><label for="spPhoto">Foto <span class="muted" id="spPhotoHint"></span></label><input id="spPhoto" type="file" accept="image/*" required></div>
-                <div class="pts-row"><div class="field pts-field"><label for="spPoints">Pontuação</label><input id="spPoints" type="number" min="1" max="1000" step="1" inputmode="numeric" placeholder="10" required></div><button class="btn btn-primary" id="speciesSubmit" type="submit">Adicionar</button><button class="btn btn-ghost" id="speciesCancel" type="button" hidden>Cancelar</button></div>
-              </form>
-              <div class="form-error" id="speciesError" role="alert"></div>
-              <p class="admin-note">A pontuação define o ranking. Alterar o valor recalcula o ranking de todas as publicações daquela espécie.</p>
-              <ul class="admin-list" id="speciesAdminList"></ul>
+              <div class="box-head sp-head">
+                <p class="box-desc">Espécies disponíveis para publicação no Social Fish e a pontuação de cada uma no ranking. Alterar a pontuação recalcula o ranking de todas as publicações daquela espécie.</p>
+                <div class="form-actions"><button class="btn btn-ghost" id="spTemplateBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>Planilha modelo</button><button class="btn btn-primary" id="spImportBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>Importar planilha</button></div>
+                <input id="spImportFile" type="file" accept=".xlsx,.xls,.csv" hidden>
+              </div>
+              <section class="sp-import" id="spImportPanel" aria-labelledby="spImportTitle" hidden>
+                <div class="sp-import-head"><div><h4 id="spImportTitle">Importar planilha</h4><p class="muted" id="spImportInfo"></p></div><button class="icon-btn" id="spImportClose" type="button" aria-label="Fechar importação"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+                <div class="imp-summary" id="spImportSummary"></div>
+                <div class="imp-wrap"><table class="imp-table"><thead><tr><th class="imp-check"><input type="checkbox" id="spImportAll" aria-label="Marcar ou desmarcar todas as linhas importáveis"></th><th>Linha</th><th>Nome popular</th><th>Nome científico</th><th>Habitat</th><th>Pts</th><th>Situação</th></tr></thead><tbody id="spImportBody"></tbody></table></div>
+                <div class="form-error" id="spImportError" role="alert"></div>
+                <div class="form-actions"><button class="btn btn-primary" id="spImportConfirm" type="button">Importar</button><button class="btn btn-ghost" id="spImportCancel" type="button">Cancelar</button></div>
+              </section>
+              <div class="sp-form-card">
+                <h4 id="speciesFormTitle">Adicionar espécie</h4>
+                <form class="species-form" id="speciesForm" novalidate>
+                  <div class="field"><label for="spName">Nome popular</label><input id="spName" maxlength="60" placeholder="Ex.: Carapau" required></div>
+                  <div class="field"><label for="spSci">Nome científico <span class="muted">(opcional)</span></label><input id="spSci" maxlength="80" placeholder="Ex.: Caranx crysos"></div>
+                  <div class="field"><label for="spHabitat">Habitat</label><select id="spHabitat" required><option value="">Selecione</option><option value="salt">Água salgada</option><option value="fresh">Água doce</option><option value="both">Ambos (doce e salgada)</option></select></div>
+                  <div class="field"><label for="spPoints">Pontos</label><input id="spPoints" type="number" min="1" max="1000" step="1" inputmode="numeric" placeholder="10" required></div>
+                  <div class="field"><label for="spPhoto">Foto <span class="muted" id="spPhotoHint"></span></label><span class="btn btn-ghost file-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5h3.2L9 6h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13.3" r="3.4"/></svg><span id="spPhotoName">Escolher foto</span><input id="spPhoto" type="file" accept="image/*" required></span></div>
+                  <div class="sp-actions"><button class="btn btn-primary" id="speciesSubmit" type="submit">Adicionar</button><button class="btn btn-ghost" id="speciesCancel" type="button" hidden>Cancelar</button></div>
+                </form>
+                <div class="form-error" id="speciesError" role="alert"></div>
+              </div>
+              <p class="saved" id="speciesSaved" aria-live="polite"></p>
+              <div class="sp-toolbar">
+                <label class="feed-search sp-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="spSearch" type="search" placeholder="Buscar por nome popular ou científico" aria-label="Buscar espécie"></label>
+                <select id="spFilter" aria-label="Filtrar lista de espécies"><option value="all">Todas</option><option value="salt">Água salgada</option><option value="fresh">Água doce</option><option value="both">Ambos</option><option value="nohab">Sem habitat</option><option value="nophoto">Sem foto</option></select>
+                <span class="sp-count" id="spCount" aria-live="polite"></span>
+              </div>
+              <ul class="admin-list sp-admin-list" id="speciesAdminList"></ul>
               <input id="spRowPhoto" type="file" accept="image/*" hidden>
             </div>
             <div class="admin-box" data-admin-panel="requests" hidden>
@@ -2364,7 +2427,9 @@ await new Promise(resolve => {
     if (!isAdmin()) return;
     const sp = getSpecies();
     $('cntSpecies').textContent = sp.length; $('cntUsers').textContent = getUsers().length; $('cntSlides').textContent = heroSlides.length;
-    $('speciesAdminList').innerHTML = sp.length ? sp.map(s => `<li><button type="button" class="sp-thumb ${speciesPhotos[s.id] ? 'has' : ''}" data-photo-species="${esc(s.id)}" ${speciesPhotos[s.id] ? `style="background-image:url('${speciesPhotos[s.id]}')"` : ''} aria-label="${speciesPhotos[s.id] ? 'Trocar' : 'Adicionar'} foto de ${esc(s.name)}" title="${speciesPhotos[s.id] ? 'Trocar foto' : 'Adicionar foto'}">${speciesPhotos[s.id] ? '' : fishIcon}</button><span class="grow">${esc(s.name)} ${s.sci ? `<i>${esc(s.sci)}</i>` : ''} ${habitatOk(s.habitat) ? habitatChip(s.habitat) : '<span class="hab-chip hab-missing" title="Edite a espécie para informar o habitat">Sem habitat</span>'}</span><label class="pts-inline"><input type="number" min="1" max="1000" step="1" value="${s.points}" data-points="${esc(s.id)}" aria-label="Pontuação de ${esc(s.name)}"><span>pts</span></label><button class="btn btn-ghost species-edit-btn" type="button" data-edit-species="${esc(s.id)}">Editar</button><button class="post-del" type="button" data-del-species="${esc(s.id)}" aria-label="Remover ${esc(s.name)}" title="Remover">${delIcon}</button></li>`).join('') : '<li class="empty-row">Nenhuma espécie cadastrada.</li>';
+    const spShown = filterAdminSpecies(sp);
+    $('spCount').textContent = spShown.length === sp.length ? `${sp.length} ${sp.length === 1 ? 'espécie' : 'espécies'}` : `${spShown.length} de ${sp.length} espécies`;
+    $('speciesAdminList').innerHTML = spShown.length ? spShown.map(s => `<li><button type="button" class="sp-thumb ${speciesPhotos[s.id] ? 'has' : ''}" data-photo-species="${esc(s.id)}" ${speciesPhotos[s.id] ? `style="background-image:url('${speciesPhotos[s.id]}')"` : ''} aria-label="${speciesPhotos[s.id] ? 'Trocar' : 'Adicionar'} foto de ${esc(s.name)}" title="${speciesPhotos[s.id] ? 'Trocar foto' : 'Adicionar foto'}">${speciesPhotos[s.id] ? '' : fishIcon}</button><span class="grow">${esc(s.name)} ${s.sci ? `<i>${esc(s.sci)}</i>` : ''} ${habitatOk(s.habitat) ? habitatChip(s.habitat) : '<span class="hab-chip hab-missing" title="Edite a espécie para informar o habitat">Sem habitat</span>'}</span><label class="pts-inline"><input type="number" min="1" max="1000" step="1" value="${s.points}" data-points="${esc(s.id)}" aria-label="Pontuação de ${esc(s.name)}"><span>pts</span></label><button class="btn btn-ghost species-edit-btn" type="button" data-edit-species="${esc(s.id)}">Editar</button><button class="post-del" type="button" data-del-species="${esc(s.id)}" aria-label="Remover ${esc(s.name)}" title="Remover">${delIcon}</button></li>`).join('') : `<li class="empty-row">${sp.length ? 'Nenhuma espécie encontrada com esse filtro.' : 'Nenhuma espécie cadastrada. Adicione uma acima ou importe uma planilha.'}</li>`;
     const me = currentUser();
     const ui = {
       edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
@@ -2437,7 +2502,7 @@ await new Promise(resolve => {
     if (edit) {
       const s = getSpecies().find(x => x.id === edit.dataset.editSpecies); if (!s) return;
       editingSpeciesId = s.id; $('spName').value = s.name; $('spSci').value = s.sci || ''; $('spHabitat').value = habitatOk(s.habitat) ? s.habitat : ''; $('spPoints').value = s.points;
-      $('spPhoto').value = ''; $('spPhoto').required = false; $('spPhotoHint').textContent = '(opcional, mantenha a atual)';
+      $('spPhoto').value = ''; $('spPhotoName').textContent = 'Trocar foto'; $('spPhoto').required = false; $('spPhotoHint').textContent = '(opcional)';
       $('speciesFormTitle').textContent = `Editar espécie: ${s.name}`; $('speciesSubmit').textContent = 'Salvar alterações'; $('speciesCancel').hidden = false;
       $('speciesError').textContent = ''; softFocus($('spName')); $('speciesForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return;
     }
@@ -2449,6 +2514,194 @@ await new Promise(resolve => {
     if (editingSpeciesId === s.id) closeSpeciesEdit();
     setSpeciesPhoto(s.id, '').catch(() => {}).finally(renderAll);
   });
+  /* ===== Lista de espécies: busca e filtro ===== */
+  const normKey = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  let spAdminQuery = '', spAdminFilter = 'all';
+  const filterAdminSpecies = list => list.filter(s =>
+    (!spAdminQuery || normKey(`${s.name} ${s.sci || ''}`).includes(spAdminQuery)) &&
+    (spAdminFilter === 'all' || (spAdminFilter === 'nophoto' ? !speciesPhotos[s.id] : spAdminFilter === 'nohab' ? !habitatOk(s.habitat) : s.habitat === spAdminFilter)));
+  $('spSearch').addEventListener('input', () => { spAdminQuery = normKey($('spSearch').value); renderAdmin(); });
+  $('spFilter').addEventListener('change', () => { spAdminFilter = $('spFilter').value; renderAdmin(); });
+  $('spPhoto').addEventListener('change', () => { const f = $('spPhoto').files && $('spPhoto').files[0]; $('spPhotoName').textContent = f ? f.name : (editingSpeciesId ? 'Trocar foto' : 'Escolher foto'); });
+  $('speciesForm').addEventListener('reset', () => { setTimeout(() => { $('spPhotoName').textContent = editingSpeciesId ? 'Trocar foto' : 'Escolher foto'; }, 0); });
+
+  /* ===== Importação de espécies em lote (planilha .xlsx, .xls ou .csv) ===== */
+  const SPECIES_TEMPLATE_B64 = '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s/xx9f5y/4uoeKH5he82N7v71cPRs1f7f87PXqXTj/Zv09N7NX96S+aPn3X++Fkf/u84fbmtqBVXMhy8eDp40R7cilpxJcPBy6eDl+3BragVVzIcfPJ08El7cCtqxZUMB58+HXzaHtyKWnElw8FnTweftQe3olZcyXDw+dPB5+3BragVVzIcfPF08EV7cCtqxZUMB8+Op247bo/uST25pPH00Kyz/vSW1JNLGk+fSmzWt1hP6skljadPTTbrq6wn9eSSxtOnOpv1fdaTenJJ4+lTp836UutJPbmk8fSp2GZ9s/WknlzSePrUbrO+3npSTy5pPH2quFnfcT2pJ5c0nj713Kwvup7Uk0saf88ydd2877qe1JNLGk+fum7ed11P6skljaeH37DB79jgt2zwe7Znu24+dd2877qe1JNLGk+fum7ed11P6skljadPXTfvu64n9eSSxtOnrpv3XdeTenJJ4+lT1837rutJPbmk8fSp6+Z91/WknlzSePrUdfO+63pSTy5p/GPS1HWLvut6Uk8uaTx96rpF33U9qSeXNJ4+dd2i77qe1JNLGk8Pf0KFP6LCn1HhD6nPdt1i6rpF33U9qSeXNJ4+dd2i77qe1JNLGk+fum7Rd11P6skljadPXbfou64n9eSSxtOnrlv0XdeTenJJ4+lT1y36rutJPbmk8W9mpq5b9l3Xk3pySePpU9ct+67rST25pPH0qeuWfdf1pJ5c0nj61HXLvut6Uk8uaTw9/JUc/J0c/KUc/K3cs123nLpu2XddT+rJJY2nT1237LuuJ/XkksbTp65b9l3Xk3pySePpU9ct+67rST25pPH0qeuWfdf1pJ5c0viXwVPXnfRd15N6cknj6VPXnfRd15N6cknj6VPXnfRd15N6cknj6VPXnfRd15N6cknj6VPXnfRd15N6cknj6eF7EPBNCPguBHwb4tmuO5m67qTvup7Uk0saT5+67qTvup7Uk0saT5+67qTvup7Uk0saT5+67qTvup7Uk0sav/80dd1p33U9qSeXNJ4+dd1p33U9qSeXNJ4+dd1p33U9qSeXNJ4+dd1p33U9qSeXNJ4+dd1p33U9qSeXNJ4+dd1p33U9qSeXNJ4evukK33WFb7vC912f7brTqetO+67rST25pPH0qetO+67rST25pPH0qetO+67rST25pPFb3lPXnfVd15N6cknj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';
+  const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  let xlsxLoading = null;
+  const loadXLSX = () => window.XLSX ? Promise.resolve(window.XLSX) : (xlsxLoading = xlsxLoading || new Promise((resolve, reject) => {
+    const s = document.createElement('script'); s.src = XLSX_URL; s.async = true;
+    s.onload = () => window.XLSX ? resolve(window.XLSX) : reject(new Error('xlsx'));
+    s.onerror = () => { xlsxLoading = null; s.remove(); reject(new Error('xlsx')); };
+    document.head.appendChild(s);
+  }));
+  const HAB_IN = { 'agua salgada': 'salt', 'salgada': 'salt', 'marinha': 'salt', 'mar': 'salt', 'agua doce': 'fresh', 'doce': 'fresh', 'ambos': 'both', 'ambas': 'both', 'doce e salgada': 'both', 'salgada e doce': 'both', 'agua doce e salgada': 'both', 'agua salgada e doce': 'both', 'salt': 'salt', 'fresh': 'fresh', 'both': 'both' };
+  const IMPORT_COLS = { name: ['nome popular', 'nome', 'especie', 'nome comum'], sci: ['nome cientifico', 'cientifico'], habitat: ['habitat', 'ambiente'], points: ['pontuacao', 'pontos', 'pts'] };
+  const HAB_SHORT = { salt: 'Água salgada', fresh: 'Água doce', both: 'Ambos' };
+  let importRows = [], importBusy = false;
+  const findHeader = rows => {
+    for (let i = 0; i < Math.min(rows.length, 15); i++) {
+      const cells = rows[i].map(normKey), map = {};
+      Object.entries(IMPORT_COLS).forEach(([k, names]) => { const idx = cells.findIndex(c => names.includes(c)); if (idx >= 0) map[k] = idx; });
+      if (map.name != null && map.habitat != null && map.points != null) return { index: i, map };
+    }
+    return null;
+  };
+  // CSV: detecta UTF-8 ou Windows-1252 e o separador (ponto e vírgula, vírgula ou tabulação)
+  const parseCSV = buf => {
+    let text = new TextDecoder('utf-8').decode(buf);
+    if (text.includes('\uFFFD')) { try { text = new TextDecoder('windows-1252').decode(buf); } catch (_) {} }
+    text = text.replace(/^\uFEFF/, '');
+    const first = text.split(/\r?\n/).find(l => l.trim()) || '';
+    const sep = [';', '\t', ','].map(s => [s, first.split(s).length]).sort((a, b) => b[1] - a[1])[0][0];
+    const rows = []; let row = [], cell = '', q = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (q) { if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += ch; }
+      else if (ch === '"') q = true;
+      else if (ch === sep) { row.push(cell); cell = ''; }
+      else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+      else cell += ch;
+    }
+    if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+    return rows;
+  };
+  const readSpeciesSheet = async file => {
+    if (/\.csv$/i.test(file.name)) {
+      const rows = parseCSV(await file.arrayBuffer()), head = findHeader(rows);
+      if (!head) return null;
+      const data = [];
+      rows.slice(head.index + 1).forEach((row, i) => { if (row.some(c => String(c).trim() !== '')) data.push({ line: head.index + 2 + i, row }); });
+      return { sheetName: 'CSV', map: head.map, data };
+    }
+    const XLSX = await loadXLSX();
+    const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    for (const sheetName of wb.SheetNames) {
+      const ws = wb.Sheets[sheetName]; if (!ws || !ws['!ref']) continue;
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true, blankrows: true });
+      const head = findHeader(rows); if (!head) continue;
+      const startRow = XLSX.utils.decode_range(ws['!ref']).s.r + 1; // linha do Excel (base 1) da primeira linha lida
+      const data = [];
+      rows.slice(head.index + 1).forEach((row, i) => { if (row.some(c => String(c).trim() !== '')) data.push({ line: startRow + head.index + 1 + i, row }); });
+      return { sheetName, map: head.map, data };
+    }
+    return null;
+  };
+  const analyzeImport = sheet => {
+    const species = getSpecies(), seen = new Map(), out = [];
+    sheet.data.forEach(({ line, row }) => {
+      const m = sheet.map, name = String(row[m.name] ?? '').trim().replace(/\s+/g, ' '), sci = m.sci != null ? String(row[m.sci] ?? '').trim().replace(/\s+/g, ' ') : '';
+      const habRaw = String(row[m.habitat] ?? '').trim(), habitat = HAB_IN[normKey(habRaw)] || '';
+      const ptsRaw = row[m.points], points = typeof ptsRaw === 'number' ? ptsRaw : Number(String(ptsRaw).trim().replace(',', '.'));
+      const errors = [];
+      if (!name) errors.push('nome popular vazio'); else if (name.length > 60) errors.push('nome popular com mais de 60 caracteres');
+      if (sci.length > 80) errors.push('nome científico com mais de 80 caracteres');
+      if (!habitat) errors.push(habRaw ? `habitat "${habRaw}" não reconhecido (use Água Salgada, Água Doce ou Ambos)` : 'habitat vazio');
+      if (String(ptsRaw).trim() === '') errors.push('pontuação vazia'); else if (!Number.isInteger(points) || points < 1 || points > 1000) errors.push('pontuação deve ser um número inteiro de 1 a 1000');
+      const key = normKey(name);
+      if (name && seen.has(key)) errors.push(`repetida na planilha (linha ${seen.get(key)})`);
+      if (name && !seen.has(key)) seen.set(key, line);
+      const r = { line, name, sci, habitat, points, errors, include: false, status: 'error', note: '' };
+      if (!errors.length) {
+        const existing = species.find(s => normKey(s.name) === key);
+        if (existing) {
+          const changes = [];
+          if (sci && sci !== (existing.sci || '')) changes.push('nome científico');
+          if (habitat !== existing.habitat) changes.push(habitatOk(existing.habitat) ? `habitat ${HAB_SHORT[existing.habitat].toLowerCase()} → ${HAB_SHORT[habitat].toLowerCase()}` : `habitat → ${HAB_SHORT[habitat].toLowerCase()}`);
+          if (points !== existing.points) changes.push(`${existing.points} → ${points} pts`);
+          Object.assign(r, changes.length ? { status: 'update', include: true, existingId: existing.id, note: changes.join(' · ') } : { status: 'same', existingId: existing.id, note: 'Já cadastrada, sem mudanças' });
+        } else {
+          // Nomes compostos ("Carapau / Xixarro") que lembram espécies já cadastradas ficam desmarcados para conferência
+          const parts = name.split('/').map(normKey).filter(Boolean);
+          const similar = species.find(s => { const sp = s.name.split('/').map(normKey); return sp.some(p => parts.includes(p)); });
+          Object.assign(r, similar ? { status: 'new', warn: true, include: false, note: `Parecida com "${similar.name}", já cadastrada. Confira antes de marcar.` } : { status: 'new', include: true });
+        }
+      }
+      out.push(r);
+    });
+    return out;
+  };
+  const importable = r => r.status === 'new' || r.status === 'update';
+  const renderImport = () => {
+    const c = { new: 0, update: 0, same: 0, error: 0, warn: 0 };
+    importRows.forEach(r => { if (r.warn) c.warn++; else c[r.status]++; });
+    const chosen = importRows.filter(r => importable(r) && r.include).length;
+    $('spImportSummary').innerHTML = [
+      c.new && `<span class="imp-chip new">${c.new} ${c.new === 1 ? 'nova' : 'novas'}</span>`,
+      c.update && `<span class="imp-chip update">${c.update} para atualizar</span>`,
+      c.same && `<span class="imp-chip same">${c.same} já ${c.same === 1 ? 'cadastrada' : 'cadastradas'}, sem mudanças</span>`,
+      c.warn && `<span class="imp-chip warn">${c.warn} ${c.warn === 1 ? 'parecida' : 'parecidas'} com espécies existentes (desmarcadas)</span>`,
+      c.error && `<span class="imp-chip error">${c.error} com erro (não serão importadas)</span>`
+    ].filter(Boolean).join('') || '<span class="imp-chip same">Nenhuma linha preenchida</span>';
+    const label = { new: 'Nova', update: 'Atualizar', same: 'Sem mudanças', error: 'Erro' };
+    $('spImportBody').innerHTML = importRows.map((r, i) => `<tr class="is-${r.status}${r.warn ? ' is-warn' : ''}">
+      <td class="imp-check">${importable(r) ? `<input type="checkbox" data-imp-row="${i}" ${r.include ? 'checked' : ''} aria-label="Importar linha ${r.line}: ${esc(r.name)}">` : ''}</td>
+      <td class="imp-line">${r.line}</td><td><b>${esc(r.name || '—')}</b></td><td><i>${esc(r.sci)}</i></td><td>${r.habitat ? HAB_SHORT[r.habitat] : '—'}</td><td>${Number.isFinite(r.points) ? r.points : '—'}</td>
+      <td><span class="imp-chip ${r.warn ? 'warn' : r.status}">${r.warn ? 'Nova · conferir' : label[r.status]}</span>${r.errors.length ? `<small>${esc(r.errors.join('; '))}</small>` : r.note ? `<small>${esc(r.note)}</small>` : ''}</td></tr>`).join('');
+    const boxes = importRows.filter(importable);
+    $('spImportAll').checked = boxes.length > 0 && boxes.every(r => r.include);
+    $('spImportAll').indeterminate = boxes.some(r => r.include) && !boxes.every(r => r.include);
+    $('spImportAll').disabled = !boxes.length;
+    const btn = $('spImportConfirm'); btn.disabled = !chosen || importBusy;
+    btn.textContent = importBusy ? 'Importando…' : chosen ? `Importar ${chosen} ${chosen === 1 ? 'espécie' : 'espécies'}` : 'Nada para importar';
+  };
+  const closeImport = () => { importRows = []; $('spImportPanel').hidden = true; $('spImportError').textContent = ''; $('spImportBody').innerHTML = ''; };
+  $('spImportBtn').addEventListener('click', () => { if (isAdmin() && !importBusy) $('spImportFile').click(); });
+  $('spImportFile').addEventListener('change', async () => {
+    const file = $('spImportFile').files && $('spImportFile').files[0]; $('spImportFile').value = '';
+    if (!file || !isAdmin()) return;
+    const err = $('speciesError'), btn = $('spImportBtn'); err.textContent = ''; $('speciesSaved').textContent = '';
+    if (!/\.(xlsx|xls|csv)$/i.test(file.name)) { err.textContent = 'Envie uma planilha do Excel (.xlsx ou .xls) ou um arquivo .csv.'; return; }
+    btn.disabled = true; const label = btn.innerHTML; btn.textContent = 'Lendo planilha…';
+    try {
+      const sheet = await readSpeciesSheet(file);
+      if (!sheet) { err.textContent = 'Não encontrei as colunas "Nome Popular", "Habitat" e "Pontuação" na planilha. Baixe a planilha modelo e use os mesmos títulos na primeira linha.'; return; }
+      if (sheet.data.length > 1000) { err.textContent = `A planilha tem ${sheet.data.length} linhas. Importe no máximo 1000 de cada vez.`; return; }
+      importRows = analyzeImport(sheet);
+      $('spImportInfo').textContent = `${file.name} · aba "${sheet.sheetName}" · ${importRows.length} ${importRows.length === 1 ? 'linha' : 'linhas'}`;
+      $('spImportError').textContent = ''; $('spImportPanel').hidden = false; renderImport();
+      $('spImportPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e2) {
+      err.textContent = e2 && e2.message === 'xlsx' ? 'Não foi possível carregar o leitor de planilhas. Verifique a conexão com a internet e tente de novo.' : 'Não foi possível ler esse arquivo. Confira se é uma planilha válida e tente de novo.';
+    } finally { btn.disabled = false; btn.innerHTML = label; }
+  });
+  $('spImportBody').addEventListener('change', e => { const cb = e.target.closest('[data-imp-row]'); if (!cb) return; const r = importRows[Number(cb.dataset.impRow)]; if (r) r.include = cb.checked; renderImport(); });
+  $('spImportAll').addEventListener('change', () => { const v = $('spImportAll').checked; importRows.forEach(r => { if (importable(r)) r.include = v; }); renderImport(); });
+  $('spImportClose').addEventListener('click', closeImport);
+  $('spImportCancel').addEventListener('click', closeImport);
+  $('spImportConfirm').addEventListener('click', async () => {
+    if (!isAdmin() || importBusy) return;
+    const chosen = importRows.filter(r => importable(r) && r.include); if (!chosen.length) return;
+    importBusy = true; renderImport(); $('spImportError').textContent = '';
+    const list = readJSON('ajing-species', []), ids = new Set(list.map(s => s.id)), changedPoints = new Map();
+    let added = 0, updated = 0;
+    chosen.forEach(r => {
+      if (r.status === 'update') {
+        const s = list.find(x => x.id === r.existingId); if (!s) return;
+        if (s.points !== r.points) changedPoints.set(s.id, r.points);
+        Object.assign(s, { sci: r.sci || s.sci || '', habitat: r.habitat, points: r.points }); updated++;
+      } else {
+        if (list.some(s => normKey(s.name) === normKey(r.name))) return; // cadastrada por outra pessoa enquanto a prévia estava aberta
+        let id = uid(); while (ids.has(id)) id = uid(); ids.add(id);
+        list.push({ id, name: r.name, sci: r.sci, habitat: r.habitat, points: r.points }); added++;
+      }
+    });
+    try { await fb.writeQuiet('ajing-species', list); }
+    catch (e2) { importBusy = false; renderImport(); $('spImportError').textContent = 'Não foi possível salvar a importação. ' + fb.errMsg(e2); return; }
+    let postsWarn = '';
+    const touched = posts.filter(p => changedPoints.has(p.speciesId)).map(p => ({ ...p, points: changedPoints.get(p.speciesId) }));
+    if (touched.length) { try { await Promise.all(touched.map(p => postsDB.put(p))); await loadPosts(); } catch (_) { postsWarn = ' Algumas publicações não puderam ser recalculadas; edite a espécie para tentar de novo.'; } }
+    importBusy = false; closeImport(); renderAll(); renderChampion();
+    $('speciesSaved').textContent = `Importação concluída: ${added} ${added === 1 ? 'espécie nova' : 'espécies novas'}${updated ? ` e ${updated} ${updated === 1 ? 'atualizada' : 'atualizadas'}` : ''}.${added ? ' Para adicionar as fotos, filtre a lista por "Sem foto" e clique no quadro ao lado de cada nome.' : ''}${postsWarn}`;
+  });
+  $('spTemplateBtn').addEventListener('click', () => {
+    const bin = atob(SPECIES_TEMPLATE_B64), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'modelo-especies-ajing-game.xlsx'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  });
+
   // Usuários: criar, editar (nome, perfil, senha), desativar/reativar e excluir
   let editingUser = null;
   const activeAdmins = users => users.filter(u => u.role === 'admin' && u.active !== false);
