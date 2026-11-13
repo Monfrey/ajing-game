@@ -891,6 +891,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .post-noscore b{font-size:.88rem}
 .post-noscore small{font-size:.76rem;line-height:1.4;color:var(--muted)}
 .post-noscore:has(input:checked){border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.season-info{display:grid;gap:2px;min-height:40px;align-content:center;padding:8px 11px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg)}
+.season-info b{font-size:.92rem}
+.season-info small{font-size:.78rem;color:var(--muted)}
+.flabel{display:block;margin-bottom:6px;font-size:.85rem;font-weight:600}
 </style>
 </head>
 <body>
@@ -1123,7 +1127,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
           <ol class="rank-list" id="rankList"></ol>
           <div class="empty" id="rankEmpty" hidden><h4>Ranking ainda vazio</h4><p>O ranking começa quando os membros publicarem capturas no Social Fish.</p></div>
           </div>
-          <div id="rankHistoryView" hidden><div class="panel-head"><div><h4>Campeões por temporada</h4><p>Histórico dos campeões semestrais ou anuais e suas insígnias acumuladas.</p></div></div><ul class="admin-list req-list" id="rankChampionHistory"></ul></div>
+          <div id="rankHistoryView" hidden><div class="panel-head"><div><h4>Campeões por temporada</h4><p>Histórico dos campeões de cada estação do ano e suas insígnias acumuladas.</p></div></div><ul class="admin-list req-list" id="rankChampionHistory"></ul></div>
         </section>
         <section class="panel" role="tabpanel" data-panel="species" hidden>
           <div class="panel-head"><div><h3>Espécies</h3><p>Espécies válidas para o Social Fish, com a pontuação no ranking e o total de capturas.</p></div><button class="btn btn-ghost admin-only" type="button" data-goto="admin" data-goto-sec="species" hidden>Gerenciar espécies</button><button class="btn btn-primary member-only" type="button" data-open-req hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Solicitar nova espécie</button></div>
@@ -1249,10 +1253,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
             </div>
             <div class="admin-box" data-admin-panel="rank-award" hidden>
               <h4 class="req-title">Temporada e premiação do ranking</h4>
-              <p class="box-desc">A periodicidade define a temporada exibida no ranking do site. No modo semestral, as temporadas são janeiro a junho e julho a dezembro; no anual, janeiro a dezembro. O ranking reinicia em cada período, mas os pontos acumulados no perfil e os níveis são mantidos. A temporada continua mesmo se a premiação estiver desativada.</p>
+              <p class="box-desc">A temporada do ranking segue as estações do ano no hemisfério sul: outono, inverno, primavera e verão. As datas são as astronômicas de cada ano (por volta de 20/03, 21/06, 22/09 e 21/12), e cada estação começa à meia-noite (horário de Brasília) do seu primeiro dia. O ranking reinicia a cada estação, mas os pontos acumulados no perfil e os níveis são mantidos. A temporada continua mesmo se a premiação estiver desativada.</p>
               <form id="rankAwardForm" class="user-form" novalidate>
                 <div class="uf-grid">
-                  <div class="field"><label for="rankAwardPeriod">Período da temporada</label><select id="rankAwardPeriod"><option value="semester">Semestral (1º e 2º semestre)</option><option value="annual">Anual</option></select></div>
+                  <div class="field"><span class="flabel">Temporada atual</span><div class="season-info" id="rankSeasonInfo" aria-live="polite"></div></div>
                   <div class="field"><label for="rankAwardEnabled">Premiação</label><label class="inline-check"><input id="rankAwardEnabled" type="checkbox"> Ativar premiação e slide do campeão</label></div>
                 </div>
                 <div class="form-error" id="rankAwardError" role="alert"></div>
@@ -2324,38 +2328,63 @@ await new Promise(resolve => {
     if (changed) saveChamps(list);
   };
   const latestChampion = () => getChamps().filter(c => c.settled && c.champion).sort((a, b) => b.end - a.end)[0] || null;
+  /* ===== Temporadas do ranking: estações do ano (hemisfério sul) ===== */
+  // Equinócios e solstícios pelo algoritmo de Jean Meeus (precisão de cerca de 1 minuto)
+  const SEASON_COEF = [
+    [2451623.80984, 365242.37404, 0.05169, -0.00411, -0.00057], // equinócio de março: outono
+    [2451716.56767, 365241.62603, 0.00325, 0.00888, -0.00030],  // solstício de junho: inverno
+    [2451810.21715, 365242.01767, -0.11575, 0.00337, 0.00078],  // equinócio de setembro: primavera
+    [2451900.05952, 365242.74049, -0.06223, -0.00823, 0.00032]  // solstício de dezembro: verão
+  ];
+  const SEASON_TERMS = [[485,324.96,1934.136],[203,337.23,32964.467],[199,342.08,20.186],[182,27.85,445267.112],[156,73.14,45036.886],[136,171.52,22518.443],[77,222.54,65928.934],[74,296.72,3034.906],[70,243.58,9037.513],[58,119.81,33718.147],[52,297.17,150.678],[50,21.02,2281.226],[45,247.54,29929.562],[44,325.15,31555.956],[29,60.93,4443.417],[18,155.12,67555.328],[17,288.79,4562.452],[16,198.04,62894.029],[14,199.76,31436.921],[12,95.39,14577.848],[12,287.11,31931.756],[12,320.81,34777.259],[9,227.73,1222.114],[8,15.45,16859.074]];
+  const SEASON_NAMES = ['Outono', 'Inverno', 'Primavera', 'Verão'];
+  const seasonStartCache = {};
+  const seasonStart = (year, k) => {
+    const key = `${year}:${k}`; if (seasonStartCache[key]) return seasonStartCache[key];
+    const Y = (year - 2000) / 1000, c = SEASON_COEF[k], rad = Math.PI / 180;
+    const jde0 = c[0] + c[1] * Y + c[2] * Y * Y + c[3] * Y ** 3 + c[4] * Y ** 4, T = (jde0 - 2451545) / 36525;
+    const W = (35999.373 * T - 2.47) * rad, dl = 1 + 0.0334 * Math.cos(W) + 0.0007 * Math.cos(2 * W);
+    const S = SEASON_TERMS.reduce((sum, [a, b, cc]) => sum + a * Math.cos((b + cc * T) * rad), 0);
+    const instant = Date.UTC(2000, 0, 1, 12) + (jde0 + 0.00001 * S / dl - 2451545) * 86400000 - 69200; // TT → UTC
+    const brt = new Date(instant - 3 * 3600000); // dia civil em Brasília (UTC−3)
+    return (seasonStartCache[key] = Date.UTC(brt.getUTCFullYear(), brt.getUTCMonth(), brt.getUTCDate(), 3));
+  };
+  const seasonAt = (year, k) => {
+    const [ny, nk] = k === 3 ? [year + 1, 0] : [year, k + 1];
+    return { mode: 'season', year, k, start: seasonStart(year, k), end: seasonStart(ny, nk), label: k === 3 ? `Verão ${year}/${String(year + 1).slice(2)}` : `${SEASON_NAMES[k]} ${year}` };
+  };
+  const seasonContaining = ts => {
+    const y = new Date(ts - 3 * 3600000).getUTCFullYear();
+    return [seasonAt(y - 1, 3), seasonAt(y, 0), seasonAt(y, 1), seasonAt(y, 2), seasonAt(y, 3)].find(s => ts >= s.start && ts < s.end);
+  };
+  const seasonRange = s => `${fmtDay(s.start)} a ${fmtDay(s.end - 1)}`;
   const readRankAwardConfig = () => {
     const saved = readJSON('ajing-ranking-award-config', {});
-    return { enabled: saved.enabled !== false, period: saved.period === 'annual' ? 'annual' : 'semester' };
+    return { enabled: saved.enabled !== false, period: 'season' };
   };
   let rankAwardConfig = readRankAwardConfig();
+  // Última estação já encerrada (a que recebe a premiação)
   const completedRankAwardPeriod = (now = Date.now()) => {
-    const d = new Date(now), year = d.getFullYear(), month = d.getMonth();
-    if (rankAwardConfig.period === 'annual') return { label: `Campeão anual de ${year - 1}`, start: new Date(year - 1, 0, 1).getTime(), end: new Date(year, 0, 1).getTime() };
-    if (month >= 6) return { label: `Campeão do 1º semestre de ${year}`, start: new Date(year, 0, 1).getTime(), end: new Date(year, 6, 1).getTime() };
-    return { label: `Campeão do 2º semestre de ${year - 1}`, start: new Date(year - 1, 6, 1).getTime(), end: new Date(year, 0, 1).getTime() };
+    const prev = seasonContaining(seasonContaining(now).start - 1);
+    return { ...prev, label: `Campeão ${prev.k === 2 ? 'da' : 'do'} ${prev.label}` };
   };
-  const currentRankSeason = (now = Date.now()) => {
-    const d = new Date(now), year = d.getFullYear(), month = d.getMonth();
-    if (rankAwardConfig.period === 'annual') return { label: `Ano ${year}`, start: new Date(year, 0, 1).getTime(), end: new Date(year + 1, 0, 1).getTime() };
-    if (month < 6) return { label: `1º semestre de ${year}`, start: new Date(year, 0, 1).getTime(), end: new Date(year, 6, 1).getTime() };
-    return { label: `2º semestre de ${year}`, start: new Date(year, 6, 1).getTime(), end: new Date(year + 1, 0, 1).getTime() };
-  };
+  const currentRankSeason = (now = Date.now()) => seasonContaining(now);
   const currentRankSeasonPosts = () => {
     const season = currentRankSeason();
     return posts.filter(p => p.created >= season.start && p.created < season.end && isPostScored(p));
   };
   const renderRankAwardForm = () => {
-    $('rankAwardPeriod').value = rankAwardConfig.period;
+    const cur = currentRankSeason(), next = seasonContaining(cur.end);
+    $('rankSeasonInfo').innerHTML = `<b>${esc(cur.label)}</b><small>${seasonRange(cur)} · próxima: ${esc(next.label)}, a partir de ${fmtDay(next.start)}</small>`;
     $('rankAwardEnabled').checked = rankAwardConfig.enabled;
   };
   renderRankAwardForm();
   $('rankAwardForm').addEventListener('submit', e => {
     e.preventDefault();
-    const next = { enabled: $('rankAwardEnabled').checked, period: $('rankAwardPeriod').value === 'annual' ? 'annual' : 'semester' };
+    const next = { enabled: $('rankAwardEnabled').checked, period: 'season' };
     if (!writeJSON('ajing-ranking-award-config', next)) { $('rankAwardError').textContent = 'Não foi possível salvar a configuração.'; return; }
     rankAwardConfig = next; $('rankAwardError').textContent = '';
-    $('rankAwardSaved').textContent = `Temporada ${next.period === 'semester' ? 'semestral' : 'anual'} salva. ${next.enabled ? 'Premiação ativada.' : 'Premiação desativada; o ranking continua reiniciando por temporada.'}`;
+    $('rankAwardSaved').textContent = `Configuração salva. ${next.enabled ? 'Premiação ativada.' : 'Premiação desativada; o ranking continua reiniciando a cada estação.'}`;
     renderChampion(); renderAll();
   });
 
@@ -2401,14 +2430,8 @@ await new Promise(resolve => {
     const history = readRankChampionHistory(), years = posts.filter(isPostScored).map(p => new Date(p.created).getFullYear()).concat(history.map(h => new Date(h.start).getFullYear()).filter(Number.isFinite));
     const now = Date.now(), currentYear = new Date(now).getFullYear(), firstYear = years.reduce((min, year) => Math.min(min, year), currentYear), periods = [];
     const add = (start, end, label, mode = rankAwardConfig.period) => { if (end <= now) periods.push({ key: rankPeriodKey({ mode, start, end }), mode, start, end, label }); };
-    if (rankAwardConfig.period === 'annual') {
-      for (let year = firstYear; year <= currentYear; year++) add(new Date(year, 0, 1).getTime(), new Date(year + 1, 0, 1).getTime(), `Ano ${year}`);
-    } else {
-      for (let year = firstYear; year <= currentYear; year++) {
-        add(new Date(year, 0, 1).getTime(), new Date(year, 6, 1).getTime(), `1º semestre de ${year}`);
-        add(new Date(year, 6, 1).getTime(), new Date(year + 1, 0, 1).getTime(), `2º semestre de ${year}`);
-      }
-    }
+    const firstTs = Date.UTC(firstYear, 0, 1, 3);
+    for (let year = firstYear - 1; year <= currentYear; year++) for (let k = 0; k < 4; k++) { const s = seasonAt(year, k); if (s.end > firstTs) add(s.start, s.end, s.label, 'season'); }
     history.forEach(h => { const key = historyPeriodKey(h); if (!periods.some(p => p.key === key)) periods.push({ key, mode: h.mode, start: h.start, end: h.end, label: h.label }); });
     return periods.sort((a, b) => b.start - a.start);
   };
@@ -2456,7 +2479,7 @@ await new Promise(resolve => {
     const sourcePosts = rankScope === 'season' ? currentRankSeasonPosts() : posts.filter(isPostScored);
     const rows = rankRows(key, sourcePosts), scopeLabel = rankScope === 'season' ? `Temporada · ${season.label}` : 'Ranking geral';
     const scopeDetail = rankScope === 'season' ? 'nesta temporada' : 'em todo o histórico';
-    $('editionBar').innerHTML = `<span class="ed-pill">${esc(scopeLabel)}</span><span class="muted">${fmtNum(sourcePosts.length)} ${sourcePosts.length === 1 ? 'captura aprovada' : 'capturas aprovadas'} ${scopeDetail}</span>`;
+    $('editionBar').innerHTML = `<span class="ed-pill">${esc(scopeLabel)}</span><span class="muted">${rankScope === 'season' ? `${seasonRange(season)} · ` : ''}${fmtNum(sourcePosts.length)} ${sourcePosts.length === 1 ? 'captura aprovada' : 'capturas aprovadas'} ${scopeDetail}</span>`;
     $('rankRule').textContent = key === 'points'
       ? `Soma dos pontos das capturas aprovadas ${scopeDetail}. Empates são desempatados pela quantidade de capturas.`
       : `Total de capturas aprovadas ${scopeDetail}. Empates são desempatados pela pontuação.`;
