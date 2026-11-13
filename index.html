@@ -865,6 +865,32 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 :root[data-theme="dark"] .imp-chip.new{color:#86dba6}:root[data-theme="dark"] .imp-chip.update{color:#7fd6ee}:root[data-theme="dark"] .imp-chip.warn{color:#ffb766}
 @media (max-width:1100px){#speciesForm.species-form{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:720px){.sp-head{flex-direction:column}.sp-head .form-actions{flex-wrap:wrap}#speciesForm.species-form{grid-template-columns:repeat(2,minmax(0,1fr))}#speciesForm .field:first-child,#speciesForm .field:nth-child(2){grid-column:1/-1}.sp-actions{grid-column:1/-1}.sp-count{margin-left:0;width:100%}}
+/* Busca de espécie na nova publicação */
+.sp-pick{position:relative}
+.sp-pick-ico{position:absolute;left:11px;top:50%;width:16px;height:16px;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.field .sp-pick input{padding-left:34px;padding-right:38px}
+.sp-pick input.has-value{font-weight:600;border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.sp-pick-clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:28px;height:28px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--muted);cursor:pointer}
+.sp-pick-clear:hover{background:var(--surface-2);color:var(--ink)}
+.sp-pick-clear svg{width:15px;height:15px}
+.sp-pick-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:40;max-height:min(300px,42vh);overflow:auto;margin:0;padding:4px;list-style:none;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:0 14px 30px rgba(0,0,0,.18)}
+.sp-pick-list li[role=option]{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 10px;border-radius:4px;cursor:pointer}
+.sp-pick-list li[role=option].active,.sp-pick-list li[role=option]:hover{background:var(--surface-2)}
+.sp-pick-list li[aria-selected=true] b{color:var(--accent)}
+.sp-opt-main{min-width:0}
+.sp-opt-main b{display:block;font-size:.9rem;font-weight:600}
+.sp-opt-main small{display:block;font-size:.74rem;font-style:italic;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp-opt-pts{flex:none;font-size:.78rem;font-weight:700;color:var(--accent)}
+.sp-pick-group{padding:8px 10px 3px;font-size:.66rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.sp-pick-empty{padding:10px;font-size:.85rem;color:var(--muted)}
+/* Publicar sem pontuar */
+.score-fish.unscored{color:var(--muted)}
+.post-noscore{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg);cursor:pointer}
+.post-noscore input{width:18px;height:18px;margin:1px 0 0;flex:none;accent-color:var(--accent)}
+.post-noscore span{display:grid;gap:2px}
+.post-noscore b{font-size:.88rem}
+.post-noscore small{font-size:.76rem;line-height:1.4;color:var(--muted)}
+.post-noscore:has(input:checked){border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
 </style>
 </head>
 <body>
@@ -1175,7 +1201,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               <p class="saved" id="speciesSaved" aria-live="polite"></p>
               <div class="sp-toolbar">
                 <label class="feed-search sp-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="spSearch" type="search" placeholder="Buscar por nome popular ou científico" aria-label="Buscar espécie"></label>
-                <select id="spFilter" aria-label="Filtrar lista de espécies"><option value="all">Todas</option><option value="salt">Água salgada</option><option value="fresh">Água doce</option><option value="both">Ambos</option><option value="nohab">Sem habitat</option><option value="nophoto">Sem foto</option></select>
+                <select id="spFilter" aria-label="Filtrar lista de espécies"><option value="all">Todas</option><option value="salt">Água salgada</option><option value="fresh">Água doce</option><option value="both">Ambos</option><option value="nophoto">Sem foto</option></select>
                 <span class="sp-count" id="spCount" aria-live="polite"></span>
               </div>
               <ul class="admin-list sp-admin-list" id="speciesAdminList"></ul>
@@ -1397,10 +1423,18 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <span class="hint">A imagem inteira será mantida no formato vertical do feed (4:5); o espaço restante será preenchido com a própria foto desfocada.</span>
       </div>
       <div class="post-fields">
-        <div class="field"><label for="postSpecies">Espécie</label><select id="postSpecies" required></select><span class="hint" id="speciesHint"></span></div>
+        <div class="field"><label for="postSpeciesSearch">Espécie</label>
+          <div class="sp-pick">
+            <svg class="sp-pick-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>
+            <input id="postSpeciesSearch" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="spPickList" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite para buscar a espécie">
+            <button class="sp-pick-clear" id="spPickClear" type="button" aria-label="Limpar espécie escolhida" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+            <ul class="sp-pick-list" id="spPickList" role="listbox" aria-label="Espécies" hidden></ul>
+          </div>
+          <select id="postSpecies" required hidden tabindex="-1" aria-hidden="true"></select><span class="hint" id="speciesHint"></span></div>
         <div class="field"><label for="postPlace">Local</label><input id="postPlace" maxlength="80" placeholder="Ex.: Píer de Itapoã, Vila Velha - ES" required></div>
         <div class="field"><label for="postCaptureDate">Data da captura</label><input id="postCaptureDate" type="date" required><span class="hint">Escolha hoje ou um dos dois dias anteriores. A data de hoje é preenchida automaticamente.</span></div>
         <div class="field"><label for="postCaption">Descrição <span class="muted">(opcional)</span></label><textarea id="postCaption" rows="4" maxlength="300" placeholder="Isca, trabalho, condições do dia..."></textarea><span class="hint" id="captionCount">0 / 300</span></div>
+        <label class="post-noscore"><input id="postNoScore" type="checkbox"><span><b>Publicar sem pontuar</b><small>A publicação vai direto para o feed, sem validação do administrador, e não conta pontos no ranking nem na carta.</small></span></label>
         <div class="form-error" id="postError" role="alert"></div>
         <div class="form-actions"><button class="btn btn-primary" id="postSubmit" type="submit">Publicar</button><button class="btn btn-ghost" id="postCancel" type="button">Cancelar</button></div>
       </div>
@@ -1816,7 +1850,8 @@ await new Promise(resolve => {
     { n: 5, min: 10000, name: 'Mestre Finesse',          desc: 'Referência da comunidade em pesca finesse.',
       icon: '<path d="M4 18 5.5 8l4 4L12 5l2.5 7 4-4L20 18z"/><path d="M4 21h16"/>' }
   ];
-  const isPostScored = p => p.status !== 'pending' && p.status !== 'rejected';
+  // 'unscored' = publicada sem pontuar (escolha do membro): fica no feed, mas não pontua
+  const isPostScored = p => p.status !== 'pending' && p.status !== 'rejected' && p.status !== 'unscored';
   const userPoints = u => posts.filter(p => p.user === u && isPostScored(p)).reduce((s, p) => s + postPoints(p), 0);
   // nível atual, próximo e progresso até o próximo
   const levelInfo = pts => {
@@ -2054,11 +2089,84 @@ await new Promise(resolve => {
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && postModal.classList.contains('open')) closePostModal(); });
   dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); postPhoto.click(); } });
 
+  /* ===== Busca de espécie na publicação ===== */
+  // Campo de busca com lista de resultados; o valor escolhido continua no <select id="postSpecies"> (oculto)
+  const spPickInput = $('postSpeciesSearch'), spPickList = $('spPickList'), spPickClear = $('spPickClear');
+  const spPickNorm = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  let spPickItems = [], spPickActive = -1;
+  const spPickLabel = s => `${s.name} · ${ptsLabel(s.points)}`;
+  const spPickSync = () => {
+    const s = getSpecies().find(x => x.id === postSpecies.value);
+    spPickInput.value = s ? spPickLabel(s) : (postSpecies.value ? spPickInput.value : '');
+    spPickClear.hidden = !s; spPickInput.classList.toggle('has-value', !!s);
+  };
+  const spPickClose = () => { spPickList.hidden = true; spPickInput.setAttribute('aria-expanded', 'false'); spPickInput.removeAttribute('aria-activedescendant'); spPickActive = -1; };
+  const spPickRender = () => {
+    const list = getSpecies(), chosen = postSpecies.value;
+    const q = spPickInput.classList.contains('has-value') ? '' : spPickNorm(spPickInput.value), words = q ? q.split(' ') : [];
+    let groups;
+    if (words.length) {
+      const hits = list.filter(s => { const hay = spPickNorm(`${s.name} ${s.sci || ''}`); return words.every(w => hay.includes(w)); });
+      // nomes que começam com o termo aparecem primeiro
+      hits.sort((a, b) => (spPickNorm(b.name).startsWith(q) - spPickNorm(a.name).startsWith(q)) || a.name.localeCompare(b.name, 'pt-BR'));
+      groups = [{ items: hits }];
+    } else {
+      const me = currentUser(), recentIds = [];
+      posts.filter(p => p.user === me).sort((a, b) => b.created - a.created).forEach(p => { if (!recentIds.includes(p.speciesId) && list.some(s => s.id === p.speciesId)) recentIds.push(p.speciesId); });
+      const recent = recentIds.slice(0, 5).map(id => list.find(s => s.id === id));
+      groups = recent.length ? [{ title: 'Suas espécies recentes', items: recent }, { title: 'Todas as espécies', items: list }] : [{ items: list }];
+    }
+    spPickItems = [];
+    let html = '';
+    groups.forEach(g => {
+      if (g.title) html += `<li class="sp-pick-group" role="presentation">${g.title}</li>`;
+      g.items.forEach(s => { const i = spPickItems.length; spPickItems.push(s);
+        html += `<li role="option" id="spOpt${i}" data-pick="${i}" aria-selected="${s.id === chosen}"><span class="sp-opt-main"><b>${esc(s.name)}</b>${s.sci ? `<small>${esc(s.sci)}</small>` : ''}</span><span class="sp-opt-pts">${ptsLabel(s.points)}</span></li>`; });
+    });
+    if (!spPickItems.length) html = `<li class="sp-pick-empty" role="presentation">Nenhuma espécie encontrada${isAdmin() ? '.' : '. Não está na lista? Solicite o cadastro em Meu perfil › Solicitar espécie.'}</li>`;
+    spPickList.innerHTML = html; spPickList.hidden = false; spPickInput.setAttribute('aria-expanded', 'true');
+    spPickActive = spPickItems.length && words.length ? 0 : -1; spPickHighlight();
+  };
+  const spPickHighlight = () => {
+    spPickList.querySelectorAll('[data-pick]').forEach(li => li.classList.toggle('active', Number(li.dataset.pick) === spPickActive));
+    const li = spPickList.querySelector(`[data-pick="${spPickActive}"]`);
+    if (li) { spPickInput.setAttribute('aria-activedescendant', li.id); li.scrollIntoView({ block: 'nearest' }); } else spPickInput.removeAttribute('aria-activedescendant');
+  };
+  const spPickChoose = i => {
+    const s = spPickItems[i]; if (!s) return;
+    postSpecies.value = s.id; spPickSync(); spPickClose(); postError.textContent = '';
+  };
+  spPickInput.addEventListener('focus', () => { if (!spPickInput.disabled) spPickRender(); });
+  spPickInput.addEventListener('click', () => { if (spPickList.hidden && !spPickInput.disabled) spPickRender(); });
+  spPickInput.addEventListener('input', () => {
+    // ao editar o texto, a escolha anterior é desfeita até escolher de novo
+    if (spPickInput.classList.contains('has-value')) { postSpecies.value = ''; spPickInput.classList.remove('has-value'); spPickClear.hidden = true; }
+    spPickRender();
+  });
+  spPickInput.addEventListener('keydown', e => {
+    const open = !spPickList.hidden;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault(); if (!open) { spPickRender(); return; }
+      if (!spPickItems.length) return;
+      spPickActive = e.key === 'ArrowDown' ? Math.min(spPickItems.length - 1, spPickActive + 1) : Math.max(0, spPickActive - 1); spPickHighlight();
+    } else if (e.key === 'Enter') {
+      if (open && spPickActive >= 0) { e.preventDefault(); spPickChoose(spPickActive); }
+      else if (open) e.preventDefault();
+    } else if (e.key === 'Escape' && open) { e.preventDefault(); e.stopPropagation(); spPickClose(); }
+    else if (e.key === 'Tab') spPickClose();
+  });
+  spPickList.addEventListener('mousedown', e => e.preventDefault()); // mantém o foco no campo ao clicar na lista
+  spPickList.addEventListener('click', e => { const li = e.target.closest('[data-pick]'); if (li) spPickChoose(Number(li.dataset.pick)); });
+  spPickClear.addEventListener('click', () => { postSpecies.value = ''; spPickInput.classList.remove('has-value'); spPickInput.value = ''; spPickClear.hidden = true; spPickInput.focus(); });
+  document.addEventListener('click', e => { if (!spPickList.hidden && !e.target.closest('.sp-pick')) spPickClose(); });
+  postForm.addEventListener('reset', () => setTimeout(() => { spPickInput.classList.remove('has-value'); spPickClear.hidden = true; spPickClose(); }, 0));
+
   const renderSpeciesSelect = () => {
     const list = getSpecies(), prev = postSpecies.value;
     postSpecies.innerHTML = '<option value="">Selecione a espécie</option>' + list.map(s => `<option value="${esc(s.id)}">${esc(s.name)} · ${ptsLabel(s.points)}</option>`).join('');
     if (list.some(s => s.id === prev)) postSpecies.value = prev;
     postSpecies.disabled = !list.length;
+    spPickInput.disabled = !list.length; spPickSync();
     $('speciesHint').textContent = list.length ? (isAdmin() ? 'Novas espécies são cadastradas na aba Administração.' : 'Não encontrou a espécie? Solicite o cadastro em Meu perfil › Solicitar espécie.') : (isAdmin() ? 'Cadastre as espécies na aba Administração.' : 'Nenhuma espécie cadastrada ainda. Um administrador precisa cadastrar a lista.');
   };
 
@@ -2078,8 +2186,8 @@ await new Promise(resolve => {
     const me = currentUser(), canDel = isAdmin() || p.user === me, name = displayName(p.user);
     const likes = Array.isArray(p.likes) ? [...new Set(p.likes)] : [], liked = !!me && likes.includes(me);
     const alt = `Captura de ${esc(p.speciesName)}${p.place ? ' em ' + esc(p.place) : ''}`;
-    const scoreStatus = p.status === 'pending' ? 'pending' : p.status === 'rejected' ? 'rejected' : 'approved';
-    const scoreLabel = scoreStatus === 'pending' ? 'Pontuação em validação' : scoreStatus === 'rejected' ? 'Sem pontuação' : 'Pontuação aprovada';
+    const scoreStatus = p.status === 'pending' ? 'pending' : p.status === 'rejected' ? 'rejected' : p.status === 'unscored' ? 'unscored' : 'approved';
+    const scoreLabel = { pending: 'Pontuação em validação', rejected: 'Pontuação recusada', unscored: 'Publicada sem pontuar', approved: 'Pontuação aprovada' }[scoreStatus];
     const time = `<time datetime="${new Date(p.created).toISOString()}" title="${fullDate(p.created)}">${timeAgo(p.created)}</time>`;
     const likeButton = `<button class="post-like-btn ${liked ? 'liked' : ''}" type="button" data-like-post="${esc(p.id)}" aria-pressed="${liked}" aria-label="${liked ? 'Descurtir' : 'Curtir'} publicação de ${esc(name)}" title="${liked ? 'Descurtir' : 'Curtir'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.7c0 5.2-8.8 10.3-8.8 10.3S3.2 13.9 3.2 8.7A4.7 4.7 0 0 1 12 6a4.7 4.7 0 0 1 8.8 2.7Z"/></svg><span class="post-like-count">${likes.length}</span></button>`;
     return `<article class="post ${compact ? 'compact' : ''}">
@@ -2162,17 +2270,19 @@ await new Promise(resolve => {
     if (postImagePending) await postImagePending;
     if (!postImage) { postError.textContent = 'Adicione a foto da captura.'; dropZone.focus(); return; }
     const sp = getSpecies().find(s => s.id === postSpecies.value);
-    if (!sp) { postError.textContent = 'Selecione a espécie na lista.'; postSpecies.focus(); return; }
+    if (!sp) { postError.textContent = 'Busque e escolha a espécie na lista.'; spPickInput.focus(); return; }
     const place = postPlace.value.trim();
     if (!place) { postError.textContent = 'Informe o local da captura.'; postPlace.focus(); return; }
     const today = new Date(), earliest = localDateValue(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2)), captureDate = postCaptureDate.value;
     if (!captureDate || captureDate < earliest || captureDate > localDateValue(today)) { postError.textContent = 'A data da captura precisa ser hoje ou uma das duas datas anteriores.'; postCaptureDate.focus(); return; }
-    const btn = $('postSubmit'); btn.disabled = true;
+    const btn = $('postSubmit'), noScore = $('postNoScore').checked; btn.disabled = true;
     try {
-      await postsDB.put({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate, caption: postCaption.value.trim().slice(0, 300), photo: postImage, created: Date.now(), status: 'pending' });
+      await postsDB.put({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate, caption: postCaption.value.trim().slice(0, 300), photo: postImage, created: Date.now(), status: noScore ? 'unscored' : 'pending' });
       closePostModal();
       await loadPosts(); renderChampion(); renderAll();
-      showToast('<div><b>Publicação enviada ao feed</b><small>A pontuação será adicionada após a validação de um administrador.</small></div>');
+      showToast(noScore
+        ? '<div><b>Publicação enviada ao feed</b><small>Publicada sem pontuar: não entra no ranking nem na carta.</small></div>'
+        : '<div><b>Publicação enviada ao feed</b><small>A pontuação será adicionada após a validação de um administrador.</small></div>');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch(_) {
       postError.textContent = 'Não foi possível publicar. Verifique a conexão e tente de novo; se persistir, use uma foto menor.';
@@ -2519,7 +2629,7 @@ await new Promise(resolve => {
   let spAdminQuery = '', spAdminFilter = 'all';
   const filterAdminSpecies = list => list.filter(s =>
     (!spAdminQuery || normKey(`${s.name} ${s.sci || ''}`).includes(spAdminQuery)) &&
-    (spAdminFilter === 'all' || (spAdminFilter === 'nophoto' ? !speciesPhotos[s.id] : spAdminFilter === 'nohab' ? !habitatOk(s.habitat) : s.habitat === spAdminFilter)));
+    (spAdminFilter === 'all' || (spAdminFilter === 'nophoto' ? !speciesPhotos[s.id] : s.habitat === spAdminFilter)));
   $('spSearch').addEventListener('input', () => { spAdminQuery = normKey($('spSearch').value); renderAdmin(); });
   $('spFilter').addEventListener('change', () => { spAdminFilter = $('spFilter').value; renderAdmin(); });
   $('spPhoto').addEventListener('change', () => { const f = $('spPhoto').files && $('spPhoto').files[0]; $('spPhotoName').textContent = f ? f.name : (editingSpeciesId ? 'Trocar foto' : 'Escolher foto'); });
