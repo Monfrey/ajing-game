@@ -734,11 +734,15 @@ select{font:inherit;color:inherit}
 .print-box .hint{display:block;margin-top:8px;font-size:.78rem;color:var(--muted)}
 #printArea{display:none}
 @media print{
-  body.print-card{background:#fff!important;margin:0!important;padding:0!important}
-  :root:has(body.print-card){padding:0!important;background:#fff!important}
+  body.print-card{background:transparent!important;margin:0!important;padding:0!important}
+  :root:has(body.print-card){padding:0!important;background:transparent!important}
   body.print-card::before{display:none!important}
   body.print-card > *:not(#printArea){display:none!important}
-  body.print-card #printArea{display:block!important;width:63mm;height:88mm;overflow:hidden;position:relative}
+  body.print-card #printArea{display:block!important;width:63mm;height:88mm;overflow:hidden;position:relative;background:transparent}
+  /* Com coroa: a página ganha 6 mm em cima e à direita para a coroa sair inteira; a carta continua com 63 × 88 mm */
+  body.print-card #printArea.with-crown{width:69mm;height:94mm}
+  #printArea .print-holder{position:absolute;left:0;top:0;width:63mm;height:88mm}
+  #printArea.with-crown .print-holder{top:6mm}
   #printArea .tcard{position:absolute;top:0;left:0;width:320px;height:447.0476px;aspect-ratio:auto;transform:none;zoom:.744105;box-shadow:none;
     -webkit-print-color-adjust:exact;print-color-adjust:exact}
   #printArea .tcard *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -801,6 +805,22 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .social-input input{width:100%;padding-left:34px!important}
 @media (max-width:720px){.social-grid{grid-template-columns:minmax(0,1fr)}}
 @media print{.tc-soc span{text-decoration:none!important}}
+/* Habitat das espécies */
+.hab-chip{display:inline-block;margin-top:4px;padding:2px 7px;border-radius:99px;font-size:.68rem;font-weight:700;line-height:1.4;font-style:normal;white-space:nowrap;vertical-align:middle}
+.sp-info .hab-chip{display:table}
+.hab-salt{background:rgba(8,121,155,.13);color:#06617c}
+.hab-fresh{background:rgba(31,140,74,.14);color:#17663a}
+.hab-both{background:linear-gradient(90deg,rgba(8,121,155,.14),rgba(31,140,74,.14));color:#0f5e5a}
+.hab-missing{background:rgba(196,13,24,.1);color:var(--danger)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hab-salt{color:#7fd6ee}:root:not([data-theme="light"]) .hab-fresh{color:#86dba6}:root:not([data-theme="light"]) .hab-both{color:#8fe0d6}}
+:root[data-theme="dark"] .hab-salt{color:#7fd6ee}:root[data-theme="dark"] .hab-fresh{color:#86dba6}:root[data-theme="dark"] .hab-both{color:#8fe0d6}
+.hab-filter{margin:0 0 14px}
+.species-form{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}
+.species-form .pts-row{grid-column:span 2}
+.species-form .pts-row .pts-field{flex:0 0 120px;width:120px}
+@media (max-width:920px){.species-form .pts-row{grid-column:1/-1}}
+.req-card .rf{grid-template-columns:minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1fr) 110px}
+@media (max-width:920px){.req-card .rf{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 </style>
 </head>
 <body>
@@ -1037,7 +1057,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         </section>
         <section class="panel" role="tabpanel" data-panel="species" hidden>
           <div class="panel-head"><div><h3>Espécies</h3><p>Espécies válidas para o Social Fish, com a pontuação no ranking e o total de capturas.</p></div><button class="btn btn-ghost admin-only" type="button" data-goto="admin" data-goto-sec="species" hidden>Gerenciar espécies</button><button class="btn btn-primary member-only" type="button" data-open-req hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Solicitar nova espécie</button></div>
+          <div class="seg hab-filter" role="group" aria-label="Filtrar espécies por habitat"><button type="button" data-hab-filter="all" aria-pressed="true">Todas</button><button type="button" data-hab-filter="salt" aria-pressed="false">Água salgada</button><button type="button" data-hab-filter="fresh" aria-pressed="false">Água doce</button></div>
           <div class="species-grid" id="speciesGrid"></div>
+          <p class="empty-row" id="speciesFilterEmpty" hidden>Nenhuma espécie cadastrada para esse habitat.</p>
           <div class="empty" id="speciesEmpty" hidden><h4>Nenhuma espécie cadastrada</h4><p>A lista de espécies é mantida pelos administradores.</p></div>
           <div class="sp-pending" id="spPendingBox" hidden>
             <h4 class="req-title">Suas solicitações</h4>
@@ -1087,6 +1109,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               <form class="species-form" id="speciesForm" novalidate>
                 <div class="field"><label for="spName">Nome popular</label><input id="spName" maxlength="60" placeholder="Ex.: Carapau" required></div>
                 <div class="field"><label for="spSci">Nome científico <span class="muted">(opcional)</span></label><input id="spSci" maxlength="80" placeholder="Ex.: Caranx crysos"></div>
+                <div class="field"><label for="spHabitat">Habitat</label><select id="spHabitat" required><option value="">Selecione</option><option value="salt">Água salgada</option><option value="fresh">Água doce</option><option value="both">Ambos (doce e salgada)</option></select></div>
                 <div class="field photo-field"><label for="spPhoto">Foto <span class="muted" id="spPhotoHint"></span></label><input id="spPhoto" type="file" accept="image/*" required></div>
                 <div class="pts-row"><div class="field pts-field"><label for="spPoints">Pontuação</label><input id="spPoints" type="number" min="1" max="1000" step="1" inputmode="numeric" placeholder="10" required></div><button class="btn btn-primary" id="speciesSubmit" type="submit">Adicionar</button><button class="btn btn-ghost" id="speciesCancel" type="button" hidden>Cancelar</button></div>
               </form>
@@ -1223,7 +1246,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                 <div class="form-actions"><button type="button" class="btn btn-primary" id="editProfileBtn">Editar perfil</button><button type="button" class="btn btn-ghost" id="changePassBtn">Alterar senha</button></div>
                 <div class="print-box">
                   <button type="button" class="btn btn-ghost" id="printCardBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2M6 14h12v7H6z"/></svg>Imprimir ou salvar PDF</button>
-                  <p class="hint">Tamanho padrão de carta colecionável: 63 × 88 mm. Para PDF, escolha “Salvar como PDF” como impressora. Para imprimir, use escala 100% (tamanho real) e papel com gramatura alta.</p>
+                  <p class="hint">Tamanho padrão de carta colecionável: 63 × 88 mm (cartas com coroa ganham 6 mm de margem em cima e à direita para a coroa sair inteira). Para PDF, escolha “Salvar como PDF” como impressora. Para imprimir, use escala 100% (tamanho real) e papel com gramatura alta.</p>
                 </div>
               </div>
               <form class="pass-form" id="passForm" hidden novalidate>
@@ -1345,6 +1368,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <div class="req-fields">
           <div class="field"><label for="reqName">Nome popular</label><input id="reqName" maxlength="60" placeholder="Ex.: Carapau" required></div>
           <div class="field"><label for="reqSci">Nome científico <span class="muted">(opcional)</span></label><input id="reqSci" maxlength="80" placeholder="Ex.: Caranx crysos"></div>
+          <div class="field"><label for="reqHabitat">Habitat</label><select id="reqHabitat" required><option value="">Selecione</option><option value="salt">Água salgada</option><option value="fresh">Água doce</option><option value="both">Ambos (doce e salgada)</option></select></div>
           <div class="field"><label for="reqPoints">Pontuação sugerida</label><input id="reqPoints" type="number" min="1" max="1000" step="1" inputmode="numeric" placeholder="10" required><span class="hint">O administrador define o valor final.</span></div>
           <div class="form-error" id="reqError" role="alert"></div>
           <div class="form-actions"><button class="btn btn-primary" id="reqSubmit" type="submit">Enviar para análise</button><button class="btn btn-ghost" id="reqCancel" type="button">Cancelar</button></div>
@@ -1704,10 +1728,10 @@ await new Promise(resolve => {
   const seedSpecies = () => {
     if (!isAdmin() || getSpecies().length || (fb.config('meta') || {}).speciesSeeded) return;
     writeJSON('ajing-species', [
-      { id: uid(), name: 'Carapau', sci: 'Caranx crysos', points: 10 },
-      { id: uid(), name: 'Xixarro', sci: 'Trachurus lathami', points: 10 },
-      { id: uid(), name: 'Robalo-peva', sci: 'Centropomus parallelus', points: 30 },
-      { id: uid(), name: 'Peixe-espada', sci: 'Trichiurus lepturus', points: 20 }
+      { id: uid(), name: 'Carapau', sci: 'Caranx crysos', points: 10, habitat: 'salt' },
+      { id: uid(), name: 'Xixarro', sci: 'Trachurus lathami', points: 10, habitat: 'salt' },
+      { id: uid(), name: 'Robalo-peva', sci: 'Centropomus parallelus', points: 30, habitat: 'both' },
+      { id: uid(), name: 'Peixe-espada', sci: 'Trichiurus lepturus', points: 20, habitat: 'salt' }
     ]);
     fb.setConfig('meta', { ...(fb.config('meta') || {}), speciesSeeded: true }).catch(() => {});
   };
@@ -2305,14 +2329,26 @@ await new Promise(resolve => {
   document.querySelectorAll('[data-rank]').forEach(b => b.addEventListener('click', () => { rankMode = b.dataset.rank; renderRanking(); }));
   document.querySelectorAll('[data-rank-scope]').forEach(b => b.addEventListener('click', () => { rankScope = b.dataset.rankScope; renderRanking(); }));
 
+  /* ===== Habitat das espécies ===== */
+  const HABITATS = { salt: 'Água salgada', fresh: 'Água doce', both: 'Doce e salgada' };
+  const habitatOk = h => Object.prototype.hasOwnProperty.call(HABITATS, h);
+  const habitatChip = h => habitatOk(h) ? `<span class="hab-chip hab-${h}">${HABITATS[h]}</span>` : '';
+  const habitatSelect = (attrs, sel) => `<select ${attrs}><option value="">Selecione</option>${[['salt', 'Água salgada'], ['fresh', 'Água doce'], ['both', 'Ambos (doce e salgada)']].map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  // "Água salgada" inclui as espécies dos dois ambientes; o mesmo vale para "Água doce"
+  const habitatMatch = (h, filter) => filter === 'all' || h === filter || h === 'both';
+  let habFilter = 'all';
+  document.querySelectorAll('[data-hab-filter]').forEach(b => b.addEventListener('click', () => { habFilter = b.dataset.habFilter; renderSpecies(); }));
+
   /* ===== Espécies (visão do membro) ===== */
   const renderSpecies = () => {
-    const list = getSpecies();
+    document.querySelectorAll('[data-hab-filter]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.habFilter === habFilter)));
+    const all = getSpecies(), list = all.filter(s => habitatMatch(s.habitat, habFilter));
+    $('speciesFilterEmpty').hidden = !all.length || list.length > 0;
     const count = id => posts.filter(p => p.speciesId === id && isPostScored(p)).length;
     $('speciesGrid').innerHTML = list.map(s => { const n = count(s.id);
       const ph = speciesPhotos[s.id];
-      return `<article class="species-card"><div class="sp-photo">${ph ? `<img src="${ph}" alt="${esc(s.name)}" loading="lazy">` : fishIcon}</div><div class="sp-info"><div><b>${esc(s.name)}</b>${s.sci ? `<i>${esc(s.sci)}</i>` : ''}</div><div class="sc-right"><strong>${ptsLabel(s.points)}</strong><span>${n} ${n === 1 ? 'captura' : 'capturas'}</span></div></div></article>`; }).join('');
-    $('speciesEmpty').hidden = list.length > 0;
+      return `<article class="species-card"><div class="sp-photo">${ph ? `<img src="${ph}" alt="${esc(s.name)}" loading="lazy">` : fishIcon}</div><div class="sp-info"><div><b>${esc(s.name)}</b>${s.sci ? `<i>${esc(s.sci)}</i>` : ''}${habitatChip(s.habitat)}</div><div class="sc-right"><strong>${ptsLabel(s.points)}</strong><span>${n} ${n === 1 ? 'captura' : 'capturas'}</span></div></div></article>`; }).join('');
+    $('speciesEmpty').hidden = all.length > 0;
   };
 
   /* ===== Administração ===== */
@@ -2328,7 +2364,7 @@ await new Promise(resolve => {
     if (!isAdmin()) return;
     const sp = getSpecies();
     $('cntSpecies').textContent = sp.length; $('cntUsers').textContent = getUsers().length; $('cntSlides').textContent = heroSlides.length;
-    $('speciesAdminList').innerHTML = sp.length ? sp.map(s => `<li><button type="button" class="sp-thumb ${speciesPhotos[s.id] ? 'has' : ''}" data-photo-species="${esc(s.id)}" ${speciesPhotos[s.id] ? `style="background-image:url('${speciesPhotos[s.id]}')"` : ''} aria-label="${speciesPhotos[s.id] ? 'Trocar' : 'Adicionar'} foto de ${esc(s.name)}" title="${speciesPhotos[s.id] ? 'Trocar foto' : 'Adicionar foto'}">${speciesPhotos[s.id] ? '' : fishIcon}</button><span class="grow">${esc(s.name)} ${s.sci ? `<i>${esc(s.sci)}</i>` : ''}</span><label class="pts-inline"><input type="number" min="1" max="1000" step="1" value="${s.points}" data-points="${esc(s.id)}" aria-label="Pontuação de ${esc(s.name)}"><span>pts</span></label><button class="btn btn-ghost species-edit-btn" type="button" data-edit-species="${esc(s.id)}">Editar</button><button class="post-del" type="button" data-del-species="${esc(s.id)}" aria-label="Remover ${esc(s.name)}" title="Remover">${delIcon}</button></li>`).join('') : '<li class="empty-row">Nenhuma espécie cadastrada.</li>';
+    $('speciesAdminList').innerHTML = sp.length ? sp.map(s => `<li><button type="button" class="sp-thumb ${speciesPhotos[s.id] ? 'has' : ''}" data-photo-species="${esc(s.id)}" ${speciesPhotos[s.id] ? `style="background-image:url('${speciesPhotos[s.id]}')"` : ''} aria-label="${speciesPhotos[s.id] ? 'Trocar' : 'Adicionar'} foto de ${esc(s.name)}" title="${speciesPhotos[s.id] ? 'Trocar foto' : 'Adicionar foto'}">${speciesPhotos[s.id] ? '' : fishIcon}</button><span class="grow">${esc(s.name)} ${s.sci ? `<i>${esc(s.sci)}</i>` : ''} ${habitatOk(s.habitat) ? habitatChip(s.habitat) : '<span class="hab-chip hab-missing" title="Edite a espécie para informar o habitat">Sem habitat</span>'}</span><label class="pts-inline"><input type="number" min="1" max="1000" step="1" value="${s.points}" data-points="${esc(s.id)}" aria-label="Pontuação de ${esc(s.name)}"><span>pts</span></label><button class="btn btn-ghost species-edit-btn" type="button" data-edit-species="${esc(s.id)}">Editar</button><button class="post-del" type="button" data-del-species="${esc(s.id)}" aria-label="Remover ${esc(s.name)}" title="Remover">${delIcon}</button></li>`).join('') : '<li class="empty-row">Nenhuma espécie cadastrada.</li>';
     const me = currentUser();
     const ui = {
       edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
@@ -2352,9 +2388,10 @@ await new Promise(resolve => {
   $('speciesCancel').addEventListener('click', closeSpeciesEdit);
   $('speciesForm').addEventListener('submit', async e => { if (!isAdmin()) return;
     e.preventDefault();
-    const name = $('spName').value.trim(), sci = $('spSci').value.trim(), err = $('speciesError');
+    const name = $('spName').value.trim(), sci = $('spSci').value.trim(), habitat = $('spHabitat').value, err = $('speciesError');
     const points = Number($('spPoints').value);
     if (!name) { err.textContent = 'Informe o nome popular da espécie.'; $('spName').focus(); return; }
+    if (!habitatOk(habitat)) { err.textContent = 'Escolha o habitat da espécie: água salgada, água doce ou ambos.'; $('spHabitat').focus(); return; }
     if (!Number.isInteger(points) || points < 1 || points > 1000) { err.textContent = 'Informe a pontuação: um número inteiro de 1 a 1000.'; $('spPoints').focus(); return; }
     const file = $('spPhoto').files && $('spPhoto').files[0];
     const list = readJSON('ajing-species', []);
@@ -2365,7 +2402,7 @@ await new Promise(resolve => {
       const species = list.find(s => s.id === editingSpeciesId); if (!species) { closeSpeciesEdit(); return; }
       if (file) { try { await setSpeciesPhoto(species.id, await resizeImage(file, 640, .76)); }
         catch(_) { err.textContent = 'Não foi possível salvar a foto. Tente outra imagem.'; return; } }
-      Object.assign(species, { name, sci, points }); writeJSON('ajing-species', list);
+      Object.assign(species, { name, sci, points, habitat }); writeJSON('ajing-species', list);
       const changedPosts = posts.filter(p => p.speciesId === species.id).map(p => ({ ...p, speciesName: name, points }));
       try { await Promise.all(changedPosts.map(p => postsDB.put(p))); await loadPosts(); }
       catch(_) { err.textContent = 'A espécie foi atualizada, mas algumas publicações não puderam ser sincronizadas.'; }
@@ -2374,7 +2411,7 @@ await new Promise(resolve => {
     const id = uid();
     try { await setSpeciesPhoto(id, await resizeImage(file, 640, .76)); }
     catch(_) { err.textContent = 'Não foi possível salvar a foto. Tente outra imagem.'; return; }
-    list.push({ id, name, sci, points }); writeJSON('ajing-species', list);
+    list.push({ id, name, sci, points, habitat }); writeJSON('ajing-species', list);
     err.textContent = ''; e.target.reset(); softFocus($('spName')); renderAll();
   });
   $('speciesAdminList').addEventListener('change', e => { if (!isAdmin()) return;
@@ -2399,7 +2436,7 @@ await new Promise(resolve => {
     const edit = e.target.closest('[data-edit-species]');
     if (edit) {
       const s = getSpecies().find(x => x.id === edit.dataset.editSpecies); if (!s) return;
-      editingSpeciesId = s.id; $('spName').value = s.name; $('spSci').value = s.sci || ''; $('spPoints').value = s.points;
+      editingSpeciesId = s.id; $('spName').value = s.name; $('spSci').value = s.sci || ''; $('spHabitat').value = habitatOk(s.habitat) ? s.habitat : ''; $('spPoints').value = s.points;
       $('spPhoto').value = ''; $('spPhoto').required = false; $('spPhotoHint').textContent = '(opcional, mantenha a atual)';
       $('speciesFormTitle').textContent = `Editar espécie: ${s.name}`; $('speciesSubmit').textContent = 'Salvar alterações'; $('speciesCancel').hidden = false;
       $('speciesError').textContent = ''; softFocus($('spName')); $('speciesForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return;
@@ -3167,16 +3204,17 @@ await new Promise(resolve => {
   $('reqForm').addEventListener('submit', async e => {
     e.preventDefault();
     if (reqImagePending) await reqImagePending;
-    const err = $('reqError'), name = $('reqName').value.trim(), sci = $('reqSci').value.trim(), points = Number($('reqPoints').value);
+    const err = $('reqError'), name = $('reqName').value.trim(), sci = $('reqSci').value.trim(), habitat = $('reqHabitat').value, points = Number($('reqPoints').value);
     if (!reqImage) { err.textContent = 'Adicione a foto da espécie.'; reqDrop.focus(); return; }
     if (!name) { err.textContent = 'Informe o nome popular da espécie.'; $('reqName').focus(); return; }
+    if (!habitatOk(habitat)) { err.textContent = 'Escolha o habitat da espécie: água salgada, água doce ou ambos.'; $('reqHabitat').focus(); return; }
     if (!Number.isInteger(points) || points < 1 || points > 1000) { err.textContent = 'Informe a pontuação sugerida: um número inteiro de 1 a 1000.'; $('reqPoints').focus(); return; }
     if (getSpecies().some(s => norm(s.name) === norm(name))) { err.textContent = 'Essa espécie já está cadastrada e disponível no Social Fish.'; return; }
     if (getRequests().some(r => r.status === 'pending' && norm(r.name) === norm(name))) { err.textContent = 'Já existe uma solicitação em análise para essa espécie.'; return; }
     const id = uid(); $('reqSubmit').disabled = true;
     try { await setReqPhoto(id, reqImage); }
     catch(_) { err.textContent = 'Não foi possível enviar a foto. Verifique a conexão ou tente outra imagem.'; $('reqSubmit').disabled = false; return; }
-    const list = getRequests(); list.push({ id, user: currentUser(), name, sci, points, status: 'pending', created: Date.now() }); saveRequests(list);
+    const list = getRequests(); list.push({ id, user: currentUser(), name, sci, habitat, points, status: 'pending', created: Date.now() }); saveRequests(list);
     $('reqForm').reset(); setReqImage(''); err.textContent = ''; $('reqSubmit').disabled = false;
     $('reqSaved').textContent = `Solicitação de "${name}" enviada para análise.`;
     closeReqModal(); renderRequests();
@@ -3190,14 +3228,14 @@ await new Promise(resolve => {
     $('cntMyReq').textContent = mine.filter(r => r.status === 'pending').length || '';
     $('myReqList').innerHTML = mine.length ? mine.map(r => `<li>
         <span class="rthumb" ${reqPhotos[r.id] ? `style="background-image:url('${reqPhotos[r.id]}')"` : ''}></span>
-        <span class="grow"><b>${esc(r.name)}</b>${r.sci ? ` <i>${esc(r.sci)}</i>` : ''}
+        <span class="grow"><b>${esc(r.name)}</b>${r.sci ? ` <i>${esc(r.sci)}</i>` : ''} ${habitatChip(r.habitat)}
           <small>Enviada em ${fmtShort(r.created)} · sugerido ${ptsLabel(r.points)}${r.status === 'approved' ? ` · publicada com ${ptsLabel(r.finalPoints)}` : ''}${r.status === 'rejected' && r.reason ? ` · Motivo: ${esc(r.reason)}` : ''}</small></span>
         <span class="req-status ${r.status}">${STATUS[r.status]}</span></li>`).join('') : '<li class="empty-row">Você ainda não enviou solicitações.</li>';
 
     // Solicitações do membro na aba Espécies (pendentes e recusadas recentes)
     const showMine = mine.filter(r => r.status !== 'approved');
     $('spPendingBox').hidden = isAdmin() || !showMine.length;
-    $('spPendingGrid').innerHTML = showMine.map(r => `<article class="species-card sp-card-pending"><div class="sp-photo">${reqPhotos[r.id] ? `<img src="${reqPhotos[r.id]}" alt="${esc(r.name)}" loading="lazy">` : fishIcon}<span class="req-status ${r.status}">${STATUS[r.status]}</span></div><div class="sp-info"><div><b>${esc(r.name)}</b>${r.sci ? `<i>${esc(r.sci)}</i>` : ''}${r.status === 'rejected' && r.reason ? `<i>Motivo: ${esc(r.reason)}</i>` : ''}</div><div class="sc-right"><strong>${ptsLabel(r.points)}</strong><span>sugerido</span></div></div></article>`).join('');
+    $('spPendingGrid').innerHTML = showMine.map(r => `<article class="species-card sp-card-pending"><div class="sp-photo">${reqPhotos[r.id] ? `<img src="${reqPhotos[r.id]}" alt="${esc(r.name)}" loading="lazy">` : fishIcon}<span class="req-status ${r.status}">${STATUS[r.status]}</span></div><div class="sp-info"><div><b>${esc(r.name)}</b>${r.sci ? `<i>${esc(r.sci)}</i>` : ''}${habitatChip(r.habitat)}${r.status === 'rejected' && r.reason ? `<i>Motivo: ${esc(r.reason)}</i>` : ''}</div><div class="sc-right"><strong>${ptsLabel(r.points)}</strong><span>sugerido</span></div></div></article>`).join('');
     const pending = all.filter(r => r.status === 'pending').sort((a, b) => a.created - b.created);
     const eventRequests = getChamps().flatMap(c => (Array.isArray(c.registrationRequests) ? c.registrationRequests : []).map(r => ({ ...r, championshipId: c.id, championshipName: c.name })));
     const eventHistory = getChamps().flatMap(c => (Array.isArray(c.registrationHistory) ? c.registrationHistory : []).map(r => ({ ...r, championshipId: c.id, championshipName: c.name })))
@@ -3215,6 +3253,7 @@ await new Promise(resolve => {
           <div class="rf">
             <div class="field"><label for="rn-${esc(r.id)}">Nome popular</label><input id="rn-${esc(r.id)}" data-f="name" maxlength="60" value="${esc(r.name)}"></div>
             <div class="field"><label for="rs-${esc(r.id)}">Nome científico</label><input id="rs-${esc(r.id)}" data-f="sci" maxlength="80" value="${esc(r.sci || '')}"></div>
+            <div class="field"><label for="rh-${esc(r.id)}">Habitat</label>${habitatSelect(`id="rh-${esc(r.id)}" data-f="habitat"`, r.habitat)}</div>
             <div class="field"><label for="rp-${esc(r.id)}">Pontuação</label><input id="rp-${esc(r.id)}" data-f="points" type="number" min="1" max="1000" step="1" value="${r.points}"></div>
           </div>
           <div class="actions"><button class="btn btn-primary" type="button" data-req-act="approve">Aprovar e publicar</button><button class="btn btn-danger" type="button" data-req-act="reject">Recusar</button></div>
@@ -3235,7 +3274,7 @@ await new Promise(resolve => {
     const done = all.filter(r => r.status !== 'pending').sort((a, b) => (b.reviewed || 0) - (a.reviewed || 0));
     $('reqHistory').innerHTML = done.length ? done.map(r => `<li class="review-history-row" data-species-history="${esc(r.id)}"><span class="grow"><b>${esc(r.name)}</b><small>${esc(displayName(r.user))} · ${STATUS[r.status].toLowerCase()} por ${esc(displayName(r.reviewer || ''))} em ${fmtShort(r.reviewed)}${r.status === 'approved' ? ` · ${ptsLabel(r.finalPoints)}` : ''}${r.reason ? ` · ${esc(r.reason)}` : ''}</small></span><span class="req-status ${r.status}">${STATUS[r.status]}</span><button class="btn btn-ghost" type="button" data-review-edit="species">Editar</button><form class="review-edit-panel" data-review-form="species" hidden>
       <div class="field"><label>Resultado da análise</label><select data-edit-field="status"><option value="approved" ${r.status === 'approved' ? 'selected' : ''}>Aprovada</option><option value="rejected" ${r.status === 'rejected' ? 'selected' : ''}>Recusada</option><option value="pending">Voltar para análise</option></select></div>
-      <div class="field"><label>Nome popular</label><input maxlength="60" data-edit-field="name" value="${esc(r.name)}"></div><div class="field"><label>Nome científico</label><input maxlength="80" data-edit-field="sci" value="${esc(r.sci || '')}"></div><div class="field"><label>Pontuação final</label><input type="number" min="1" max="1000" step="1" data-edit-field="points" value="${Number(r.finalPoints || r.points) || 1}"></div>
+      <div class="field"><label>Nome popular</label><input maxlength="60" data-edit-field="name" value="${esc(r.name)}"></div><div class="field"><label>Nome científico</label><input maxlength="80" data-edit-field="sci" value="${esc(r.sci || '')}"></div><div class="field"><label>Habitat</label>${habitatSelect('data-edit-field="habitat"', r.habitat || (getSpecies().find(s => s.id === r.speciesId) || {}).habitat)}</div><div class="field"><label>Pontuação final</label><input type="number" min="1" max="1000" step="1" data-edit-field="points" value="${Number(r.finalPoints || r.points) || 1}"></div>
       <div class="field"><label>Trocar foto (opcional)</label><input type="file" accept="image/*" data-edit-field="photo"></div><div class="field"><label>Motivo da recusa</label><input maxlength="140" data-edit-field="reason" value="${esc(r.reason || '')}"></div>
       <div class="form-error" data-edit-error role="alert"></div><div class="form-actions"><button class="btn btn-primary" type="submit">Salvar revisão</button><button class="btn btn-ghost" type="button" data-review-cancel>Cancelar</button></div>
     </form></li>`).join('') : '<li class="empty-row">Nenhuma solicitação analisada ainda.</li>';
@@ -3258,15 +3297,16 @@ await new Promise(resolve => {
       $('reqAdminSaved').textContent = `Solicitação de "${r.name}" recusada.`; return renderRequests();
     }
     if (act === 'approve') {
-      const name = f('name').value.trim(), sci = f('sci').value.trim(), points = Number(f('points').value);
+      const name = f('name').value.trim(), sci = f('sci').value.trim(), habitat = f('habitat').value, points = Number(f('points').value);
       if (!name) { err.textContent = 'Informe o nome popular antes de aprovar.'; f('name').focus(); return; }
+      if (!habitatOk(habitat)) { err.textContent = 'Escolha o habitat antes de aprovar.'; f('habitat').focus(); return; }
       if (!Number.isInteger(points) || points < 1 || points > 1000) { err.textContent = 'A pontuação precisa ser um número inteiro de 1 a 1000.'; f('points').focus(); return; }
       const species = readJSON('ajing-species', []);
       if (species.some(s => norm(s.name) === norm(name))) { err.textContent = `"${name}" já está cadastrada. Recuse a solicitação ou altere o nome.`; return; }
       const spId = uid();
       try { if (reqPhotos[id]) await setSpeciesPhoto(spId, reqPhotos[id]); } catch(_) { err.textContent = 'Não foi possível salvar a foto da espécie.'; return; }
-      species.push({ id: spId, name, sci, points }); writeJSON('ajing-species', species);
-      Object.assign(r, { status: 'approved', name, sci, finalPoints: points, speciesId: spId, reviewed: Date.now(), reviewer: currentUser() }); saveRequests(list);
+      species.push({ id: spId, name, sci, points, habitat }); writeJSON('ajing-species', species);
+      Object.assign(r, { status: 'approved', name, sci, habitat, finalPoints: points, speciesId: spId, reviewed: Date.now(), reviewer: currentUser() }); saveRequests(list);
       setReqPhoto(id, '').catch(() => {});
       $('reqAdminSaved').textContent = `"${name}" aprovada e publicada com ${ptsLabel(points)}.`;
       renderAll();
@@ -3335,8 +3375,9 @@ await new Promise(resolve => {
       if (type === 'species') {
         const row = form.closest('[data-species-history]'), list = getRequests(), request = list.find(r => r.id === row.dataset.speciesHistory);
         if (!request) { error.textContent = 'Solicitação não encontrada.'; return; }
-        const name = field('name').value.trim(), sci = field('sci').value.trim(), points = Number(field('points').value), status = field('status').value, reason = field('reason').value.trim();
+        const name = field('name').value.trim(), sci = field('sci').value.trim(), habitat = field('habitat').value, points = Number(field('points').value), status = field('status').value, reason = field('reason').value.trim();
         if (!name) { error.textContent = 'Informe o nome popular.'; field('name').focus(); return; }
+        if (status !== 'rejected' && !habitatOk(habitat)) { error.textContent = 'Escolha o habitat da espécie.'; field('habitat').focus(); return; }
         if (!Number.isInteger(points) || points < 1 || points > 1000) { error.textContent = 'A pontuação precisa ser um número inteiro de 1 a 1000.'; field('points').focus(); return; }
         const species = readJSON('ajing-species', []), existingId = request.speciesId || null;
         if (species.some(s => s.id !== existingId && norm(s.name) === norm(name))) { error.textContent = 'Já existe uma espécie cadastrada com esse nome.'; return; }
@@ -3353,7 +3394,7 @@ await new Promise(resolve => {
           try { await setSpeciesPhoto(speciesId, photo); }
           catch(_) { error.textContent = 'Não foi possível salvar a foto da espécie.'; return; }
           const current = species.find(s => s.id === speciesId);
-          if (current) Object.assign(current, { name, sci, points }); else species.push({ id: speciesId, name, sci, points });
+          if (current) Object.assign(current, { name, sci, points, habitat }); else species.push({ id: speciesId, name, sci, points, habitat });
           request.speciesId = speciesId; request.finalPoints = points;
           await setReqPhoto(request.id, '').catch(() => {});
         } else {
@@ -3363,7 +3404,7 @@ await new Promise(resolve => {
           if (status === 'pending') request.speciesId = null;
         }
         writeJSON('ajing-species', species.filter(s => status === 'approved' || s.id !== existingId));
-        Object.assign(request, { name, sci, points, status, reason: status === 'rejected' ? reason : '', reviewed: status === 'pending' ? null : Date.now(), reviewer: status === 'pending' ? '' : currentUser() });
+        Object.assign(request, { name, sci, habitat: habitatOk(habitat) ? habitat : (request.habitat || ''), points, status, reason: status === 'rejected' ? reason : '', reviewed: status === 'pending' ? null : Date.now(), reviewer: status === 'pending' ? '' : currentUser() });
         saveRequests(list); renderAll(); $('reqAdminSaved').textContent = `Revisão da solicitação de "${name}" atualizada.`;
         return;
       }
@@ -3418,14 +3459,16 @@ await new Promise(resolve => {
     clone.removeAttribute('id'); clone.removeAttribute('style'); clone.classList.remove('cropping');
     clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
     clone.querySelectorAll('.cropping').forEach(el => el.classList.remove('cropping'));
-    area.innerHTML = ''; area.appendChild(clone);
-    // página no tamanho da carta só durante esta impressão
+    const crowned = !!clone.querySelector('.tc-crown:not([hidden])');
+    const holder = document.createElement('div'); holder.className = 'print-holder'; holder.appendChild(clone);
+    area.innerHTML = ''; area.classList.toggle('with-crown', crowned); area.appendChild(holder);
+    // página no tamanho da carta só durante esta impressão (com folga para a coroa, quando houver)
     const page = document.createElement('style'); page.id = 'cardPageSize';
-    page.textContent = '@page { size: 63mm 88mm; margin: 0; }';
+    page.textContent = crowned ? '@page { size: 69mm 94mm; margin: 0; }' : '@page { size: 63mm 88mm; margin: 0; }';
     document.head.appendChild(page); document.body.classList.add('print-card');
     await Promise.all([...area.querySelectorAll('img')].filter(i => !i.hidden && i.getAttribute('src')).map(i => i.decode ? i.decode().catch(() => {}) : null));
     if (document.fonts && document.fonts.ready) await document.fonts.ready;
-    const cleanup = () => { document.body.classList.remove('print-card'); page.remove(); area.innerHTML = ''; window.removeEventListener('afterprint', cleanup); };
+    const cleanup = () => { document.body.classList.remove('print-card'); page.remove(); area.innerHTML = ''; area.classList.remove('with-crown'); window.removeEventListener('afterprint', cleanup); };
     window.addEventListener('afterprint', cleanup);
     window.print();
     setTimeout(() => { if (!window.matchMedia('print').matches && document.body.classList.contains('print-card')) cleanup(); }, 1500);
