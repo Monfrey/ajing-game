@@ -913,6 +913,41 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .season-st.next{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
 .season-st .st-short{display:none}
 @media (max-width:560px){.season-table th:nth-child(4),.season-table td:nth-child(4){display:none}.season-table th:nth-child(1){width:34%}.season-table th:nth-child(2){width:38%}.season-table th:nth-child(3){width:28%}.season-table td,.season-table th{padding:7px 8px}.season-st .st-long{display:none}.season-st .st-short{display:inline}}
+/* Solicitações: submenus, filas e históricos */
+.req-subnav{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.req-subnav button{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:99px;background:var(--surface);color:var(--muted);font:inherit;font-size:.86rem;font-weight:600;cursor:pointer}
+.req-subnav button:hover{color:var(--ink);border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+.req-subnav button[aria-current="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.req-subnav .count{font-size:.7rem;font-weight:700;padding:0 6px;border-radius:99px;background:var(--surface-2);color:var(--muted)}
+.req-subnav .count:empty{display:none}
+.req-subnav .count.alert{background:var(--red);color:#fff}
+.req-subnav button[aria-current="true"] .count{background:rgba(255,255,255,.25);color:inherit}
+.req-subnav button[aria-current="true"] .count.alert{background:#fff;color:var(--red)}
+[data-req-panel] .req-title:first-child{margin-top:10px}
+.req-queue{max-height:min(55vh,560px)}
+.hist-tools{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 8px}
+.hist-tools .feed-search{margin:0;width:min(100%,340px)}
+.hist-tools .feed-search input{padding-right:12px}
+.hist-tools select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font:inherit;font-size:.88rem}
+.hist-count{margin-left:auto;font-size:.82rem;color:var(--muted)}
+.hist-list{max-height:min(72vh,760px)}
+.hist-more{display:flex;justify-content:center;margin-top:8px}
+.hist-more:empty{display:none}
+.review-edit-btn{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:5px 11px;font-size:.8rem;white-space:nowrap}
+.review-edit-btn svg{width:14px;height:14px;flex:none}
+@media (max-width:560px){.hist-count{margin-left:0;width:100%}.req-queue li{flex-wrap:wrap}.req-queue li .grow{flex:1 1 calc(100% - 80px);white-space:normal}.req-queue .post-review-actions{width:100%;justify-content:flex-start}.hist-list .review-history-row .grow{flex:1 1 100%;white-space:normal}}
+/* Correção da publicação na fila de validação */
+.req-queue li{flex-wrap:wrap}
+.req-queue li .pq-edit{flex:1 1 100%}
+.pq-edit{display:grid;align-items:start;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,.8fr);gap:10px 12px;margin:4px 0 2px;padding:12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2)}
+.pq-edit[hidden]{display:none}
+.pq-edit .pq-species{grid-row:span 2}
+.pq-edit .pq-full{grid-column:2/-1}
+.pq-edit .form-actions.pq-full,.pq-edit .form-error.pq-full{grid-column:1/-1}
+.pq-edit select[size]{width:100%;margin-top:6px;padding:4px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg);color:var(--ink);font:inherit;font-size:.86rem}
+.pq-edit select[size] option{padding:4px 6px;border-radius:3px}
+.pq-edit textarea{resize:vertical}
+@media (max-width:720px){.pq-edit{grid-template-columns:minmax(0,1fr)}.pq-edit .pq-species{grid-row:auto}.pq-edit .pq-full{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -1230,22 +1265,39 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               <input id="spRowPhoto" type="file" accept="image/*" hidden>
             </div>
             <div class="admin-box" data-admin-panel="requests" hidden>
-              <p class="box-desc">Revise espécies, inscrições em campeonatos e pontuações das postagens do Social Fish enviadas pelos membros.</p>
+              <p class="box-desc">Revise o que os membros enviaram. Cada análise fica registrada no histórico e pode ser editada depois, se precisar.</p>
+              <nav class="req-subnav" aria-label="Tipos de solicitação">
+                <button type="button" data-req-sec="posts">Postagens<span class="count" id="cntReqPosts"></span></button>
+                <button type="button" data-req-sec="events">Inscrições<span class="count" id="cntReqEvents"></span></button>
+                <button type="button" data-req-sec="species">Espécies<span class="count" id="cntReqSpecies"></span></button>
+              </nav>
               <div class="form-error" id="reqAdminError" role="alert"></div>
               <p class="saved" id="reqAdminSaved" aria-live="polite"></p>
-              <h4 class="req-title">Solicitações de espécies</h4>
-              <ul class="req-review" id="reqAdminList"></ul>
-              <h4 class="req-title">Validação de postagens do Social Fish</h4>
-              <p class="box-desc">As publicações aparecem no feed assim que são enviadas. Elas só entram no ranking e somam pontos depois da aprovação.</p>
-              <ul class="admin-list req-list" id="postReviewList"></ul>
-              <h4 class="req-title">Postagens analisadas</h4>
-              <ul class="admin-list req-list" id="postReviewHistory"></ul>
-              <h4 class="req-title">Inscrições em campeonatos</h4>
-              <ul class="admin-list req-list" id="eventRegAdminList"></ul>
-              <h4 class="req-title">Inscrições analisadas</h4>
-              <ul class="admin-list req-list" id="eventRegHistory"></ul>
-              <h4 class="req-title">Solicitações de espécies analisadas</h4>
-              <ul class="admin-list req-list" id="reqHistory"></ul>
+              <section data-req-panel="posts">
+                <h4 class="req-title">Aguardando validação</h4>
+                <p class="box-desc">As publicações aparecem no feed assim que são enviadas e só somam pontos no ranking depois de aprovadas. As publicadas como “sem pontuar” não passam por aqui.</p>
+                <ul class="admin-list req-list req-queue" id="postReviewList"></ul>
+                <h4 class="req-title">Histórico de postagens analisadas</h4>
+                <div class="hist-tools" data-hist="posts"><label class="feed-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input type="search" data-hist-q placeholder="Buscar por membro, espécie ou local" aria-label="Buscar por membro, espécie ou local"></label><select data-hist-st aria-label="Filtrar por resultado"><option value="all">Todas</option><option value="approved">Aprovadas</option><option value="rejected">Recusadas</option></select><span class="hist-count" id="postHistCount" aria-live="polite"></span></div>
+                <ul class="admin-list req-list hist-list" id="postReviewHistory"></ul>
+                <div class="hist-more" id="postHistMore"></div>
+              </section>
+              <section data-req-panel="events" hidden>
+                <h4 class="req-title">Aguardando aprovação</h4>
+                <ul class="admin-list req-list req-queue" id="eventRegAdminList"></ul>
+                <h4 class="req-title">Histórico de inscrições analisadas</h4>
+                <div class="hist-tools" data-hist="events"><label class="feed-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input type="search" data-hist-q placeholder="Buscar por campeonato ou membro" aria-label="Buscar por campeonato ou membro"></label><select data-hist-st aria-label="Filtrar por resultado"><option value="all">Todas</option><option value="approved">Aprovadas</option><option value="rejected">Recusadas</option></select><span class="hist-count" id="eventHistCount" aria-live="polite"></span></div>
+                <ul class="admin-list req-list hist-list" id="eventRegHistory"></ul>
+                <div class="hist-more" id="eventHistMore"></div>
+              </section>
+              <section data-req-panel="species" hidden>
+                <h4 class="req-title">Aguardando análise</h4>
+                <ul class="req-review" id="reqAdminList"></ul>
+                <h4 class="req-title">Histórico de espécies analisadas</h4>
+                <div class="hist-tools" data-hist="species"><label class="feed-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input type="search" data-hist-q placeholder="Buscar por espécie ou membro" aria-label="Buscar por espécie ou membro"></label><select data-hist-st aria-label="Filtrar por resultado"><option value="all">Todas</option><option value="approved">Aprovadas</option><option value="rejected">Recusadas</option></select><span class="hist-count" id="speciesHistCount" aria-live="polite"></span></div>
+                <ul class="admin-list req-list hist-list" id="reqHistory"></ul>
+                <div class="hist-more" id="speciesHistMore"></div>
+              </section>
             </div>
             <div class="admin-box" data-admin-panel="award" hidden>
               <div class="box-head"><p class="box-desc">Defina o período de inscrição ao criar cada campeonato. A classificação conta as publicações do Social Fish feitas pelos inscritos aprovados entre o início e o término do evento. Inscrições aprovadas liberam o acesso à página e à lista de participantes. Ao final, o 1º lugar em pontos é registrado como campeão.</p><button class="btn btn-primary" id="champNew" type="button">Novo campeonato</button></div>
@@ -2577,6 +2629,34 @@ await new Promise(resolve => {
   let habFilter = 'all';
   document.querySelectorAll('[data-hab-filter]').forEach(b => b.addEventListener('click', () => { habFilter = b.dataset.habFilter; renderSpecies(); }));
 
+  /* ===== Solicitações: submenus e históricos ===== */
+  const REQ_SECS = ['posts', 'events', 'species'];
+  const showReqSec = sec => {
+    if (!REQ_SECS.includes(sec)) sec = 'posts';
+    document.querySelectorAll('[data-req-sec]').forEach(b => b.setAttribute('aria-current', String(b.dataset.reqSec === sec)));
+    document.querySelectorAll('[data-req-panel]').forEach(p => { p.hidden = p.dataset.reqPanel !== sec; });
+    store.set('ajing-req-sec', sec, true);
+  };
+  document.querySelectorAll('[data-req-sec]').forEach(b => b.addEventListener('click', () => { $('reqAdminSaved').textContent = ''; $('reqAdminError').textContent = ''; showReqSec(b.dataset.reqSec); }));
+  const HIST_PAGE = 50;
+  const histState = { posts: { q: '', st: 'all', limit: HIST_PAGE }, events: { q: '', st: 'all', limit: HIST_PAGE }, species: { q: '', st: 'all', limit: HIST_PAGE } };
+  const histNorm = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const histApply = (key, list, textOf) => {
+    const s = histState[key], f = list.filter(x => (s.st === 'all' || x.status === s.st) && (!s.q || histNorm(textOf(x)).includes(s.q)));
+    return { shown: f.slice(0, s.limit), total: f.length, all: list.length };
+  };
+  const histFooter = (key, r, countId, moreId) => {
+    $(countId).textContent = r.total === r.all ? `${r.all} ${r.all === 1 ? 'análise' : 'análises'}` : `${r.total} de ${r.all} análises`;
+    const rest = r.total - r.shown.length;
+    $(moreId).innerHTML = rest > 0 ? `<button class="btn btn-ghost" type="button" data-hist-more="${key}">Mostrar mais ${Math.min(rest, HIST_PAGE)} (${rest} ${rest === 1 ? 'restante' : 'restantes'})</button>` : '';
+  };
+  document.querySelectorAll('[data-hist]').forEach(box => {
+    const key = box.dataset.hist;
+    box.querySelector('[data-hist-q]').addEventListener('input', e => { histState[key].q = histNorm(e.target.value); histState[key].limit = HIST_PAGE; renderRequests(); });
+    box.querySelector('[data-hist-st]').addEventListener('change', e => { histState[key].st = e.target.value; histState[key].limit = HIST_PAGE; renderRequests(); });
+  });
+  document.addEventListener('click', e => { const b = e.target.closest('[data-hist-more]'); if (!b) return; histState[b.dataset.histMore].limit += HIST_PAGE; renderRequests(); });
+
   /* ===== Espécies (visão do membro) ===== */
   const renderSpecies = () => {
     document.querySelectorAll('[data-hab-filter]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.habFilter === habFilter)));
@@ -3669,8 +3749,9 @@ await new Promise(resolve => {
     const eventHistory = getChamps().flatMap(c => (Array.isArray(c.registrationHistory) ? c.registrationHistory : []).map(r => ({ ...r, championshipId: c.id, championshipName: c.name })))
       .sort((a, b) => (b.reviewed || 0) - (a.reviewed || 0));
     const pendingPosts = posts.filter(p => p.status === 'pending').sort((a, b) => a.created - b.created);
-    const postHistory = posts.filter(p => p.status === 'approved' || p.status === 'rejected').sort((a, b) => (b.reviewed || 0) - (a.reviewed || 0)).slice(0, 30);
+    const postHistory = posts.filter(p => p.status === 'approved' || p.status === 'rejected').sort((a, b) => (b.reviewed || 0) - (a.reviewed || 0));
     const pendingTotal = pending.length + eventRequests.length + pendingPosts.length;
+    [['cntReqPosts', pendingPosts.length], ['cntReqEvents', eventRequests.length], ['cntReqSpecies', pending.length]].forEach(([id, n]) => { const el = $(id); el.textContent = n || ''; el.classList.toggle('alert', n > 0); });
     const badge = $('adminBadge'); badge.hidden = !isAdmin() || !pendingTotal; badge.textContent = pendingTotal;
     const cnt = $('cntReq'); cnt.textContent = pendingTotal || ''; cnt.classList.toggle('alert', pendingTotal > 0);
     if (!isAdmin()) return;
@@ -3690,24 +3771,35 @@ await new Promise(resolve => {
     $('postReviewList').innerHTML = pendingPosts.length ? pendingPosts.map(p => `<li data-post-review="${esc(p.id)}">
       <button class="post-review-thumb" type="button" data-review-open="${esc(p.id)}" aria-label="Ampliar captura de ${esc(displayName(p.user))}"><img src="${p.photo}" alt="Captura de ${esc(p.speciesName)}"></button>
       <span class="grow"><b>${esc(displayName(p.user))} · ${esc(p.speciesName)}</b><small>Captura em ${captureDateLabel(p.captureDate)} · enviada em ${fmtShort(p.created)} · ${esc(p.place || 'Local não informado')}${p.caption ? ` · ${esc(p.caption)}` : ''}</small></span>
-      <span class="post-review-actions"><button class="btn btn-primary" type="button" data-post-review-act="approve">Validar pontos</button><button class="btn btn-danger" type="button" data-post-review-act="reject">Recusar pontos</button></span>
+      <span class="post-review-actions"><button class="btn btn-ghost review-edit-btn" type="button" data-post-review-act="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar publicação</button><button class="btn btn-primary" type="button" data-post-review-act="approve">Validar pontos</button><button class="btn btn-danger" type="button" data-post-review-act="reject">Recusar pontos</button></span>
+      <form class="review-edit-panel pq-edit" data-review-form="queue" hidden novalidate>
+        <div class="field pq-species"><label for="pqf-${esc(p.id)}">Espécie</label><input id="pqf-${esc(p.id)}" type="search" data-pq-filter placeholder="Filtrar por nome popular ou científico" autocomplete="off"><select data-pq-species size="6" aria-label="Espécie da captura">${pqSpeciesOptions(p, '')}</select><span class="hint">Atual: ${esc(p.speciesName)} · ${ptsLabel(postPoints(p))}</span></div>
+        <div class="field"><label>Local</label><input data-pq-place maxlength="80" value="${esc(p.place || '')}"></div>
+        <div class="field"><label>Data da captura</label><input type="date" data-pq-date value="${esc(p.captureDate || '')}" max="${localDateValue(new Date())}"></div>
+        <div class="field pq-full"><label>Descrição</label><textarea data-pq-caption maxlength="300" rows="2">${esc(p.caption || '')}</textarea></div>
+        <div class="form-error pq-full" data-edit-error role="alert"></div>
+        <div class="form-actions pq-full"><button class="btn btn-primary" type="submit">Salvar correção</button><button class="btn btn-ghost" type="button" data-pq-cancel>Cancelar</button></div>
+      </form>
     </li>`).join('') : '<li class="empty-row">Nenhuma postagem aguardando validação.</li>';
-    $('postReviewHistory').innerHTML = postHistory.length ? postHistory.map(p => `<li class="review-history-row" data-post-history="${esc(p.id)}"><span class="grow"><b>${esc(displayName(p.user))} · ${esc(p.speciesName)}</b><small>${p.status === 'approved' ? 'Pontuação validada' : 'Pontuação recusada'} por ${esc(displayName(p.reviewer || ''))} em ${fmtShort(p.reviewed)} · captura em ${captureDateLabel(p.captureDate)} · ${ptsLabel(postPoints(p))}</small></span><span class="req-status ${p.status}">${p.status === 'approved' ? 'Validada' : 'Recusada'}</span><button class="btn btn-ghost" type="button" data-review-edit="post">Editar</button><form class="review-edit-panel" data-review-form="post" hidden>
+    const ph = histApply('posts', postHistory, p => `${displayName(p.user)} ${p.user} ${p.speciesName} ${p.place || ''}`); histFooter('posts', ph, 'postHistCount', 'postHistMore');
+    $('postReviewHistory').innerHTML = ph.shown.length ? ph.shown.map(p => `<li class="review-history-row" data-post-history="${esc(p.id)}"><span class="grow"><b>${esc(displayName(p.user))} · ${esc(p.speciesName)}</b><small>${p.status === 'approved' ? 'Pontuação validada' : 'Pontuação recusada'} por ${esc(displayName(p.reviewer || ''))} em ${fmtShort(p.reviewed)} · captura em ${captureDateLabel(p.captureDate)} · ${ptsLabel(postPoints(p))}</small></span><span class="req-status ${p.status}">${p.status === 'approved' ? 'Validada' : 'Recusada'}</span><button class="btn btn-ghost review-edit-btn" type="button" data-review-edit="post"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar análise</button><form class="review-edit-panel" data-review-form="post" hidden>
       <div class="field"><label>Resultado da análise</label><select data-edit-field="status"><option value="approved" ${p.status === 'approved' ? 'selected' : ''}>Aprovada</option><option value="rejected" ${p.status === 'rejected' ? 'selected' : ''}>Recusada</option><option value="pending">Voltar para análise</option></select></div>
       <div class="field"><label>Espécie</label><select data-edit-field="speciesId">${!getSpecies().some(s => s.id === p.speciesId) ? `<option value="${esc(p.speciesId || '')}" selected>${esc(p.speciesName)} (fora da lista)</option>` : ''}${getSpecies().map(s => `<option value="${esc(s.id)}" ${s.id === p.speciesId ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
       <div class="field"><label>Data da captura</label><input type="date" data-edit-field="captureDate" value="${esc(p.captureDate || '')}"></div>
       <div class="field"><label>Pontuação validada</label><input type="number" min="1" max="1000" step="1" data-edit-field="points" value="${postPoints(p)}"></div>
       <div class="form-error" data-edit-error role="alert"></div><div class="form-actions"><button class="btn btn-primary" type="submit">Salvar revisão</button><button class="btn btn-ghost" type="button" data-review-cancel>Cancelar</button></div>
-    </form></li>`).join('') : '<li class="empty-row">Nenhuma postagem analisada ainda.</li>';
+    </form></li>`).join('') : `<li class="empty-row">${ph.all ? 'Nenhuma análise encontrada com esse filtro.' : 'Nenhuma postagem analisada ainda.'}</li>`;
     const done = all.filter(r => r.status !== 'pending').sort((a, b) => (b.reviewed || 0) - (a.reviewed || 0));
-    $('reqHistory').innerHTML = done.length ? done.map(r => `<li class="review-history-row" data-species-history="${esc(r.id)}"><span class="grow"><b>${esc(r.name)}</b><small>${esc(displayName(r.user))} · ${STATUS[r.status].toLowerCase()} por ${esc(displayName(r.reviewer || ''))} em ${fmtShort(r.reviewed)}${r.status === 'approved' ? ` · ${ptsLabel(r.finalPoints)}` : ''}${r.reason ? ` · ${esc(r.reason)}` : ''}</small></span><span class="req-status ${r.status}">${STATUS[r.status]}</span><button class="btn btn-ghost" type="button" data-review-edit="species">Editar</button><form class="review-edit-panel" data-review-form="species" hidden>
+    const sh = histApply('species', done, r => `${r.name} ${r.sci || ''} ${displayName(r.user)} ${r.user}`); histFooter('species', sh, 'speciesHistCount', 'speciesHistMore');
+    $('reqHistory').innerHTML = sh.shown.length ? sh.shown.map(r => `<li class="review-history-row" data-species-history="${esc(r.id)}"><span class="grow"><b>${esc(r.name)}</b><small>${esc(displayName(r.user))} · ${STATUS[r.status].toLowerCase()} por ${esc(displayName(r.reviewer || ''))} em ${fmtShort(r.reviewed)}${r.status === 'approved' ? ` · ${ptsLabel(r.finalPoints)}` : ''}${r.reason ? ` · ${esc(r.reason)}` : ''}</small></span><span class="req-status ${r.status}">${STATUS[r.status]}</span><button class="btn btn-ghost review-edit-btn" type="button" data-review-edit="species"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar análise</button><form class="review-edit-panel" data-review-form="species" hidden>
       <div class="field"><label>Resultado da análise</label><select data-edit-field="status"><option value="approved" ${r.status === 'approved' ? 'selected' : ''}>Aprovada</option><option value="rejected" ${r.status === 'rejected' ? 'selected' : ''}>Recusada</option><option value="pending">Voltar para análise</option></select></div>
       <div class="field"><label>Nome popular</label><input maxlength="60" data-edit-field="name" value="${esc(r.name)}"></div><div class="field"><label>Nome científico</label><input maxlength="80" data-edit-field="sci" value="${esc(r.sci || '')}"></div><div class="field"><label>Habitat</label>${habitatSelect('data-edit-field="habitat"', r.habitat || (getSpecies().find(s => s.id === r.speciesId) || {}).habitat)}</div><div class="field"><label>Pontuação final</label><input type="number" min="1" max="1000" step="1" data-edit-field="points" value="${Number(r.finalPoints || r.points) || 1}"></div>
       <div class="field"><label>Trocar foto (opcional)</label><input type="file" accept="image/*" data-edit-field="photo"></div><div class="field"><label>Motivo da recusa</label><input maxlength="140" data-edit-field="reason" value="${esc(r.reason || '')}"></div>
       <div class="form-error" data-edit-error role="alert"></div><div class="form-actions"><button class="btn btn-primary" type="submit">Salvar revisão</button><button class="btn btn-ghost" type="button" data-review-cancel>Cancelar</button></div>
-    </form></li>`).join('') : '<li class="empty-row">Nenhuma solicitação analisada ainda.</li>';
+    </form></li>`).join('') : `<li class="empty-row">${sh.all ? 'Nenhuma análise encontrada com esse filtro.' : 'Nenhuma solicitação analisada ainda.'}</li>`;
     $('eventRegAdminList').innerHTML = eventRequests.length ? eventRequests.sort((a, b) => a.created - b.created).map(r => `<li class="event-reg-request" data-event-reg="${esc(r.id)}" data-champ="${esc(r.championshipId)}"><span class="grow"><b>${esc(r.championshipName)}</b><small>Solicitada por ${esc(displayName(r.user))} em ${fmtShort(r.created)}</small></span><button class="btn btn-primary" type="button" data-event-reg-act="approve">Aprovar</button><button class="btn btn-danger" type="button" data-event-reg-act="reject">Recusar</button></li>`).join('') : '<li class="empty-row">Nenhuma inscrição aguardando análise.</li>';
-    $('eventRegHistory').innerHTML = eventHistory.length ? eventHistory.map(r => `<li class="review-history-row" data-event-history="${esc(r.id)}" data-champ="${esc(r.championshipId)}"><span class="grow"><b>${esc(r.championshipName)}</b><small>${esc(displayName(r.user))} · ${r.status === 'approved' ? 'aprovada' : 'recusada'} por ${esc(displayName(r.reviewer || ''))} em ${fmtShort(r.reviewed)}</small></span><span class="req-status ${r.status === 'approved' ? 'approved' : 'rejected'}">${r.status === 'approved' ? 'Aprovada' : 'Recusada'}</span><button class="btn btn-ghost" type="button" data-review-edit="event">Editar</button><form class="review-edit-panel" data-review-form="event" hidden><div class="field"><label>Resultado da análise</label><select data-edit-field="status"><option value="approved" ${r.status === 'approved' ? 'selected' : ''}>Aprovada</option><option value="rejected" ${r.status === 'rejected' ? 'selected' : ''}>Recusada</option><option value="pending">Voltar para análise</option></select></div><div class="form-error" data-edit-error role="alert"></div><div class="form-actions"><button class="btn btn-primary" type="submit">Salvar revisão</button><button class="btn btn-ghost" type="button" data-review-cancel>Cancelar</button></div></form></li>`).join('') : '<li class="empty-row">Nenhuma inscrição analisada ainda.</li>';
+    const eh = histApply('events', eventHistory, r => `${r.championshipName} ${displayName(r.user)} ${r.user}`); histFooter('events', eh, 'eventHistCount', 'eventHistMore');
+    $('eventRegHistory').innerHTML = eh.shown.length ? eh.shown.map(r => `<li class="review-history-row" data-event-history="${esc(r.id)}" data-champ="${esc(r.championshipId)}"><span class="grow"><b>${esc(r.championshipName)}</b><small>${esc(displayName(r.user))} · ${r.status === 'approved' ? 'aprovada' : 'recusada'} por ${esc(displayName(r.reviewer || ''))} em ${fmtShort(r.reviewed)}</small></span><span class="req-status ${r.status === 'approved' ? 'approved' : 'rejected'}">${r.status === 'approved' ? 'Aprovada' : 'Recusada'}</span><button class="btn btn-ghost review-edit-btn" type="button" data-review-edit="event"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar análise</button><form class="review-edit-panel" data-review-form="event" hidden><div class="field"><label>Resultado da análise</label><select data-edit-field="status"><option value="approved" ${r.status === 'approved' ? 'selected' : ''}>Aprovada</option><option value="rejected" ${r.status === 'rejected' ? 'selected' : ''}>Recusada</option><option value="pending">Voltar para análise</option></select></div><div class="form-error" data-edit-error role="alert"></div><div class="form-actions"><button class="btn btn-primary" type="submit">Salvar revisão</button><button class="btn btn-ghost" type="button" data-review-cancel>Cancelar</button></div></form></li>`).join('') : `<li class="empty-row">${eh.all ? 'Nenhuma análise encontrada com esse filtro.' : 'Nenhuma inscrição analisada ainda.'}</li>`;
   };
 
   $('reqAdminList').addEventListener('click', async e => { if (!isAdmin()) return;
@@ -3741,12 +3833,53 @@ await new Promise(resolve => {
     }
   });
 
+  // Correção da publicação antes da validação (espécie, local, data e descrição)
+  const pqSpeciesOptions = (p, filter) => {
+    const q = String(filter || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(), words = q ? q.split(/\s+/) : [];
+    const list = getSpecies().filter(s => { if (!words.length) return true; const hay = `${s.name} ${s.sci || ''}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); return words.every(w => hay.includes(w)); });
+    const outside = !getSpecies().some(s => s.id === p.speciesId) && !words.length ? `<option value="${esc(p.speciesId || '')}" selected>${esc(p.speciesName)} (fora da lista)</option>` : '';
+    return outside + list.map(s => `<option value="${esc(s.id)}" ${s.id === p.speciesId ? 'selected' : ''}>${esc(s.name)} · ${ptsLabel(s.points)}</option>`).join('') || '<option value="" disabled>Nenhuma espécie encontrada</option>';
+  };
+  $('postReviewList').addEventListener('input', e => {
+    const f = e.target.closest('[data-pq-filter]'); if (!f) return;
+    const li = f.closest('[data-post-review]'), post = posts.find(p => p.id === li.dataset.postReview), sel = li.querySelector('[data-pq-species]');
+    if (!post) return;
+    const keep = sel.value; sel.innerHTML = pqSpeciesOptions(post, f.value);
+    if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
+  });
+  $('postReviewList').addEventListener('submit', async e => {
+    const form = e.target.closest('[data-review-form="queue"]'); if (!form || !isAdmin()) return;
+    e.preventDefault();
+    const li = form.closest('[data-post-review]'), post = posts.find(p => p.id === li.dataset.postReview), error = form.querySelector('[data-edit-error]');
+    if (!post || post.status !== 'pending') { renderRequests(); return; }
+    const sel = form.querySelector('[data-pq-species]'), species = getSpecies().find(s => s.id === sel.value);
+    const keepOld = !species && sel.value && sel.value === post.speciesId;
+    if (!species && !keepOld) { error.textContent = 'Escolha a espécie na lista.'; sel.focus(); return; }
+    const place = form.querySelector('[data-pq-place]').value.trim(), captureDate = form.querySelector('[data-pq-date]').value, caption = form.querySelector('[data-pq-caption]').value.trim().slice(0, 300);
+    if (!place) { error.textContent = 'Informe o local da captura.'; form.querySelector('[data-pq-place]').focus(); return; }
+    if (!captureDate || captureDate > localDateValue(new Date())) { error.textContent = 'Informe uma data de captura válida (não pode ser no futuro).'; form.querySelector('[data-pq-date]').focus(); return; }
+    const changed = { place, captureDate, caption, edited: Date.now(), editedBy: currentUser() };
+    if (species) Object.assign(changed, { speciesId: species.id, speciesName: species.name, points: species.points });
+    const btn = form.querySelector('button[type=submit]'); btn.disabled = true; error.textContent = '';
+    try {
+      await postsDB.put({ ...post, ...changed }); await loadPosts();
+      form.hidden = true; renderChampion(); renderAll();
+      $('reqAdminSaved').textContent = `Publicação de ${displayName(post.user)} corrigida${species && species.id !== post.speciesId ? `: ${post.speciesName} → ${species.name}` : ''}. Ela continua aguardando validação.`;
+    } catch (_) { error.textContent = 'Não foi possível salvar a correção. Tente de novo.'; }
+    finally { btn.disabled = false; }
+  });
   $('postReviewList').addEventListener('click', async e => {
     if (!isAdmin()) return;
     const preview = e.target.closest('[data-review-open]'); if (preview) { openPostView(preview.dataset.reviewOpen); return; }
+    const cancel = e.target.closest('[data-pq-cancel]'); if (cancel) { cancel.closest('form').hidden = true; return; }
     const button = e.target.closest('[data-post-review-act]'); if (!button) return;
     const li = button.closest('[data-post-review]'), post = posts.find(p => p.id === li.dataset.postReview);
     if (!post || post.status !== 'pending') return renderRequests();
+    if (button.dataset.postReviewAct === 'edit') {
+      const form = li.querySelector('[data-review-form="queue"]'); form.hidden = !form.hidden;
+      if (!form.hidden) { $('reqAdminSaved').textContent = ''; const sel = form.querySelector('[data-pq-species]'); sel.querySelector('option[selected]')?.scrollIntoView({ block: 'nearest' }); softFocus(form.querySelector('[data-pq-filter]')); }
+      return;
+    }
     const approve = button.dataset.postReviewAct === 'approve';
     if (!approve && !(await askConfirm(`Recusar a pontuação da captura de ${displayName(post.user)}? A publicação continuará visível no feed, sem pontuar.`, { danger: true, confirmText: 'Recusar pontuação' }))) return;
     try {
@@ -4174,6 +4307,7 @@ await new Promise(resolve => {
   /* ===== Inicialização ===== */
   $('year').textContent = new Date().getFullYear();
   showAdminSec(store.get('ajing-admin-sec', true) || 'carousel');
+  showReqSec(store.get('ajing-req-sec', true) || 'posts');
   showProfSec(store.get('ajing-prof-sec', true) || 'card');
   Promise.all([loadPosts(), loadSpeciesPhotos(), loadReqPhotos(), loadChampBanners(), loadSlides()]).then(async () => {
     rankAwardConfig = readRankAwardConfig(); renderRankAwardForm();
