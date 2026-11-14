@@ -481,13 +481,11 @@ select{font:inherit;color:inherit}
 @media (max-width:620px){.feed{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}
 /* Portfólios e diretório de membros */
 .members-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-.member-tile{display:grid;justify-items:center;gap:8px;padding:14px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);cursor:pointer;text-align:center}
-.member-tile:hover{border-color:var(--accent);transform:translateY(-1px)}
-.member-tile .mcard{width:100px;height:140px}
-.member-tile b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.member-tile small{color:var(--muted)}
+.member-card-button{width:100%;display:grid;place-items:start center;padding:0;border:0;background:transparent;cursor:pointer}
+.member-card-button:hover .tcard{transform:translateY(-2px)}
+.member-full-card{width:min(320px,100%)}
 .portfolio-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
-.portfolio-profile{display:grid;grid-template-columns:minmax(150px,220px) minmax(0,1fr);gap:22px;align-items:center;padding:20px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);margin-bottom:22px}
+.portfolio-profile{display:grid;grid-template-columns:minmax(150px,320px) minmax(0,1fr);gap:22px;align-items:center;padding:0;border:0;border-radius:0;background:transparent;margin-bottom:22px}
 .portfolio-profile .tcard-stage{margin:0}
 .portfolio-fish-name{color:var(--muted);margin-top:-8px}
 .portfolio-description{max-width:68ch;white-space:pre-wrap}
@@ -3703,7 +3701,13 @@ await new Promise(resolve => {
     const q = normalizeFeedSearch(memberFilter);
     const active = getUsers().filter(u => u.active !== false && u.username).sort((a,b) => displayName(a.username).localeCompare(displayName(b.username), 'pt-BR'));
     const list = active.filter(u => !q || [u.username, displayName(u.username), fishingName(u.username)].some(v => normalizeFeedSearch(v).includes(q)));
-    $('membersGrid').innerHTML = list.length ? list.map(u => `<div class="member-tile" data-card-user="${esc(u.username)}">${miniCard(u.username)}<b>${esc(displayName(u.username))}</b><small>${esc(fishingName(u.username))}</small></div>`).join('') : '<div class="empty feed-empty"><h4>Nenhum membro encontrado</h4><p>Ajuste sua busca e tente novamente.</p></div>';
+    $('membersGrid').innerHTML = list.length ? list.map(u => {
+      const card = $('tcard').cloneNode(true);
+      card.removeAttribute('id'); card.removeAttribute('style'); card.classList.remove('cropping'); card.classList.add('member-full-card');
+      card.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+      fillCard(card, u.username, readProfileOf(u.username), false);
+      return `<button class="member-card-button" type="button" data-card-user="${esc(u.username)}" aria-label="Abrir portfólio de ${esc(displayName(u.username))}">${card.outerHTML}</button>`;
+    }).join('') : '<div class="empty feed-empty"><h4>Nenhum membro encontrado</h4><p>Ajuste sua busca e tente novamente.</p></div>';
   };
   const openPortfolio = u => {
     if (!getUsers().some(x => x.username === u && x.active !== false)) return;
