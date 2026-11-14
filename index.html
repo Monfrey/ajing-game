@@ -1842,7 +1842,6 @@ const AUTH_MSG = {
   'auth/requires-recent-login': 'Por segurança, saia e entre de novo antes de alterar a senha.',
   'auth/operation-not-allowed': 'O login por e-mail e senha não está ativado no Firebase (Authentication › Método de login).',
   'permission-denied': 'Sem permissão para esta ação. Confira se as regras do Firestore foram publicadas e se a conta está ativa.',
-  'invalid-argument': 'O conteúdo ficou grande demais para salvar. Tente uma imagem menor.',
   'unavailable': 'Sem conexão com o servidor. Verifique a internet.'
 };
 
@@ -1906,7 +1905,10 @@ const fb = {
   setPrivate: (uid, data) => setDoc(fsDoc(fdb, 'private', uid), clean(data)),
   getEmail: async uid => { const s = await getDoc(fsDoc(fdb, 'private', uid)); return s.exists() ? s.data().email || '' : ''; },
   deletePrivate: uid => deleteDoc(fsDoc(fdb, 'private', uid)),
-  errMsg: e => AUTH_MSG[e && e.code] || (e && e.code ? `Erro do servidor (${e.code}).` : 'Não foi possível concluir. Tente de novo.')
+  errMsg: e => {
+    if (e && e.code === 'invalid-argument') return `O Firestore rejeitou os dados enviados (${String(e.message || 'invalid-argument').slice(0, 260)}).`;
+    return AUTH_MSG[e && e.code] || (e && e.code ? `Erro do servidor (${e.code}).` : 'Não foi possível concluir. Tente de novo.');
+  }
 };
 
 // Inicialização: dados públicos, depois o login guardado e os dados de membro
