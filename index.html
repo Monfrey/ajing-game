@@ -479,6 +479,25 @@ select{font:inherit;color:inherit}
 @media (max-width:920px){.admin-grid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:900px){.feed{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:620px){.feed{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}
+/* Portfólios e diretório de membros */
+.members-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.member-tile{display:grid;justify-items:center;gap:8px;padding:14px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);cursor:pointer;text-align:center}
+.member-tile:hover{border-color:var(--accent);transform:translateY(-1px)}
+.member-tile .mcard{width:100px;height:140px}
+.member-tile b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.member-tile small{color:var(--muted)}
+.portfolio-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.portfolio-profile{display:grid;grid-template-columns:minmax(150px,220px) minmax(0,1fr);gap:22px;align-items:center;padding:20px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);margin-bottom:22px}
+.portfolio-profile .tcard-stage{margin:0}
+.portfolio-fish-name{color:var(--muted);margin-top:-8px}
+.portfolio-description{max-width:68ch;white-space:pre-wrap}
+.portfolio-species{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.portfolio-editor{margin-top:22px;padding:16px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.portfolio-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.portfolio-option{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid var(--line);border-radius:8px;font-size:.86rem}
+.portfolio-option input{accent-color:var(--accent)}
+@media(max-width:900px){.portfolio-species{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:620px){.members-grid,.portfolio-species{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.portfolio-profile{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}.portfolio-profile>div:last-child{width:100%}.portfolio-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:720px){.post-form{grid-template-columns:minmax(0,1fr);padding:16px}.post-media{width:min(220px,70%);justify-self:center}.panel .panel-head{margin-bottom:12px}.role-badge{display:none}.feed{gap:10px}}
 
 
@@ -1146,6 +1165,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <div class="container m-bar-in">
       <nav class="m-tabs" role="tablist" aria-label="Seções da área de membros">
         <button type="button" role="tab" data-tab="social" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg>Social Fish</button>
+        <button type="button" role="tab" data-tab="members" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-4 2-6 6-6s6 2 6 6M16 5a3 3 0 0 1 0 6M18 14c2 .6 3 2.5 3 5"/></svg>Membros</button>
         <button type="button" role="tab" data-tab="ranking" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 20V10M12 20V4M18 20v-7"/></svg>Ranking</button>
         <button type="button" role="tab" data-tab="species" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12c4-6 10-6 14 0-4 6-10 6-14 0zM17 12l4-4v8z"/></svg>Espécies</button>
         <button type="button" role="tab" data-tab="events" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Eventos</button>
@@ -1163,6 +1183,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   </div>
   <div class="container m-content">
       <div>
+        <section class="panel" role="tabpanel" data-panel="members" hidden>
+          <div id="membersDirectory"><div class="panel-head"><div><h3>Membros</h3><p>Conheça os pescadores e explore as espécies de cada portfólio.</p></div><label class="feed-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="memberSearch" type="search" placeholder="Buscar membro" aria-label="Buscar membro"></label></div><div id="membersGrid" class="members-grid"></div></div>
+          <div id="memberPortfolio" hidden></div>
+        </section>
         <section class="panel social" role="tabpanel" data-panel="social" hidden>
           <div class="panel-head social-head"><div><h3>Social Fish</h3><p>Capturas da comunidade, das mais recentes para as mais antigas.</p></div><label class="feed-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="feedSearch" type="search" placeholder="Buscar por membro ou peixe" aria-label="Buscar publicações por membro ou nome do peixe"><button id="feedSearchClear" type="button" hidden>Limpar</button></label></div>
           <div class="timeline">
@@ -1445,6 +1469,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               </form>
           <form class="profile-form" id="profileForm" hidden novalidate>
                 <div class="field"><label for="profileName">Nome</label><input id="profileName" maxlength="70" placeholder="Como deseja ser chamado?" required></div>
+                <div class="field"><label for="profileFishingName">Nome de pesca</label><input id="profileFishingName" maxlength="50" placeholder="Seu nome na comunidade"></div>
                 <div class="field"><label for="profileLocation">Local</label><input id="profileLocation" maxlength="80" placeholder="Ex.: Vila Velha - ES"></div>
                 <div class="field full"><label for="profileBio">Breve descrição</label><textarea id="profileBio" rows="3" maxlength="100" placeholder="Conte um pouco sobre seu estilo de pesca"></textarea><span class="hint" id="bioCount">0 / 100 caracteres</span></div>
                 <div class="field full social-fields" role="group" aria-labelledby="socialLegend">
@@ -1473,6 +1498,14 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               </form>
             </div>
           </div>
+          <section class="portfolio-editor" aria-labelledby="portfolioEditorTitle">
+            <h4 id="portfolioEditorTitle">Meu portfólio</h4>
+            <p class="muted">Escolha quais espécies capturadas aparecem no seu portfólio. Cada espécie pode aparecer uma única vez.</p>
+            <div class="portfolio-options" id="portfolioOptions"></div>
+            <p class="form-error" id="portfolioError" role="alert"></p>
+            <button class="btn btn-primary" type="button" id="savePortfolioBtn">Salvar espécies do portfólio</button>
+            <p class="saved" id="portfolioSaved" aria-live="polite"></p>
+          </section>
           <p class="saved" id="profileSaved" aria-live="polite"></p>
           </div>
           <div data-prof-panel="captures" hidden>
@@ -3658,11 +3691,61 @@ await new Promise(resolve => {
     cardModal.classList.remove('open'); cardModal.setAttribute('aria-hidden', 'true'); document.body.style.overflow = '';
     cardLastFocus && cardLastFocus.focus && cardLastFocus.focus();
   };
-  document.addEventListener('click', e => { const b = e.target.closest('[data-card-user]'); if (b) openCardModal(b.dataset.cardUser); });
+  let portfolioUser = null, memberFilter = '';
+  const fishingName = u => readProfileOf(u).fishingName || u;
+  const portfolioPostList = u => {
+    const selected = [...new Set((readProfileOf(u).portfolioSpecies || []).filter(x => typeof x === 'string'))];
+    const latest = new Map();
+    posts.filter(p => p.user === u && p.status !== 'rejected').forEach(p => { if (!latest.has(p.speciesId)) latest.set(p.speciesId, p); });
+    return selected.map(id => latest.get(id)).filter(Boolean);
+  };
+  const renderMembers = () => {
+    const q = normalizeFeedSearch(memberFilter);
+    const active = getUsers().filter(u => u.active !== false && u.username).sort((a,b) => displayName(a.username).localeCompare(displayName(b.username), 'pt-BR'));
+    const list = active.filter(u => !q || [u.username, displayName(u.username), fishingName(u.username)].some(v => normalizeFeedSearch(v).includes(q)));
+    $('membersGrid').innerHTML = list.length ? list.map(u => `<div class="member-tile" data-card-user="${esc(u.username)}">${miniCard(u.username)}<b>${esc(displayName(u.username))}</b><small>${esc(fishingName(u.username))}</small></div>`).join('') : '<div class="empty feed-empty"><h4>Nenhum membro encontrado</h4><p>Ajuste sua busca e tente novamente.</p></div>';
+  };
+  const openPortfolio = u => {
+    if (!getUsers().some(x => x.username === u && x.active !== false)) return;
+    portfolioUser = u;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const p = readProfileOf(u), clone = $('tcard').cloneNode(true);
+    clone.removeAttribute('id'); clone.removeAttribute('style'); clone.classList.remove('cropping'); clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+    fillCard(clone, u, p, false);
+    const own = u === currentUser(), catches = portfolioPostList(u);
+    $('membersDirectory').hidden = true; $('memberPortfolio').hidden = false;
+    $('memberPortfolio').innerHTML = `<div class="portfolio-head"><button class="btn btn-ghost" id="portfolioBack" type="button">← Todos os membros</button><span class="muted">Portfólio do pescador</span></div>
+      <section class="portfolio-profile"><div class="tcard-stage"></div><div><h2>${esc(displayName(u))}</h2><p class="portfolio-fish-name">Nome de pesca: <b>${esc(fishingName(u))}</b></p><p class="portfolio-description">${esc(p.bio || 'Este pescador ainda não adicionou uma descrição.')}</p>${own ? '<button class="btn btn-ghost" type="button" data-edit-portfolio-profile>Editar meu perfil</button>' : ''}</div></section>
+      <div class="panel-head"><div><h3>Espécies capturadas (${catches.length})</h3><p>Uma publicação para cada espécie selecionada pelo pescador.</p></div></div>
+      <div class="portfolio-species">${catches.map(post => postHTML(post, true)).join('')}</div>${catches.length ? '' : '<div class="empty"><h4>Portfólio vazio</h4><p>Este pescador ainda não selecionou espécies para exibir.</p></div>'}`;
+    $('memberPortfolio').querySelector('.tcard-stage').appendChild(clone);
+    $('memberPortfolio').querySelector('#portfolioBack').addEventListener('click', () => { portfolioUser = null; $('memberPortfolio').hidden = true; $('membersDirectory').hidden = false; });
+    const edit = $('memberPortfolio').querySelector('[data-edit-portfolio-profile]'); if (edit) edit.addEventListener('click', () => { showTab('profile'); showProfSec('card'); $('editProfileBtn').click(); });
+  };
+  document.addEventListener('click', e => { const b = e.target.closest('[data-card-user]'); if (b) { showTab('members'); openPortfolio(b.dataset.cardUser); } });
+  $('memberSearch').addEventListener('input', () => { memberFilter = $('memberSearch').value; renderMembers(); });
   $('cardClose').addEventListener('click', closeCardModal);
   cardModal.addEventListener('click', e => { if (e.target === cardModal) closeCardModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && cardModal.classList.contains('open')) closeCardModal(); });
   const renderProfile = () => renderCard(readProfile());
+  const renderPortfolioOptions = () => {
+    const u = currentUser(), profile = readProfile(), mine = posts.filter(p => p.user === u && p.status !== 'rejected');
+    const bySpecies = new Map(); mine.forEach(p => { if (!bySpecies.has(p.speciesId)) bySpecies.set(p.speciesId, p.speciesName); });
+    const selected = new Set((profile.portfolioSpecies || []).filter(id => bySpecies.has(id)));
+    $('portfolioOptions').innerHTML = bySpecies.size ? [...bySpecies].map(([id,name]) => `<label class="portfolio-option"><input type="checkbox" data-portfolio-species="${esc(id)}" ${selected.has(id) ? 'checked' : ''}><span>${esc(name)}</span></label>`).join('') : '<p class="muted">Publique uma captura para começar a montar seu portfólio.</p>';
+  };
+  $('savePortfolioBtn').addEventListener('click', async () => {
+    const ids = [...new Set([...$('portfolioOptions').querySelectorAll('[data-portfolio-species]:checked')].map(x => x.dataset.portfolioSpecies))];
+    const error = $('portfolioError'), save = $('savePortfolioBtn'); error.textContent = ''; $('portfolioSaved').textContent = '';
+    if (ids.length > 100) { error.textContent = 'Selecione no máximo 100 espécies.'; return; }
+    save.disabled = true;
+    try {
+      const old = readProfile(), profile = { name: old.name || displayName(currentUser()), fishingName: old.fishingName || '', location: '', bio: '', photo: '', social: {}, ...old, portfolioSpecies: ids };
+      await fb.saveProfile(currentUser(), profile); $('portfolioSaved').textContent = 'Espécies do portfólio salvas.'; renderPortfolioOptions(); if (portfolioUser === currentUser()) openPortfolio(currentUser());
+    }
+    catch (err) { error.textContent = 'Não foi possível salvar o portfólio. ' + fb.errMsg(err); }
+    finally { save.disabled = false; }
+  });
   const renderMyCaptures = () => {
     const mine = posts.filter(p => p.user === currentUser());
     $('cntMyCaptures').textContent = mine.length || '';
@@ -3705,7 +3788,7 @@ await new Promise(resolve => {
   bioInput.addEventListener('input', updateCount);
   $('editProfileBtn').addEventListener('click', () => {
     const p = readProfile();
-    $('profileName').value = p.name || ''; $('profileLocation').value = p.location || '';
+    $('profileName').value = p.name || ''; $('profileFishingName').value = p.fishingName || ''; $('profileLocation').value = p.location || '';
     Object.keys(SOCIALS).forEach(net => { const s = p.social && p.social[net]; $(SOCIALS[net].input).value = s ? (s.handle ? '@' + s.handle : s.url) : ''; });
     bioInput.value = (p.bio || '').slice(0, 100); photoData = p.photo || ''; photoInput.value = '';
     profileError.textContent = ''; saved.textContent = ''; updateCount();
@@ -3738,7 +3821,7 @@ await new Promise(resolve => {
       profileError.textContent = `Não reconheci o ${net.label} informado. Use o @ (ex.: @usuario) ou o link do perfil (${hint}).`; $(net.input).focus(); return;
     }
     if (photoPending) await photoPending;
-    const p = { name, location: $('profileLocation').value.trim(), bio: bioInput.value.slice(0, 100).trim(), photo: '', social };
+    const p = { ...readProfile(), name, fishingName: $('profileFishingName').value.trim(), location: $('profileLocation').value.trim(), bio: bioInput.value.slice(0, 100).trim(), photo: '', social };
     let source = null;
     if (cropState) {
       try { p.photo = await bakeCrop(); } catch(_) { profileError.textContent = 'Não foi possível processar a foto. Tente outra imagem.'; return; }
@@ -4376,7 +4459,7 @@ await new Promise(resolve => {
   });
 
   /* ===== Renderização geral ===== */
-  function renderAll() { renderAward(); renderEvents(); updateUserChip(); renderProfile(); renderMyCaptures(); renderRequests(); const profSubnav = document.getElementById('profSubnav'); profSubnav.hidden = false; profSubnav.querySelector('[data-prof-sec="request"]').hidden = isAdmin(); if (isAdmin() && store.get('ajing-prof-sec', true) === 'request') showProfSec('card'); renderSpeciesSelect(); renderFeed(); renderSpecies(); renderRanking(); renderAdmin(); renderSlideAdmin(); }
+  function renderAll() { renderAward(); renderEvents(); updateUserChip(); renderProfile(); renderPortfolioOptions(); renderMembers(); renderMyCaptures(); renderRequests(); const profSubnav = document.getElementById('profSubnav'); profSubnav.hidden = false; profSubnav.querySelector('[data-prof-sec="request"]').hidden = isAdmin(); if (isAdmin() && store.get('ajing-prof-sec', true) === 'request') showProfSec('card'); renderSpeciesSelect(); renderFeed(); renderSpecies(); renderRanking(); renderAdmin(); renderSlideAdmin(); }
 
   /* ===== Atualização em tempo real ===== */
   // Mudanças feitas por outros membros chegam pelo Firestore; a tela só é redesenhada quando ninguém está digitando.
