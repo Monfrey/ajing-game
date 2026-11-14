@@ -619,6 +619,7 @@ select{font:inherit;color:inherit}
 /* Níveis: apenas o símbolo, sem fundo */
 .lvl{--c1:#9aa9b3;--c2:#5a6873;position:relative;display:inline-grid;place-items:center;width:28px;height:28px;flex:none;vertical-align:middle;color:var(--c2)}
 .lvl svg{width:100%;height:100%;stroke-width:2.1;overflow:visible}
+.lvl img{width:100%;height:100%;object-fit:contain}
 .lvl b{display:none!important}
 .mc-lvl .lvl.xs{width:22px;height:22px}
 .lvl-1{--c1:#dca16c;--c2:#9b5525}
@@ -681,7 +682,13 @@ select{font:inherit;color:inherit}
 .level-admin-row{min-width:0;margin:0;padding:12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface)}
 .level-admin-row legend{display:flex;align-items:center;gap:8px;padding:0 5px;color:var(--ink)}
 .level-admin-row .uf-grid{align-items:start}
+.level-admin-row .level-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+.level-icon-control{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.level-icon-control input[type=file]{flex:1;min-width:150px}
+.level-icon-preview{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.level-icon-preview .lvl{width:26px;height:26px}
 .level-admin-row input:disabled{opacity:.7}
+@media(max-width:560px){.level-admin-row .level-fields{grid-template-columns:minmax(0,1fr)}}
 .toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;align-items:center;gap:12px;padding:12px 18px;border-radius:12px;background:#0e1e2a;color:#fff;box-shadow:0 12px 30px rgba(0,0,0,.3);transform:translate(-50%,20px);opacity:0;transition:opacity .3s,transform .3s}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 .toast b{display:block}
@@ -1400,8 +1407,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               <div class="season-cal" id="seasonCalendar"></div>
             </div>
             <div class="admin-box" data-admin-panel="levels" hidden>
-              <h4 class="req-title">Níveis, descrições e pontuação</h4>
-              <p class="box-desc">Os níveis usam os pontos acumulados nas capturas aprovadas. Alterar as metas não apaga nem modifica publicações ou pontuações já registradas; os níveis dos membros são recalculados automaticamente.</p>
+              <h4 class="req-title">Níveis, nomes, símbolos e pontuação</h4>
+              <p class="box-desc">Edite o nome, o símbolo, a descrição e a pontuação mínima de cada nível. As alterações não modificam publicações ou pontuações já registradas.</p>
               <form id="levelAdminForm" class="user-form" novalidate>
                 <div id="levelsAdminFields" class="levels-admin-grid"></div>
                 <div class="form-error" id="levelsAdminError" role="alert"></div>
@@ -2023,7 +2030,8 @@ await new Promise(resolve => {
     const normalized = DEFAULT_LEVELS.map(base => {
       const row = rows.find(item => Number(item && item.n) === base.n) || {};
       const min = Number(row.min), desc = typeof row.desc === 'string' ? row.desc.trim() : '';
-      return { ...base, min: Number.isInteger(min) && min >= 0 && min <= 1000000 ? min : base.min, desc: desc.slice(0, 180) || base.desc };
+      const name = typeof row.name === 'string' ? row.name.trim().slice(0, 40) : '';
+      return { ...base, name: name || base.name, image: safeImageSrc(row.image) ? row.image : '', min: Number.isInteger(min) && min >= 0 && min <= 1000000 ? min : base.min, desc: desc.slice(0, 180) || base.desc };
     });
     const valid = normalized[0].min === 0 && normalized.every((row, i) => i === 0 || row.min > normalized[i - 1].min);
     return valid ? normalized : DEFAULT_LEVELS.map(row => ({ ...row }));
@@ -2042,24 +2050,49 @@ await new Promise(resolve => {
     return { cur, next, pct, missing: next ? next.min - pts : 0 };
   };
   const emblem = (l, size, extra) => l
-    ? `<span class="lvl lvl-${l.n} ${size || ''} ${extra || ''}" role="img" aria-label="Nível ${l.n}: ${l.name}" title="Nível ${l.n} · ${l.name}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${l.icon}</svg><b>${l.n}</b></span>`
+    ? `<span class="lvl lvl-${l.n} ${size || ''} ${extra || ''}" role="img" aria-label="Nível ${l.n}: ${esc(l.name)}" title="Nível ${l.n} · ${esc(l.name)}">${safeImageSrc(l.image) ? `<img src="${esc(l.image)}" alt="" aria-hidden="true">` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${l.icon}</svg>`}<b>${l.n}</b></span>`
     : '';
+  let levelImageData = {};
   const renderLevelsAdminForm = () => {
     const host = $('levelsAdminFields'); if (!host) return;
+    levelImageData = Object.fromEntries(LEVELS.map(l => [l.n, safeImageSrc(l.image) ? l.image : '']));
     host.innerHTML = LEVELS.map(l => `<fieldset class="level-admin-row"><legend>${emblem(l, 'sm')} <b>Nível ${l.n} · ${esc(l.name)}</b></legend>
-      <div class="uf-grid"><div class="field"><label for="levelMin${l.n}">Pontuação mínima</label><input id="levelMin${l.n}" data-level-min="${l.n}" type="number" min="${l.n === 1 ? 0 : 1}" max="1000000" step="1" value="${l.min}" ${l.n === 1 ? 'disabled' : ''}><span class="hint">${l.n === 1 ? 'Bronze é o nível inicial e começa em 0 ponto.' : 'Meta acumulada de pontos aprovados.'}</span></div>
-      <div class="field"><label for="levelDesc${l.n}">Descrição</label><textarea id="levelDesc${l.n}" data-level-desc="${l.n}" rows="2" maxlength="180">${esc(l.desc)}</textarea></div></div></fieldset>`).join('');
+      <div class="uf-grid level-fields"><div class="field"><label for="levelName${l.n}">Nome do nível</label><input id="levelName${l.n}" data-level-name="${l.n}" maxlength="40" value="${esc(l.name)}"><span class="hint">Nome exibido nas cartas e no ranking.</span></div>
+      <div class="field"><label for="levelMin${l.n}">Pontuação mínima</label><input id="levelMin${l.n}" data-level-min="${l.n}" type="number" min="${l.n === 1 ? 0 : 1}" max="1000000" step="1" value="${l.min}" ${l.n === 1 ? 'disabled' : ''}><span class="hint">${l.n === 1 ? 'O nível inicial começa em 0 ponto.' : 'Meta acumulada de pontos aprovados.'}</span></div>
+      <div class="field"><label for="levelDesc${l.n}">Descrição</label><textarea id="levelDesc${l.n}" data-level-desc="${l.n}" rows="2" maxlength="180">${esc(l.desc)}</textarea></div>
+      <div class="field"><label for="levelImage${l.n}">Símbolo do nível</label><div class="level-icon-control"><span class="level-icon-preview" id="levelImagePreview${l.n}">${emblem(l, 'sm')}</span><input id="levelImage${l.n}" data-level-image="${l.n}" type="file" accept="image/png,image/jpeg,image/webp"><button class="btn btn-ghost" type="button" data-level-image-clear="${l.n}">Usar símbolo padrão</button></div><span class="hint">Envie uma imagem quadrada. Ela será reduzida e otimizada automaticamente.</span></div></div></fieldset>`).join('');
   };
   renderLevelsAdminForm();
+  $('levelsAdminFields').addEventListener('change', async e => {
+    const input = e.target.closest('[data-level-image]'); if (!input) return;
+    const n = Number(input.dataset.levelImage), file = input.files && input.files[0]; if (!file) return;
+    const error = $('levelsAdminError'); error.textContent = '';
+    if (!file.type.startsWith('image/')) { error.textContent = 'Escolha um arquivo de imagem PNG, JPG ou WebP.'; input.value = ''; return; }
+    try {
+      const image = await resizeImage(file, 128, .78); levelImageData[n] = image;
+      $('levelImagePreview' + n).innerHTML = emblem({ ...LEVELS.find(l => l.n === n), image }, 'sm');
+    } catch (_) { error.textContent = `Não foi possível ler o símbolo do nível ${n}. Escolha outra imagem.`; input.value = ''; }
+  });
+  $('levelsAdminFields').addEventListener('click', e => {
+    const button = e.target.closest('[data-level-image-clear]'); if (!button) return;
+    const n = Number(button.dataset.levelImageClear); levelImageData[n] = '';
+    const input = $('levelImage' + n); if (input) input.value = '';
+    const level = LEVELS.find(l => l.n === n); $('levelImagePreview' + n).innerHTML = emblem({ ...level, image: '' }, 'sm');
+  });
   $('levelAdminForm').addEventListener('submit', async e => {
     e.preventDefault(); if (!isAdmin()) return;
     const error = $('levelsAdminError'), saved = $('levelsAdminSaved'); error.textContent = ''; saved.textContent = '';
     const next = LEVELS.map(level => ({
       n: level.n,
+      name: $('levelName' + level.n).value.trim(),
+      image: levelImageData[level.n] || '',
       min: level.n === 1 ? 0 : Number($(`levelMin${level.n}`).value),
       desc: $(`levelDesc${level.n}`).value.trim()
     }));
     for (let i = 0; i < next.length; i++) {
+      if (next[i].name.length < 2 || next[i].name.length > 40) {
+        error.textContent = `Informe um nome de 2 a 40 caracteres para o nível ${next[i].n}.`; $(`levelName${next[i].n}`).focus(); return;
+      }
       if (!Number.isInteger(next[i].min) || next[i].min < 0 || next[i].min > 1000000) {
         error.textContent = `Informe uma pontuação inteira entre 0 e 1.000.000 para o nível ${next[i].n}.`; $(`levelMin${next[i].n}`).focus(); return;
       }
@@ -2073,7 +2106,7 @@ await new Promise(resolve => {
     try {
       await fb.write(LEVEL_CONFIG_KEY, next);
       LEVELS = normalizeLevels(next); renderLevelsAdminForm(); renderAll();
-      saved.textContent = 'Níveis, descrições e pontuações salvos. Os pontos dos membros foram preservados.';
+      saved.textContent = 'Nomes, símbolos, descrições e pontuações dos níveis foram salvos.';
     } catch (err) { error.textContent = `Não foi possível salvar. ${fb.errMsg(err)}`; }
   });
   const userEmblem = (u, size) => emblem(levelInfo(userPoints(u)).cur, size);
