@@ -480,22 +480,26 @@ select{font:inherit;color:inherit}
 @media (max-width:900px){.feed{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:620px){.feed{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}
 /* Portfólios e diretório de membros */
-.members-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-.member-card-button{width:100%;display:grid;place-items:start center;padding:0;border:0;background:transparent;cursor:pointer}
+.members-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;align-items:start}
+.member-card-button{width:100%;min-width:0;max-width:220px;justify-self:center;display:grid;place-items:start center;padding:0;border:0;background:transparent;cursor:pointer}
 .member-card-button:hover .tcard{transform:translateY(-2px)}
-.member-full-card{width:min(320px,100%)}
+.member-full-card{width:100%;min-width:0;max-width:220px}
 .portfolio-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
-.portfolio-profile{display:grid;grid-template-columns:minmax(150px,320px) minmax(0,1fr);gap:22px;align-items:center;padding:0;border:0;border-radius:0;background:transparent;margin-bottom:22px}
+.portfolio-profile{display:grid;grid-template-columns:minmax(150px,280px) minmax(0,1fr);gap:32px;align-items:center;padding:0;border:0;border-radius:0;background:transparent;margin-bottom:28px}
 .portfolio-profile .tcard-stage{margin:0}
-.portfolio-fish-name{color:var(--muted);margin-top:-8px}
-.portfolio-description{max-width:68ch;white-space:pre-wrap}
+.portfolio-profile .tcard{width:280px;max-width:100%}
+.portfolio-copy{display:grid;gap:9px;align-content:center;min-width:0}
+.portfolio-copy h2{margin:0;line-height:1.2}
+.portfolio-fish-name{color:var(--muted);margin:0;line-height:1.45}
+.portfolio-description{max-width:68ch;white-space:pre-wrap;margin:0;line-height:1.6}
 .portfolio-species{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-.portfolio-editor{margin-top:22px;padding:16px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
-.portfolio-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
-.portfolio-option{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid var(--line);border-radius:8px;font-size:.86rem}
-.portfolio-option input{accent-color:var(--accent)}
+.portfolio-pick{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);color:var(--ink);font:inherit;font-size:.78rem;font-weight:650;cursor:pointer}
+.portfolio-pick:hover{border-color:var(--accent)}
+.portfolio-pick.selected{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface));color:var(--accent)}
+.portfolio-pick[disabled]{opacity:.55;cursor:not-allowed}
 @media(max-width:900px){.portfolio-species{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:620px){.members-grid,.portfolio-species{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.portfolio-profile{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}.portfolio-profile>div:last-child{width:100%}.portfolio-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){.members-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:620px){.members-grid,.portfolio-species{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.portfolio-profile{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}.portfolio-profile>div:last-child{width:100%}}
 @media (max-width:720px){.post-form{grid-template-columns:minmax(0,1fr);padding:16px}.post-media{width:min(220px,70%);justify-self:center}.panel .panel-head{margin-bottom:12px}.role-badge{display:none}.feed{gap:10px}}
 
 
@@ -1496,18 +1500,11 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               </form>
             </div>
           </div>
-          <section class="portfolio-editor" aria-labelledby="portfolioEditorTitle">
-            <h4 id="portfolioEditorTitle">Meu portfólio</h4>
-            <p class="muted">Escolha quais espécies capturadas aparecem no seu portfólio. Cada espécie pode aparecer uma única vez.</p>
-            <div class="portfolio-options" id="portfolioOptions"></div>
-            <p class="form-error" id="portfolioError" role="alert"></p>
-            <button class="btn btn-primary" type="button" id="savePortfolioBtn">Salvar espécies do portfólio</button>
-            <p class="saved" id="portfolioSaved" aria-live="polite"></p>
-          </section>
           <p class="saved" id="profileSaved" aria-live="polite"></p>
           </div>
           <div data-prof-panel="captures" hidden>
-            <div class="panel-head"><div><h4>Minhas capturas</h4><p class="muted">Todas as suas publicações no Social Fish, incluindo as que aguardam validação.</p></div></div>
+            <div class="panel-head"><div><h4>Minhas capturas</h4><p class="muted">Escolha a publicação exata que deseja mostrar no portfólio. Ao incluir outra captura da mesma espécie, ela substitui a anterior.</p></div></div>
+            <p class="saved" id="portfolioCaptureStatus" aria-live="polite"></p>
             <div class="feed" id="myCaptureFeed"></div>
             <div class="empty" id="myCapturesEmpty" hidden><h4>Nenhuma captura ainda</h4><p>Suas publicações do Social Fish aparecerão aqui.</p><button class="btn btn-primary" type="button" id="captureFromProfile">Publicar captura</button></div>
           </div>
@@ -2373,13 +2370,17 @@ await new Promise(resolve => {
   const pinIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
   const delBtn = id => `<button class="post-del" type="button" data-del="${esc(id)}" aria-label="Excluir publicação" title="Excluir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>`;
   // compact = cartão da grade; sem compact = publicação completa (janela)
-  const postHTML = (p, compact) => {
+  const postHTML = (p, compact, withPortfolioControl = false) => {
     const me = currentUser(), canDel = isAdmin() || p.user === me, name = displayName(p.user);
     const photo = safeImageSrc(p.photo);
     const likes = Array.isArray(p.likes) ? [...new Set(p.likes)] : [], liked = !!me && likes.includes(me);
     const alt = `Captura de ${esc(p.speciesName)}${p.place ? ' em ' + esc(p.place) : ''}`;
     const scoreStatus = p.status === 'pending' ? 'pending' : p.status === 'rejected' ? 'rejected' : p.status === 'unscored' ? 'unscored' : 'approved';
     const scoreLabel = { pending: 'Pontuação em validação', rejected: 'Pontuação recusada', unscored: 'Publicada sem pontuar', approved: 'Pontuação aprovada' }[scoreStatus];
+    const choices = withPortfolioControl ? readPortfolioChoices(me) : {};
+    const chosenPost = choices[p.speciesId];
+    const portfolioControl = withPortfolioControl && p.status !== 'rejected'
+      ? `<button class="portfolio-pick${chosenPost === p.id ? ' selected' : ''}" type="button" data-portfolio-pick="${esc(p.id)}" aria-pressed="${chosenPost === p.id}">${chosenPost === p.id ? '✓ No portfólio · remover' : chosenPost ? 'Trocar captura desta espécie' : 'Adicionar ao portfólio'}</button>` : '';
     const time = `<time datetime="${new Date(p.created).toISOString()}" title="${fullDate(p.created)}">${timeAgo(p.created)}</time>`;
     const likeButton = `<button class="post-like-btn ${liked ? 'liked' : ''}" type="button" data-like-post="${esc(p.id)}" aria-pressed="${liked}" aria-label="${liked ? 'Descurtir' : 'Curtir'} publicação de ${esc(name)}" title="${liked ? 'Descurtir' : 'Curtir'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.7c0 5.2-8.8 10.3-8.8 10.3S3.2 13.9 3.2 8.7A4.7 4.7 0 0 1 12 6a4.7 4.7 0 0 1 8.8 2.7Z"/></svg><span class="post-like-count">${likes.length}</span></button>`;
     return `<article class="post ${compact ? 'compact' : ''}">
@@ -2397,6 +2398,7 @@ await new Promise(resolve => {
           ${p.caption ? `<p class="caption">${compact ? '' : `<b>${esc(name)}</b> `}${esc(p.caption)}</p>` : ''}
           ${compact ? '' : time}
           ${!compact && isPostScored(p) ? `<span class="post-points-detail">+${ptsLabel(postPoints(p))}</span>` : ''}
+          ${portfolioControl}
         </div>
       </article>`;
   };
@@ -3691,11 +3693,20 @@ await new Promise(resolve => {
   };
   let portfolioUser = null, memberFilter = '';
   const fishingName = u => readProfileOf(u).fishingName || u;
+  const readPortfolioChoices = u => {
+    const profile = readProfileOf(u), owned = posts.filter(p => p.user === u && p.status !== 'rejected'), byId = new Map(owned.map(p => [p.id, p]));
+    if (profile.portfolioPosts && typeof profile.portfolioPosts === 'object' && !Array.isArray(profile.portfolioPosts)) {
+      return Object.fromEntries(Object.entries(profile.portfolioPosts).filter(([speciesId, postId]) => {
+        const post = byId.get(postId); return !!post && post.speciesId === speciesId;
+      }));
+    }
+    // Migra as escolhas antigas, que guardavam só a espécie, para a captura mais recente dela.
+    const latest = new Map(); owned.forEach(p => { if (!latest.has(p.speciesId)) latest.set(p.speciesId, p.id); });
+    return Object.fromEntries((profile.portfolioSpecies || []).filter(id => latest.has(id)).map(id => [id, latest.get(id)]));
+  };
   const portfolioPostList = u => {
-    const selected = [...new Set((readProfileOf(u).portfolioSpecies || []).filter(x => typeof x === 'string'))];
-    const latest = new Map();
-    posts.filter(p => p.user === u && p.status !== 'rejected').forEach(p => { if (!latest.has(p.speciesId)) latest.set(p.speciesId, p); });
-    return selected.map(id => latest.get(id)).filter(Boolean);
+    const choices = readPortfolioChoices(u), byId = new Map(posts.map(p => [p.id, p]));
+    return Object.values(choices).map(id => byId.get(id)).filter(Boolean);
   };
   const renderMembers = () => {
     const q = normalizeFeedSearch(memberFilter);
@@ -3719,7 +3730,7 @@ await new Promise(resolve => {
     const own = u === currentUser(), catches = portfolioPostList(u);
     $('membersDirectory').hidden = true; $('memberPortfolio').hidden = false;
     $('memberPortfolio').innerHTML = `<div class="portfolio-head"><button class="btn btn-ghost" id="portfolioBack" type="button">← Todos os membros</button><span class="muted">Portfólio do pescador</span></div>
-      <section class="portfolio-profile"><div class="tcard-stage"></div><div><h2>${esc(displayName(u))}</h2><p class="portfolio-fish-name">Nome de pesca: <b>${esc(fishingName(u))}</b></p><p class="portfolio-description">${esc(p.bio || 'Este pescador ainda não adicionou uma descrição.')}</p>${own ? '<button class="btn btn-ghost" type="button" data-edit-portfolio-profile>Editar meu perfil</button>' : ''}</div></section>
+      <section class="portfolio-profile"><div class="tcard-stage"></div><div class="portfolio-copy"><h2>${esc(displayName(u))}</h2><p class="portfolio-fish-name">Nome de pesca: <b>${esc(fishingName(u))}</b></p><p class="portfolio-description">${esc(p.bio || 'Este pescador ainda não adicionou uma descrição.')}</p>${own ? '<button class="btn btn-ghost" type="button" data-edit-portfolio-profile>Editar meu perfil</button>' : ''}</div></section>
       <div class="panel-head"><div><h3>Espécies capturadas (${catches.length})</h3><p>Uma publicação para cada espécie selecionada pelo pescador.</p></div></div>
       <div class="portfolio-species">${catches.map(post => postHTML(post, true)).join('')}</div>${catches.length ? '' : '<div class="empty"><h4>Portfólio vazio</h4><p>Este pescador ainda não selecionou espécies para exibir.</p></div>'}`;
     $('memberPortfolio').querySelector('.tcard-stage').appendChild(clone);
@@ -3732,30 +3743,32 @@ await new Promise(resolve => {
   cardModal.addEventListener('click', e => { if (e.target === cardModal) closeCardModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && cardModal.classList.contains('open')) closeCardModal(); });
   const renderProfile = () => renderCard(readProfile());
-  const renderPortfolioOptions = () => {
-    const u = currentUser(), profile = readProfile(), mine = posts.filter(p => p.user === u && p.status !== 'rejected');
-    const bySpecies = new Map(); mine.forEach(p => { if (!bySpecies.has(p.speciesId)) bySpecies.set(p.speciesId, p.speciesName); });
-    const selected = new Set((profile.portfolioSpecies || []).filter(id => bySpecies.has(id)));
-    $('portfolioOptions').innerHTML = bySpecies.size ? [...bySpecies].map(([id,name]) => `<label class="portfolio-option"><input type="checkbox" data-portfolio-species="${esc(id)}" ${selected.has(id) ? 'checked' : ''}><span>${esc(name)}</span></label>`).join('') : '<p class="muted">Publique uma captura para começar a montar seu portfólio.</p>';
-  };
-  $('savePortfolioBtn').addEventListener('click', async () => {
-    const ids = [...new Set([...$('portfolioOptions').querySelectorAll('[data-portfolio-species]:checked')].map(x => x.dataset.portfolioSpecies))];
-    const error = $('portfolioError'), save = $('savePortfolioBtn'); error.textContent = ''; $('portfolioSaved').textContent = '';
-    if (ids.length > 100) { error.textContent = 'Selecione no máximo 100 espécies.'; return; }
-    save.disabled = true;
-    try {
-      const old = readProfile(), profile = { name: old.name || displayName(currentUser()), fishingName: old.fishingName || '', location: '', bio: '', photo: '', social: {}, ...old, portfolioSpecies: ids };
-      await fb.saveProfile(currentUser(), profile); $('portfolioSaved').textContent = 'Espécies do portfólio salvas.'; renderPortfolioOptions(); if (portfolioUser === currentUser()) openPortfolio(currentUser());
-    }
-    catch (err) { error.textContent = 'Não foi possível salvar o portfólio. ' + fb.errMsg(err); }
-    finally { save.disabled = false; }
-  });
   const renderMyCaptures = () => {
     const mine = posts.filter(p => p.user === currentUser());
     $('cntMyCaptures').textContent = mine.length || '';
-    $('myCaptureFeed').innerHTML = mine.map(p => postHTML(p, true)).join('');
+    $('myCaptureFeed').innerHTML = mine.map(p => postHTML(p, true, true)).join('');
+    $('portfolioCaptureStatus').textContent = `${Object.keys(readPortfolioChoices(currentUser())).length} espécies selecionadas para o portfólio.`;
     $('myCapturesEmpty').hidden = mine.length > 0;
   };
+  $('myCaptureFeed').addEventListener('click', async e => {
+    const button = e.target.closest('[data-portfolio-pick]'); if (!button) return;
+    const post = posts.find(p => p.id === button.dataset.portfolioPick), member = currentUser();
+    if (!post || post.user !== member || post.status === 'rejected') return;
+    const choices = readPortfolioChoices(member), wasSelected = choices[post.speciesId] === post.id;
+    if (wasSelected) delete choices[post.speciesId]; else choices[post.speciesId] = post.id;
+    const old = readProfile(), { portfolioSpecies: legacySpecies, ...profileRest } = old;
+    const profile = { name: old.name || displayName(member), fishingName: old.fishingName || '', location: '', bio: '', photo: '', social: {}, ...profileRest, portfolioPosts: choices };
+    button.disabled = true;
+    try {
+      await fb.saveProfile(member, profile);
+      renderMyCaptures();
+      $('portfolioCaptureStatus').textContent = wasSelected ? `${post.speciesName} removida do portfólio.` : `${post.speciesName} adicionada ao portfólio.`;
+      if (portfolioUser === member) openPortfolio(member);
+    } catch (err) {
+      button.disabled = false;
+      $('portfolioCaptureStatus').textContent = 'Não foi possível atualizar o portfólio. ' + fb.errMsg(err);
+    }
+  });
   $('captureFromProfile').addEventListener('click', openPostModal);
   function renderLevelBox(li, pts) {
     $('lvlBtnIcon').innerHTML = emblem(li.cur, 'md');
@@ -4463,7 +4476,7 @@ await new Promise(resolve => {
   });
 
   /* ===== Renderização geral ===== */
-  function renderAll() { renderAward(); renderEvents(); updateUserChip(); renderProfile(); renderPortfolioOptions(); renderMembers(); renderMyCaptures(); renderRequests(); const profSubnav = document.getElementById('profSubnav'); profSubnav.hidden = false; profSubnav.querySelector('[data-prof-sec="request"]').hidden = isAdmin(); if (isAdmin() && store.get('ajing-prof-sec', true) === 'request') showProfSec('card'); renderSpeciesSelect(); renderFeed(); renderSpecies(); renderRanking(); renderAdmin(); renderSlideAdmin(); }
+  function renderAll() { renderAward(); renderEvents(); updateUserChip(); renderProfile(); renderMembers(); renderMyCaptures(); renderRequests(); const profSubnav = document.getElementById('profSubnav'); profSubnav.hidden = false; profSubnav.querySelector('[data-prof-sec="request"]').hidden = isAdmin(); if (isAdmin() && store.get('ajing-prof-sec', true) === 'request') showProfSec('card'); renderSpeciesSelect(); renderFeed(); renderSpecies(); renderRanking(); renderAdmin(); renderSlideAdmin(); }
 
   /* ===== Atualização em tempo real ===== */
   // Mudanças feitas por outros membros chegam pelo Firestore; a tela só é redesenhada quando ninguém está digitando.
