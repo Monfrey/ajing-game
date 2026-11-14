@@ -1411,6 +1411,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               <p class="box-desc">Edite o nome, o símbolo, a descrição e a pontuação mínima de cada nível. As alterações não modificam publicações ou pontuações já registradas.</p>
               <form id="levelAdminForm" class="user-form" novalidate>
                 <div id="levelsAdminFields" class="levels-admin-grid"></div>
+                <button class="btn btn-ghost" id="addLevelBtn" type="button">＋ Adicionar nível</button>
                 <div class="form-error" id="levelsAdminError" role="alert"></div>
                 <p class="saved" id="levelsAdminSaved" aria-live="polite"></p>
                 <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar níveis</button></div>
@@ -2045,11 +2046,17 @@ await new Promise(resolve => {
   ];
   const normalizeLevels = saved => {
     const rows = Array.isArray(saved) ? saved : [];
-    const normalized = DEFAULT_LEVELS.map(base => {
-      const row = rows.find(item => Number(item && item.n) === base.n) || {};
+    const savedNumbers = rows.map(item => Number(item && item.n)).filter(n => Number.isInteger(n) && n > DEFAULT_LEVELS.length && n <= 50);
+    const maxLevel = Math.max(DEFAULT_LEVELS.length, ...savedNumbers);
+    const normalized = Array.from({ length: maxLevel }, (_, index) => {
+      const n = index + 1, base = DEFAULT_LEVELS.find(item => item.n === n) || {
+        n, min: DEFAULT_LEVELS[DEFAULT_LEVELS.length - 1].min + (n - DEFAULT_LEVELS.length) * 1000,
+        name: `Nível ${n}`, desc: `Descrição do nível ${n}.`, icon: DEFAULT_LEVELS[DEFAULT_LEVELS.length - 1].icon
+      };
+      const row = rows.find(item => Number(item && item.n) === n) || {};
       const min = Number(row.min), desc = typeof row.desc === 'string' ? row.desc.trim() : '';
       const name = typeof row.name === 'string' ? row.name.trim().slice(0, 40) : '';
-      const cachedImage = C.levelIcons && C.levelIcons[String(base.n)] && C.levelIcons[String(base.n)].data;
+      const cachedImage = C.levelIcons && C.levelIcons[String(n)] && C.levelIcons[String(n)].data;
       return { ...base, name: name || base.name, image: safeImageSrc(row.image) ? row.image : safeImageSrc(cachedImage) ? cachedImage : '', min: Number.isInteger(min) && min >= 0 && min <= 1000000 ? min : base.min, desc: desc.slice(0, 180) || base.desc };
     });
     const valid = normalized[0].min === 0 && normalized.every((row, i) => i === 0 || row.min > normalized[i - 1].min);
@@ -2074,6 +2081,7 @@ await new Promise(resolve => {
   let levelImageData = {};
   const renderLevelsAdminForm = () => {
     const host = $('levelsAdminFields'); if (!host) return;
+    $('addLevelBtn').hidden = LEVELS.length >= 50;
     levelImageData = Object.fromEntries(LEVELS.map(l => [l.n, safeImageSrc(l.image) ? l.image : '']));
     host.innerHTML = LEVELS.map(l => `<fieldset class="level-admin-row"><legend>${emblem(l, 'sm')} <b>Nível ${l.n} · ${esc(l.name)}</b></legend>
       <div class="uf-grid level-fields"><div class="field"><label for="levelName${l.n}">Nome do nível</label><input id="levelName${l.n}" data-level-name="${l.n}" maxlength="40" value="${esc(l.name)}"><span class="hint">Nome exibido nas cartas e no ranking.</span></div>
@@ -2097,6 +2105,24 @@ await new Promise(resolve => {
     const n = Number(button.dataset.levelImageClear); levelImageData[n] = '';
     const input = $('levelImage' + n); if (input) input.value = '';
     const level = LEVELS.find(l => l.n === n); $('levelImagePreview' + n).innerHTML = emblem({ ...level, image: '' }, 'sm');
+  });
+  $('addLevelBtn').addEventListener('click', () => {
+    if (!isAdmin() || LEVELS.length >= 50) return;
+    const prior = LEVELS.map(level => ({
+      ...level,
+      name: $('levelName' + level.n).value.trim(),
+      min: Number($('levelMin' + level.n).value),
+      desc: $('levelDesc' + level.n).value.trim(),
+      image: levelImageData[level.n] || ''
+    }));
+    const last = prior[prior.length - 1], n = last.n + 1;
+    const lastMin = Number.isFinite(last.min) ? last.min : LEVELS[LEVELS.length - 1].min;
+    if (lastMin >= 1000000) { $('levelsAdminError').textContent = 'O último nível já alcançou a pontuação máxima permitida.'; return; }
+    const suggestedMin = lastMin + 1000 <= 1000000 ? lastMin + 1000 : lastMin + 1;
+    LEVELS = [...prior, { n, min: suggestedMin, name: `Nível ${n}`, desc: `Descrição do nível ${n}.`, icon: DEFAULT_LEVELS[DEFAULT_LEVELS.length - 1].icon, image: '' }];
+    $('levelsAdminError').textContent = ''; $('levelsAdminSaved').textContent = '';
+    renderLevelsAdminForm(); $('levelName' + n).focus();
+    $('addLevelBtn').hidden = LEVELS.length >= 50;
   });
   $('levelAdminForm').addEventListener('submit', async e => {
     e.preventDefault(); if (!isAdmin()) return;
