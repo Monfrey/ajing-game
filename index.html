@@ -1600,7 +1600,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword, setPersistence, inMemoryPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection as fsCol, doc as fsDoc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection as fsCol, doc as fsDoc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 /* =====================================================================
    CONFIGURAÇÃO DO FIREBASE
@@ -1720,6 +1720,14 @@ const setBlob = async (col, id, data) => {
   if (data) { next[id] = { data }; C[col] = next; await setDoc(fsDoc(fdb, col, id), { data }); }
   else { delete next[id]; C[col] = next; await deleteDoc(fsDoc(fdb, col, id)); }
 };
+const createSpeciesRequest = async (request, photo) => {
+  const data = clean(request), batch = writeBatch(fdb);
+  batch.set(fsDoc(fdb, 'speciesRequests', data.id), data);
+  batch.set(fsDoc(fdb, 'requestPhotos', data.id), { data: photo });
+  await batch.commit();
+  C.speciesRequests = { ...C.speciesRequests, [data.id]: data };
+  C.requestPhotos = { ...C.requestPhotos, [data.id]: { data: photo } };
+};
 const KV_COLS = { 'species-photos': 'speciesPhotos', 'championship-banners': 'banners', 'species-request-photos': 'requestPhotos' };
 const kvDB = {
   get: async k => {
@@ -1759,10 +1767,18 @@ const fb = {
   isShared: k => SHARED_KEYS.includes(k) || k.startsWith(PROFILE),
   read: fbRead, write: fbWrite, writeQuiet: fbWriteQuiet,
   postsDB, kvDB, setBlob,
+  createSpeciesRequest,
   user: fbUser, authUid: () => authUid,
   config: id => C.config[id] ? clean(C.config[id]) : null,
   setConfig: (id, data) => { C.config = { ...C.config, [id]: clean(data) }; return setDoc(fsDoc(fdb, 'config', id), clean(data)); },
-  setLikes: (id, likes) => { if (C.posts[id]) C.posts = { ...C.posts, [id]: { ...C.posts[id], likes } }; return updateDoc(fsDoc(fdb, 'posts', id), { likes }); },
+  setLike: async (id, username, liked) => {
+    const post = C.posts[id]; if (!post) throw new Error('Publicação não encontrada.');
+    const previous = Array.isArray(post.likes) ? post.likes : [], likes = new Set(previous);
+    if (liked) likes.add(username); else likes.delete(username);
+    C.posts = { ...C.posts, [id]: { ...post, likes: [...likes] } };
+    try { await updateDoc(fsDoc(fdb, 'posts', id), { likes: liked ? arrayUnion(username) : arrayRemove(username) }); }
+    catch (error) { C.posts = { ...C.posts, [id]: { ...C.posts[id], likes: previous } }; throw error; }
+  },
   saveProfile: (u, p) => fbWriteQuiet(PROFILE + u, p),
   getPhotoSource: async u => { try { const s = await getDoc(fsDoc(fdb, 'photoSources', u)); return s.exists() ? s.data() : null; } catch (_) { return null; } },
   setPhotoSource: (u, data) => data ? setDoc(fsDoc(fdb, 'photoSources', u), clean(data)) : deleteDoc(fsDoc(fdb, 'photoSources', u)),
@@ -1886,6 +1902,7 @@ await new Promise(resolve => {
 
   /* ===== Dados locais (protótipo) ===== */
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const safeImageSrc = value => typeof value === 'string' && value.length <= 800000 && /^data:image\/(?:webp|jpeg|png);base64,[A-Za-z0-9+/]+={0,2}$/i.test(value) ? value : '';
   const readJSON = (k, d) => { if (fb.isShared(k)) { const v = fb.read(k); return v ?? d; } try { const v = JSON.parse(store.get(k) || 'null'); return v ?? d; } catch(_) { return d; } };
   const writeJSON = (k, v) => { if (fb.isShared(k)) { fb.write(k, v).catch(() => {}); return true; } return store.set(k, JSON.stringify(v)); };
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -2075,15 +2092,16 @@ await new Promise(resolve => {
 
   /* ===== Chip do usuário ===== */
   const avatarHTML = (u, cls) => {
-    const p = readProfileOf(u), n = displayName(u);
-    return p.photo ? `<span class="m-avatar ${cls||''}" style="background-image:url('${p.photo}')"></span>`
+    const p = readProfileOf(u), n = displayName(u), photo = safeImageSrc(p.photo);
+    return photo ? `<span class="m-avatar ${cls||''}" style="background-image:url('${photo}')"></span>`
                    : `<span class="m-avatar ${cls||''}">${esc(n.charAt(0).toUpperCase())}</span>`;
   };
   const updateUserChip = () => {
     const u = currentUser() || '', p = readProfile(), name = displayName(u);
     $('membersGreeting').textContent = name;
     const mini = $('miniAvatar');
-    if (p.photo) { mini.style.backgroundImage = `url("${p.photo}")`; mini.textContent = ''; }
+    const photo = safeImageSrc(p.photo);
+    if (photo) { mini.style.backgroundImage = `url("${photo}")`; mini.textContent = ''; }
     else { mini.style.backgroundImage = ''; mini.textContent = name.charAt(0).toUpperCase(); }
   };
 
@@ -2261,6 +2279,7 @@ await new Promise(resolve => {
   // compact = cartão da grade; sem compact = publicação completa (janela)
   const postHTML = (p, compact) => {
     const me = currentUser(), canDel = isAdmin() || p.user === me, name = displayName(p.user);
+    const photo = safeImageSrc(p.photo);
     const likes = Array.isArray(p.likes) ? [...new Set(p.likes)] : [], liked = !!me && likes.includes(me);
     const alt = `Captura de ${esc(p.speciesName)}${p.place ? ' em ' + esc(p.place) : ''}`;
     const scoreStatus = p.status === 'pending' ? 'pending' : p.status === 'rejected' ? 'rejected' : p.status === 'unscored' ? 'unscored' : 'approved';
@@ -2274,8 +2293,8 @@ await new Promise(resolve => {
           ${canDel ? delBtn(p.id) : ''}
         </header>
         ${compact
-          ? `<div class="post-media-wrap"><button class="post-photo" type="button" data-open-post="${esc(p.id)}" aria-label="Abrir publicação de ${esc(name)}: ${esc(p.speciesName)}${isPostScored(p) ? ', ' + ptsLabel(postPoints(p)) : ''}"><img src="${p.photo}" alt="${alt}" loading="lazy">${isPostScored(p) ? `<span class="post-points-badge" aria-hidden="true">+${ptsLabel(postPoints(p))}</span>` : ''}</button>${likeButton}</div>`
-          : `<div class="post-media-wrap"><div class="post-photo"><img src="${p.photo}" alt="${alt}"></div>${likeButton}</div>`}
+          ? `<div class="post-media-wrap"><button class="post-photo" type="button" data-open-post="${esc(p.id)}" aria-label="Abrir publicação de ${esc(name)}: ${esc(p.speciesName)}${isPostScored(p) ? ', ' + ptsLabel(postPoints(p)) : ''}"><img src="${esc(photo)}" alt="${alt}" loading="lazy">${isPostScored(p) ? `<span class="post-points-badge" aria-hidden="true">+${ptsLabel(postPoints(p))}</span>` : ''}</button>${likeButton}</div>`
+          : `<div class="post-media-wrap"><div class="post-photo"><img src="${esc(photo)}" alt="${alt}"></div>${likeButton}</div>`}
         <div class="post-body">
           <div class="pb-row"><span class="species-tag has-score-fish">${esc(p.speciesName)}<span class="score-fish ${scoreStatus}" role="img" aria-label="${scoreLabel}" title="${scoreLabel}">${fishIcon}</span></span>${compact ? time : ''}</div>
           ${p.captureDate ? `<small class="capture-date">Capturada em ${captureDateLabel(p.captureDate)}</small>` : ''}
@@ -2331,10 +2350,9 @@ await new Promise(resolve => {
     e.preventDefault();
     const member = currentUser(); if (!member) { openLogin(); return; }
     const post = posts.find(p => p.id === button.dataset.likePost); if (!post) return;
-    const likes = new Set(Array.isArray(post.likes) ? post.likes : []);
-    if (likes.has(member)) likes.delete(member); else likes.add(member);
+    const likes = new Set(Array.isArray(post.likes) ? post.likes : []), liked = !likes.has(member);
     try {
-      await fb.setLikes(post.id, [...likes]); await loadPosts(); renderAll();
+      await fb.setLike(post.id, member, liked); await loadPosts(); renderAll();
       if (postView.classList.contains('open')) {
         $('postViewBody').innerHTML = postHTML(posts.find(p => p.id === post.id), false);
         $('postViewBody').querySelector('[data-like-post]')?.focus();
@@ -3414,6 +3432,7 @@ await new Promise(resolve => {
   }
   const loadDims = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
   const startCrop = async (src, crop) => {
+    src = safeImageSrc(src); if (!src) return;
     const i = await loadDims(src);
     cropState = { src, iw: i.naturalWidth, ih: i.naturalHeight, z: (crop && crop.z) || 1, cx: crop ? crop.cx : .5, cy: crop ? crop.cy : .5 };
     $('tcArt').classList.add('cropping'); $('tcArt').tabIndex = 0; $('tcArt').setAttribute('aria-label', 'Quadro da foto: arraste ou use as setas para posicionar');
@@ -3513,7 +3532,7 @@ await new Promise(resolve => {
     const soc = k('social'); if (soc) { soc.innerHTML = socialLinks(p); soc.hidden = !soc.innerHTML; }
     const img = k('photo');
     if (own && cropState) applyCrop();
-    else if (p.photo) { img.removeAttribute('style'); img.src = p.photo; img.hidden = false; k('fallback').hidden = true; }
+    else if (safeImageSrc(p.photo)) { img.removeAttribute('style'); img.src = safeImageSrc(p.photo); img.hidden = false; k('fallback').hidden = true; }
     else { img.removeAttribute('src'); img.removeAttribute('style'); img.hidden = true; k('fallback').hidden = false; }
     img.alt = `Foto de ${p.name || displayName(u)}`;
     k('pts').textContent = fmtNum(pts);
@@ -3533,10 +3552,10 @@ await new Promise(resolve => {
 
   // Mini carta: substitui a foto dos membros nas páginas, com o emblema do nível no canto superior direito
   const miniCard = (u, size) => {
-    const p = readProfileOf(u), name = displayName(u), li = levelInfo(userPoints(u));
+    const p = readProfileOf(u), name = displayName(u), li = levelInfo(userPoints(u)), photo = safeImageSrc(p.photo);
     const account = getUsers().find(x => x.username === u), crowned = !!(account && account.seasonChampion), hookCount = Math.max(0, Math.min(999, Number.parseInt(account && account.goldHooks, 10) || 0));
     return `<button type="button" class="mcard ${size || ''}${crowned ? ' has-crown' : ''}" data-card-user="${esc(u)}" aria-label="Ver carta de ${esc(name)}${li.cur ? ', nível ' + li.cur.n + ' ' + li.cur.name : ''}${crowned ? ', campeão da temporada' : ''}">
-      <span class="mc-in"><span class="mc-art" ${p.photo ? `style="background-image:url('${p.photo}')"` : ''}>${p.photo ? '' : esc(name.charAt(0).toUpperCase())}</span><i></i><i></i></span>
+      <span class="mc-in"><span class="mc-art" ${photo ? `style="background-image:url('${photo}')"` : ''}>${photo ? '' : esc(name.charAt(0).toUpperCase())}</span><i></i><i></i></span>
       ${li.cur ? `<span class="mc-lvl">${emblem(li.cur, 'xs')}</span>` : ''}${crowned ? '<span class="mc-crown" aria-hidden="true"><svg viewBox="0 0 48 42"><path d="M4 10 14 18 23 4l9 14 12-8-5 26H9z"/></svg></span>' : ''}${hookCount ? `<span class="mc-hooks" aria-hidden="true">${Array.from({ length: hookCount }, () => '<svg viewBox="0 0 24 24"><path d="M9 3h6M12 3v10a5 5 0 0 1-10 0v-2M2 11l4 1"/></svg>').join('')}</span>` : ''}</button>`;
   };
 
@@ -3615,7 +3634,8 @@ await new Promise(resolve => {
     fb.getPhotoSource(who).then(src => {
       if (form.hidden || currentUser() !== who) return;
       const s = src && src.photoSrc ? src : null;
-      if (s || p.photo) return startCrop(s ? s.photoSrc : p.photo, s ? s.crop : null);
+      const sourcePhoto = safeImageSrc(s && s.photoSrc), profilePhoto = safeImageSrc(p.photo);
+      if (sourcePhoto || profilePhoto) return startCrop(sourcePhoto || profilePhoto, sourcePhoto ? s.crop : null);
     }).catch(() => {});
   });
   $('cancelEdit').addEventListener('click', closeEdit);
@@ -3720,9 +3740,9 @@ await new Promise(resolve => {
     if (getSpecies().some(s => norm(s.name) === norm(name))) { err.textContent = 'Essa espécie já está cadastrada e disponível no Social Fish.'; return; }
     if (getRequests().some(r => r.status === 'pending' && norm(r.name) === norm(name))) { err.textContent = 'Já existe uma solicitação em análise para essa espécie.'; return; }
     const id = uid(); $('reqSubmit').disabled = true;
-    try { await setReqPhoto(id, reqImage); }
-    catch(_) { err.textContent = 'Não foi possível enviar a foto. Verifique a conexão ou tente outra imagem.'; $('reqSubmit').disabled = false; return; }
-    const list = getRequests(); list.push({ id, user: currentUser(), name, sci, habitat, points, status: 'pending', created: Date.now() }); saveRequests(list);
+    const request = { id, user: currentUser(), name, sci, habitat, points, status: 'pending', created: Date.now() };
+    try { await fb.createSpeciesRequest(request, reqImage); }
+    catch(_) { err.textContent = 'Não foi possível enviar a solicitação e a foto. Verifique a conexão ou tente outra imagem.'; $('reqSubmit').disabled = false; return; }
     $('reqForm').reset(); setReqImage(''); err.textContent = ''; $('reqSubmit').disabled = false;
     $('reqSaved').textContent = `Solicitação de "${name}" enviada para análise.`;
     closeReqModal(); renderRequests();
@@ -3735,7 +3755,7 @@ await new Promise(resolve => {
     const mine = all.filter(r => r.user === me).sort((a, b) => b.created - a.created);
     $('cntMyReq').textContent = mine.filter(r => r.status === 'pending').length || '';
     $('myReqList').innerHTML = mine.length ? mine.map(r => `<li>
-        <span class="rthumb" ${reqPhotos[r.id] ? `style="background-image:url('${reqPhotos[r.id]}')"` : ''}></span>
+        <span class="rthumb" ${safeImageSrc(reqPhotos[r.id]) ? `style="background-image:url('${safeImageSrc(reqPhotos[r.id])}')"` : ''}></span>
         <span class="grow"><b>${esc(r.name)}</b>${r.sci ? ` <i>${esc(r.sci)}</i>` : ''} ${habitatChip(r.habitat)}
           <small>Enviada em ${fmtShort(r.created)} · sugerido ${ptsLabel(r.points)}${r.status === 'approved' ? ` · publicada com ${ptsLabel(r.finalPoints)}` : ''}${r.status === 'rejected' && r.reason ? ` · Motivo: ${esc(r.reason)}` : ''}</small></span>
         <span class="req-status ${r.status}">${STATUS[r.status]}</span></li>`).join('') : '<li class="empty-row">Você ainda não enviou solicitações.</li>';
@@ -3743,7 +3763,7 @@ await new Promise(resolve => {
     // Solicitações do membro na aba Espécies (pendentes e recusadas recentes)
     const showMine = mine.filter(r => r.status !== 'approved');
     $('spPendingBox').hidden = isAdmin() || !showMine.length;
-    $('spPendingGrid').innerHTML = showMine.map(r => `<article class="species-card sp-card-pending"><div class="sp-photo">${reqPhotos[r.id] ? `<img src="${reqPhotos[r.id]}" alt="${esc(r.name)}" loading="lazy">` : fishIcon}<span class="req-status ${r.status}">${STATUS[r.status]}</span></div><div class="sp-info"><div><b>${esc(r.name)}</b>${r.sci ? `<i>${esc(r.sci)}</i>` : ''}${habitatChip(r.habitat)}${r.status === 'rejected' && r.reason ? `<i>Motivo: ${esc(r.reason)}</i>` : ''}</div><div class="sc-right"><strong>${ptsLabel(r.points)}</strong><span>sugerido</span></div></div></article>`).join('');
+    $('spPendingGrid').innerHTML = showMine.map(r => { const photo = safeImageSrc(reqPhotos[r.id]); return `<article class="species-card sp-card-pending"><div class="sp-photo">${photo ? `<img src="${esc(photo)}" alt="${esc(r.name)}" loading="lazy">` : fishIcon}<span class="req-status ${r.status}">${STATUS[r.status]}</span></div><div class="sp-info"><div><b>${esc(r.name)}</b>${r.sci ? `<i>${esc(r.sci)}</i>` : ''}${habitatChip(r.habitat)}${r.status === 'rejected' && r.reason ? `<i>Motivo: ${esc(r.reason)}</i>` : ''}</div><div class="sc-right"><strong>${ptsLabel(r.points)}</strong><span>sugerido</span></div></div></article>`; }).join('');
     const pending = all.filter(r => r.status === 'pending').sort((a, b) => a.created - b.created);
     const eventRequests = getChamps().flatMap(c => (Array.isArray(c.registrationRequests) ? c.registrationRequests : []).map(r => ({ ...r, championshipId: c.id, championshipName: c.name })));
     const eventHistory = getChamps().flatMap(c => (Array.isArray(c.registrationHistory) ? c.registrationHistory : []).map(r => ({ ...r, championshipId: c.id, championshipName: c.name })))
@@ -3756,7 +3776,7 @@ await new Promise(resolve => {
     const cnt = $('cntReq'); cnt.textContent = pendingTotal || ''; cnt.classList.toggle('alert', pendingTotal > 0);
     if (!isAdmin()) return;
     $('reqAdminList').innerHTML = pending.length ? pending.map(r => `<li class="req-card" data-req="${esc(r.id)}">
-        <div class="rphoto" ${reqPhotos[r.id] ? `style="background-image:url('${reqPhotos[r.id]}')"` : ''} role="img" aria-label="Foto enviada para ${esc(r.name)}"></div>
+        <div class="rphoto" ${safeImageSrc(reqPhotos[r.id]) ? `style="background-image:url('${safeImageSrc(reqPhotos[r.id])}')"` : ''} role="img" aria-label="Foto enviada para ${esc(r.name)}"></div>
         <div>
           <div class="meta">Enviada por <b>${esc(displayName(r.user))}</b> em ${fmtShort(r.created)}</div>
           <div class="rf">
@@ -3769,7 +3789,7 @@ await new Promise(resolve => {
           <div class="reject-box" hidden><div class="field"><label for="rr-${esc(r.id)}">Motivo da recusa</label><input id="rr-${esc(r.id)}" data-f="reason" maxlength="140" placeholder="Ex.: espécie já cadastrada com outro nome"></div><button class="btn btn-danger" type="button" data-req-act="confirm-reject">Confirmar recusa</button><button class="btn btn-ghost" type="button" data-req-act="cancel-reject">Cancelar</button></div>
         </div></li>`).join('') : '<li class="empty-row">Nenhuma solicitação aguardando análise.</li>';
     $('postReviewList').innerHTML = pendingPosts.length ? pendingPosts.map(p => `<li data-post-review="${esc(p.id)}">
-      <button class="post-review-thumb" type="button" data-review-open="${esc(p.id)}" aria-label="Ampliar captura de ${esc(displayName(p.user))}"><img src="${p.photo}" alt="Captura de ${esc(p.speciesName)}"></button>
+      <button class="post-review-thumb" type="button" data-review-open="${esc(p.id)}" aria-label="Ampliar captura de ${esc(displayName(p.user))}"><img src="${esc(safeImageSrc(p.photo))}" alt="Captura de ${esc(p.speciesName)}"></button>
       <span class="grow"><b>${esc(displayName(p.user))} · ${esc(p.speciesName)}</b><small>Captura em ${captureDateLabel(p.captureDate)} · enviada em ${fmtShort(p.created)} · ${esc(p.place || 'Local não informado')}${p.caption ? ` · ${esc(p.caption)}` : ''}</small></span>
       <span class="post-review-actions"><button class="btn btn-ghost review-edit-btn" type="button" data-post-review-act="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar publicação</button><button class="btn btn-primary" type="button" data-post-review-act="approve">Validar pontos</button><button class="btn btn-danger" type="button" data-post-review-act="reject">Recusar pontos</button></span>
       <form class="review-edit-panel pq-edit" data-review-form="queue" hidden novalidate>
