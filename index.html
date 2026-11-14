@@ -575,13 +575,15 @@ select{font:inherit;color:inherit}
 .lvl svg{width:100%;height:100%;stroke-width:2.1;overflow:visible}
 .lvl b{display:none!important}
 .mc-lvl .lvl.xs{width:22px;height:22px}
-.lvl-0{--c1:#c9d2d8;--c2:#6f7e89}
-.lvl-1{--c1:#7fe3f5;--c2:#0096bf}
-.lvl-2{--c1:#6fc6ee;--c2:#0b6fa8}
-.lvl-3{--c1:#ffd84a;--c2:#d39a00}
-.lvl-4{--c1:#ffa552;--c2:#e86400}
-.lvl-5{--c1:#ff6a52;--c2:#d0101c}
-.lvl-5 svg{stroke:url(#lvlSpectrum)}
+.lvl-1{--c1:#dca16c;--c2:#9b5525}
+.lvl-2{--c1:#d6d7dc;--c2:#858995}
+.lvl-3{--c1:#ffda55;--c2:#c99500}
+.lvl-4{--c1:#77b8ff;--c2:#2879d3}
+.lvl-5{--c1:#53c8f0;--c2:#0786b5}
+.lvl-6{--c1:#61d58a;--c2:#118644}
+.lvl-7{--c1:#ff9b54;--c2:#d85a0a}
+.lvl-8{--c1:#f4c542;--c2:#9e7100}
+.lvl-8 svg{filter:drop-shadow(0 0 1px #f6d97d)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .lvl{color:var(--c1)}}
 :root[data-theme="dark"] .lvl{color:var(--c1)}
 .lvl.xs{width:20px;height:20px}
@@ -611,12 +613,14 @@ select{font:inherit;color:inherit}
 .lvl-pts{display:inline-block;margin-top:4px;font-size:.78rem;font-weight:700;color:var(--accent)}
 .lvl-bar{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin:14px 0 6px}
 .lvl-bar span{display:block;height:100%;border-radius:4px;background:var(--accent);transition:width .6s ease}
-.lvl-bar span.to-1{background:linear-gradient(90deg,#9aa9b3,#00a3cc)}
-.lvl-bar span.to-2{background:linear-gradient(90deg,#00a3cc,#0b6fa8)}
-.lvl-bar span.to-3{background:linear-gradient(90deg,#0b6fa8,#f7c81e)}
-.lvl-bar span.to-4{background:linear-gradient(90deg,#f7c81e,#f57c01)}
-.lvl-bar span.to-5{background:linear-gradient(90deg,#f57c01,#f2101e)}
-.lvl-bar span.to-max{background:var(--spectrum)}
+.lvl-bar span.to-2{background:linear-gradient(90deg,#9b5525,#858995)}
+.lvl-bar span.to-3{background:linear-gradient(90deg,#858995,#c99500)}
+.lvl-bar span.to-4{background:linear-gradient(90deg,#c99500,#2879d3)}
+.lvl-bar span.to-5{background:linear-gradient(90deg,#2879d3,#0786b5)}
+.lvl-bar span.to-6{background:linear-gradient(90deg,#0786b5,#118644)}
+.lvl-bar span.to-7{background:linear-gradient(90deg,#118644,#d85a0a)}
+.lvl-bar span.to-8{background:linear-gradient(90deg,#d85a0a,#9e7100)}
+.lvl-bar span.to-max{background:linear-gradient(90deg,#9e7100,#f4c542)}
 .lvl-next{font-size:.82rem;color:var(--muted)}
 .lvl-next b{color:var(--ink)}
 .lvl-ladder{list-style:none;margin:14px 0 0;padding:12px 0 0;border-top:1px solid var(--line);display:grid;gap:8px}
@@ -627,6 +631,11 @@ select{font:inherit;color:inherit}
 .lvl-ladder li:not(.got) b{color:var(--muted)}
 .lvl-ladder li.now{padding:6px 8px;margin:0 -8px;border-radius:var(--radius-sm);background:color-mix(in srgb,var(--cyan) 10%,transparent)}
 .lvl-ladder em{font-style:normal;font-size:.7rem;font-weight:600;color:var(--accent)}
+.levels-admin-grid{display:grid;gap:10px;margin:12px 0}
+.level-admin-row{min-width:0;margin:0;padding:12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface)}
+.level-admin-row legend{display:flex;align-items:center;gap:8px;padding:0 5px;color:var(--ink)}
+.level-admin-row .uf-grid{align-items:start}
+.level-admin-row input:disabled{opacity:.7}
 .toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;align-items:center;gap:12px;padding:12px 18px;border-radius:12px;background:#0e1e2a;color:#fff;box-shadow:0 12px 30px rgba(0,0,0,.3);transform:translate(-50%,20px);opacity:0;transition:opacity .3s,transform .3s}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 .toast b{display:block}
@@ -1204,6 +1213,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
             <button type="button" data-admin-sec="requests">Solicitações<span class="count" id="cntReq"></span></button>
             <button type="button" data-admin-sec="award">Campeonatos</button>
             <button type="button" data-admin-sec="rank-award">Temporada do ranking</button>
+            <button type="button" data-admin-sec="levels">Níveis</button>
             <button type="button" data-admin-sec="carousel" aria-current="true">Carrossel<span class="count" id="cntSlides"></span></button>
             <button type="button" data-admin-sec="species">Espécies<span class="count" id="cntSpecies"></span></button>
             <button type="button" data-admin-sec="users">Usuários<span class="count" id="cntUsers"></span></button>
@@ -1338,6 +1348,16 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               <p class="box-desc">As duas temporadas de cada ano, com as datas de início e fim. A contagem considera as capturas aprovadas no período.</p>
               <div class="season-cal" id="seasonCalendar"></div>
             </div>
+            <div class="admin-box" data-admin-panel="levels" hidden>
+              <h4 class="req-title">Níveis, descrições e pontuação</h4>
+              <p class="box-desc">Os níveis usam os pontos acumulados nas capturas aprovadas. Alterar as metas não apaga nem modifica publicações ou pontuações já registradas; os níveis dos membros são recalculados automaticamente.</p>
+              <form id="levelAdminForm" class="user-form" novalidate>
+                <div id="levelsAdminFields" class="levels-admin-grid"></div>
+                <div class="form-error" id="levelsAdminError" role="alert"></div>
+                <p class="saved" id="levelsAdminSaved" aria-live="polite"></p>
+                <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar níveis</button></div>
+              </form>
+            </div>
             <div class="admin-box" data-admin-panel="users" hidden>
               <div class="box-head"><p class="box-desc">Contas com acesso à área de membros. Cada conta entra com e-mail e senha. Contas desativadas não conseguem entrar, mas as publicações continuam no site. Para trocar a senha de alguém, envie o link de redefinição pelo ícone de chave.</p><button class="btn btn-primary" id="userNew" type="button">Novo usuário</button></div>
               <form class="user-form" id="userForm" hidden novalidate>
@@ -1361,7 +1381,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <section class="panel" role="tabpanel" data-panel="profile" hidden>
           <div class="panel-head"><div><h3>Meu perfil</h3><p>Sua carta de pescador e suas contribuições para a comunidade Ajing Game.</p></div>
             <div class="lvl-menu">
-              <button type="button" class="lvl-btn" id="lvlBtn" aria-expanded="false" aria-controls="lvlPop"><span id="lvlBtnIcon"></span><span class="lvl-btn-txt"><small>Seu nível</small><b id="lvlBtnLabel">Nível 0</b></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+              <button type="button" class="lvl-btn" id="lvlBtn" aria-expanded="false" aria-controls="lvlPop"><span id="lvlBtnIcon"></span><span class="lvl-btn-txt"><small>Seu nível</small><b id="lvlBtnLabel">Nível 1 · Bronze</b></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
                 <section class="lvl-box lvl-pop" id="lvlPop" aria-labelledby="lvlTitle" hidden>
                 <h5 id="lvlTitle">Seu nível</h5>
                 <div class="lvl-now" id="lvlNow"></div>
@@ -1674,7 +1694,7 @@ const syncCol = (name, entries, remote = true) => {
   return Promise.all(ops);
 };
 
-const SHARED_KEYS = ['ajing-users', 'ajing-species', 'ajing-championships', 'ajing-species-requests', 'ajing-rank-champion-history', 'ajing-ranking-award-config'];
+const SHARED_KEYS = ['ajing-users', 'ajing-species', 'ajing-championships', 'ajing-species-requests', 'ajing-rank-champion-history', 'ajing-ranking-award-config', 'ajing-level-config'];
 const PROFILE = 'ajing-profile:';
 const fbRead = k => {
   switch (k) {
@@ -1687,6 +1707,7 @@ const fbRead = k => {
     case 'ajing-species-requests': return Object.values(C.speciesRequests).map(clean);
     case 'ajing-rank-champion-history': return Object.values(C.rankHistory).map(clean);
     case 'ajing-ranking-award-config': return C.config.rankAward ? clean(C.config.rankAward) : null;
+    case 'ajing-level-config': return C.config.levelSystem ? clean(C.config.levelSystem) : null;
   }
   if (k.startsWith(PROFILE)) { const p = C.profiles[k.slice(PROFILE.length)]; return p ? { ...p } : null; }
   return null;
@@ -1706,6 +1727,9 @@ const fbWriteQuiet = (k, v) => {
     case 'ajing-ranking-award-config':
       C.config = { ...C.config, rankAward: clean(v) };
       return fbIsAdmin() ? setDoc(fsDoc(fdb, 'config', 'rankAward'), clean(v)) : Promise.resolve();
+    case 'ajing-level-config':
+      C.config = { ...C.config, levelSystem: clean(v) };
+      return fbIsAdmin() ? setDoc(fsDoc(fdb, 'config', 'levelSystem'), clean(v)) : Promise.resolve();
   }
   if (k.startsWith(PROFILE)) {
     const u = k.slice(PROFILE.length); C.profiles = { ...C.profiles, [u]: clean(v) };
@@ -1930,20 +1954,29 @@ await new Promise(resolve => {
   const fmtNum = n => new Intl.NumberFormat('pt-BR').format(n);
 
   /* ===== Níveis dos membros (pela pontuação acumulada) ===== */
-  const LEVELS = [
-    { n: 0, min: 0,     name: 'Iniciante',               desc: 'Primeiro anzol na água. Toda lenda começa aqui.',
-      icon: '<path d="M12 3v10.5a4 4 0 1 1-8 0V12"/><path d="M4 12l2.5 2"/><circle cx="12" cy="3" r="1"/>' },
-    { n: 1, min: 1000,  name: 'Beliscada Fantasma',      desc: 'Sente até o toque que ninguém mais percebeu.',
-      icon: '<path d="M6 20V10a6 6 0 0 1 12 0v10l-2-1.6-2 1.6-2-1.6-2 1.6-2-1.6z"/><circle cx="10" cy="10" r=".9" fill="currentColor"/><circle cx="14" cy="10" r=".9" fill="currentColor"/>' },
-    { n: 2, min: 2000,  name: 'Fio de Cabelo',           desc: 'Pesca com linha tão fina que parece invisível.',
-      icon: '<path d="M4 4c3 3 1 6 4 9s5 1 7 4"/><path d="M15 17v1.5a2.5 2.5 0 0 0 5 0V16"/><path d="M20 16l-1.6 1.4"/>' },
-    { n: 3, min: 3000,  name: 'Paraquedista do Jig',     desc: 'Faz a isca descer na camada certa, no tempo certo.',
-      icon: '<path d="M3 10a9 7 0 0 1 18 0z"/><path d="M3 10l9 7 9-7M12 10v7"/><circle cx="12" cy="19.5" r="2"/>' },
-    { n: 4, min: 4000,  name: 'Sussurrador de Cardume',  desc: 'Lê a água e encontra o cardume antes de todo mundo.',
-      icon: '<path d="M2.5 12c2.5-4 7-4 9.5 0-2.5 4-7 4-9.5 0zM12 12l3-2.5v5z"/><path d="M17.5 8.5a5 5 0 0 1 0 7M20 6a8.5 8.5 0 0 1 0 12"/>' },
-    { n: 5, min: 10000, name: 'Mestre Finesse',          desc: 'Referência da comunidade em pesca finesse.',
-      icon: '<path d="M4 18 5.5 8l4 4L12 5l2.5 7 4-4L20 18z"/><path d="M4 21h16"/>' }
+  const LEVEL_CONFIG_KEY = 'ajing-level-config';
+  const DEFAULT_LEVELS = [
+    { n: 1, min: 0,     name: 'Bronze',    desc: 'Sua jornada no Ajing começa aqui. Cada captura aprovada conta.', icon: '<path d="M2.5 12c4-5.5 10.5-5.5 15 0-4.5 5.5-11 5.5-15 0zM17.5 12 22 8v8z"/><circle cx="8.5" cy="11" r=".8" fill="currentColor"/>' },
+    { n: 2, min: 1000,  name: 'Prata',     desc: 'A prática constante já aparece nas suas capturas.', icon: '<path d="M2.5 12c4-5.5 10.5-5.5 15 0-4.5 5.5-11 5.5-15 0zM17.5 12 22 8v8z"/><circle cx="8.5" cy="11" r=".8" fill="currentColor"/><path d="M11 8.2v7.6"/>' },
+    { n: 3, min: 2000,  name: 'Ouro',      desc: 'Você já construiu uma boa trajetória na água.', icon: '<path d="M2.5 12c4-5.5 10.5-5.5 15 0-4.5 5.5-11 5.5-15 0zM17.5 12 22 8v8z"/><circle cx="8.5" cy="11" r=".8" fill="currentColor"/><path d="m11 8 1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5L10 10z"/>' },
+    { n: 4, min: 3500,  name: 'Platina',   desc: 'Precisão e dedicação colocam você entre os destaques.', icon: '<path d="M2.5 12c4-5.5 10.5-5.5 15 0-4.5 5.5-11 5.5-15 0zM17.5 12 22 8v8z"/><circle cx="8.5" cy="11" r=".8" fill="currentColor"/><path d="M12 3v3M18 6l-2 2M6 6l2 2"/>' },
+    { n: 5, min: 5000,  name: 'Diamante',  desc: 'Uma marca de consistência e domínio das técnicas.', icon: '<path d="m12 2 8 7-8 13L4 9z"/><path d="M4 9h16M8 9l4 13 4-13M8 9l4-7 4 7"/>' },
+    { n: 6, min: 7500,  name: 'Esmeralda', desc: 'Seu conhecimento já inspira outros pescadores.', icon: '<path d="m5 4 7-2 7 2 3 6-10 12L2 10z"/><path d="M5 4 2 10h20l-3-6M12 2v20M5 4l7 6 7-6"/>' },
+    { n: 7, min: 10000, name: 'Mestre',    desc: 'Uma trajetória de experiência e resultados notáveis.', icon: '<path d="m3 7 5 4 4-7 4 7 5-4-2 13H5z"/><path d="M6 16h12M3 21h18"/><circle cx="3" cy="7" r="1"/><circle cx="12" cy="4" r="1"/><circle cx="21" cy="7" r="1"/>' },
+    { n: 8, min: 15000, name: 'Lendário',  desc: 'O topo, conquistado com uma jornada extraordinária.', icon: '<path d="m2 8 5 3 5-8 5 8 5-3-2 13H4z"/><path d="M6 16h12M2 22h20M12 2V0M4 5 2 3M20 5l2-2"/><circle cx="12" cy="3" r="1" fill="currentColor"/>' }
   ];
+  const normalizeLevels = saved => {
+    const rows = Array.isArray(saved) ? saved : [];
+    const normalized = DEFAULT_LEVELS.map(base => {
+      const row = rows.find(item => Number(item && item.n) === base.n) || {};
+      const min = Number(row.min), desc = typeof row.desc === 'string' ? row.desc.trim() : '';
+      return { ...base, min: Number.isInteger(min) && min >= 0 && min <= 1000000 ? min : base.min, desc: desc.slice(0, 180) || base.desc };
+    });
+    const valid = normalized[0].min === 0 && normalized.every((row, i) => i === 0 || row.min > normalized[i - 1].min);
+    return valid ? normalized : DEFAULT_LEVELS.map(row => ({ ...row }));
+  };
+  let LEVELS = normalizeLevels(readJSON(LEVEL_CONFIG_KEY, null));
+  const reloadLevels = () => { LEVELS = normalizeLevels(readJSON(LEVEL_CONFIG_KEY, null)); };
   // 'unscored' = publicada sem pontuar (escolha do membro): fica no feed, mas não pontua
   const isPostScored = p => p.status !== 'pending' && p.status !== 'rejected' && p.status !== 'unscored';
   const userPoints = u => posts.filter(p => p.user === u && isPostScored(p)).reduce((s, p) => s + postPoints(p), 0);
@@ -1958,6 +1991,38 @@ await new Promise(resolve => {
   const emblem = (l, size, extra) => l
     ? `<span class="lvl lvl-${l.n} ${size || ''} ${extra || ''}" role="img" aria-label="Nível ${l.n}: ${l.name}" title="Nível ${l.n} · ${l.name}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${l.icon}</svg><b>${l.n}</b></span>`
     : '';
+  const renderLevelsAdminForm = () => {
+    const host = $('levelsAdminFields'); if (!host) return;
+    host.innerHTML = LEVELS.map(l => `<fieldset class="level-admin-row"><legend>${emblem(l, 'sm')} <b>Nível ${l.n} · ${esc(l.name)}</b></legend>
+      <div class="uf-grid"><div class="field"><label for="levelMin${l.n}">Pontuação mínima</label><input id="levelMin${l.n}" data-level-min="${l.n}" type="number" min="${l.n === 1 ? 0 : 1}" max="1000000" step="1" value="${l.min}" ${l.n === 1 ? 'disabled' : ''}><span class="hint">${l.n === 1 ? 'Bronze é o nível inicial e começa em 0 ponto.' : 'Meta acumulada de pontos aprovados.'}</span></div>
+      <div class="field"><label for="levelDesc${l.n}">Descrição</label><textarea id="levelDesc${l.n}" data-level-desc="${l.n}" rows="2" maxlength="180">${esc(l.desc)}</textarea></div></div></fieldset>`).join('');
+  };
+  renderLevelsAdminForm();
+  $('levelAdminForm').addEventListener('submit', async e => {
+    e.preventDefault(); if (!isAdmin()) return;
+    const error = $('levelsAdminError'), saved = $('levelsAdminSaved'); error.textContent = ''; saved.textContent = '';
+    const next = LEVELS.map(level => ({
+      n: level.n,
+      min: level.n === 1 ? 0 : Number($(`levelMin${level.n}`).value),
+      desc: $(`levelDesc${level.n}`).value.trim()
+    }));
+    for (let i = 0; i < next.length; i++) {
+      if (!Number.isInteger(next[i].min) || next[i].min < 0 || next[i].min > 1000000) {
+        error.textContent = `Informe uma pontuação inteira entre 0 e 1.000.000 para o nível ${next[i].n}.`; $(`levelMin${next[i].n}`).focus(); return;
+      }
+      if (next[i].desc.length < 3 || next[i].desc.length > 180) {
+        error.textContent = `A descrição do nível ${next[i].n} precisa ter de 3 a 180 caracteres.`; $(`levelDesc${next[i].n}`).focus(); return;
+      }
+      if (i > 0 && next[i].min <= next[i - 1].min) {
+        error.textContent = `A pontuação do nível ${next[i].n} deve ser maior que a do nível anterior.`; $(`levelMin${next[i].n}`).focus(); return;
+      }
+    }
+    try {
+      await fb.write(LEVEL_CONFIG_KEY, next);
+      LEVELS = normalizeLevels(next); renderLevelsAdminForm(); renderAll();
+      saved.textContent = 'Níveis, descrições e pontuações salvos. Os pontos dos membros foram preservados.';
+    } catch (err) { error.textContent = `Não foi possível salvar. ${fb.errMsg(err)}`; }
+  });
   const userEmblem = (u, size) => emblem(levelInfo(userPoints(u)).cur, size);
   const trophyIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>';
   const fishIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12c4-6 10-6 14 0-4 6-10 6-14 0zM17 12l4-4v8z"/><circle cx="8" cy="11" r=".6" fill="currentColor"/></svg>';
@@ -2704,7 +2769,7 @@ await new Promise(resolve => {
 
   /* ===== Administração ===== */
   const showAdminSec = sec => {
-    if (!['requests', 'award', 'rank-award', 'carousel', 'species', 'users'].includes(sec)) sec = 'carousel';
+    if (!['requests', 'award', 'rank-award', 'levels', 'carousel', 'species', 'users'].includes(sec)) sec = 'carousel';
     document.querySelectorAll('[data-admin-sec]').forEach(b => b.setAttribute('aria-current', String(b.dataset.adminSec === sec)));
     document.querySelectorAll('[data-admin-panel]').forEach(p => p.hidden = p.dataset.adminPanel !== sec);
     store.set('ajing-admin-sec', sec, true);
@@ -2731,6 +2796,7 @@ await new Promise(resolve => {
     $('userAdminList').innerHTML = getUsers().map(u => { const self = u.username === me, off = u.active === false;
       const hookCount = Math.max(0, Number(u.goldHooks) || 0);
       return `<li class="${off ? 'off' : ''}"><span class="grow"><b>${esc(u.username)}</b> <span class="muted">${self ? '(você)' : ''}</span></span>${hookCount ? `<span class="user-hook-count" title="${hookCount} insígnias de anzol dourado">${hookCount} anzóis</span>` : ''}${off ? '<span class="status-badge">Desativado</span>' : ''}<span class="role-badge ${u.role === 'admin' ? 'admin' : ''}">${u.role === 'admin' ? 'Administrador' : 'Membro'}</span>${ub('crown', u.username, u.seasonChampion ? 'Remover coroa de campeão da temporada' : 'Definir como campeão da temporada', ui.crown, 'crown-btn' + (u.seasonChampion ? ' crown-active' : ''))}${ub('hook', u.username, 'Adicionar uma insígnia de anzol dourado', ui.hook, 'crown-btn')}${ub('reset', u.username, 'Enviar link de redefinição de senha para ' + u.username, ui.key)}${ub('edit', u.username, 'Editar usuário ' + u.username, ui.edit)}${self ? '' : ub('toggle', u.username, (off ? 'Reativar ' : 'Desativar ') + u.username, ui.off) + ub('delete', u.username, 'Excluir ' + u.username, ui.del)}</li>`; }).join('');
+    renderLevelsAdminForm();
   };
   let editingSpeciesId = null;
   const closeSpeciesEdit = () => {
@@ -4325,7 +4391,7 @@ await new Promise(resolve => {
     if (busy()) { refreshTimer = setTimeout(doRefresh, 1500); return; }
     if (fb.authUid() && !currentUser()) { await logout(); return; } // conta desativada ou excluída
     await Promise.all([loadPosts(), loadSpeciesPhotos(), loadReqPhotos(), loadChampBanners(), loadSlides()]);
-    rankAwardConfig = readRankAwardConfig(); renderRankAwardForm();
+    reloadLevels(); rankAwardConfig = readRankAwardConfig(); renderRankAwardForm();
     renderChampion();
     if (!membersPage.hidden) {
       document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
@@ -4345,7 +4411,7 @@ await new Promise(resolve => {
   showReqSec(store.get('ajing-req-sec', true) || 'posts');
   showProfSec(store.get('ajing-prof-sec', true) || 'card');
   Promise.all([loadPosts(), loadSpeciesPhotos(), loadReqPhotos(), loadChampBanners(), loadSlides()]).then(async () => {
-    rankAwardConfig = readRankAwardConfig(); renderRankAwardForm();
+    reloadLevels(); rankAwardConfig = readRankAwardConfig(); renderRankAwardForm();
     renderChampion();
     if (fb.authUid() && !currentUser()) await fb.signOut().catch(() => {});
     if (currentUser()) { showMembers(); showTab(store.get('ajing-member-tab', true) || 'social'); seedSpecies(); }
