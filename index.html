@@ -1180,7 +1180,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
           <ol class="rank-list" id="rankList"></ol>
           <div class="empty" id="rankEmpty" hidden><h4>Ranking ainda vazio</h4><p>O ranking começa quando os membros publicarem capturas no Social Fish.</p></div>
           </div>
-          <div id="rankHistoryView" hidden><div class="panel-head"><div><h4>Campeões por temporada</h4><p>Histórico dos campeões de cada estação do ano e suas insígnias acumuladas.</p></div></div><ul class="admin-list req-list" id="rankChampionHistory"></ul></div>
+          <div id="rankHistoryView" hidden><div class="panel-head"><div><h4>Campeões por temporada</h4><p>Histórico dos campeões de cada período e suas insígnias acumuladas.</p></div></div><ul class="admin-list req-list" id="rankChampionHistory"></ul></div>
         </section>
         <section class="panel" role="tabpanel" data-panel="species" hidden>
           <div class="panel-head"><div><h3>Espécies</h3><p>Espécies válidas para o Social Fish, com a pontuação no ranking e o total de capturas.</p></div><button class="btn btn-ghost admin-only" type="button" data-goto="admin" data-goto-sec="species" hidden>Gerenciar espécies</button><button class="btn btn-primary member-only" type="button" data-open-req hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Solicitar nova espécie</button></div>
@@ -1323,7 +1323,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
             </div>
             <div class="admin-box" data-admin-panel="rank-award" hidden>
               <h4 class="req-title">Temporada e premiação do ranking</h4>
-              <p class="box-desc">A temporada do ranking segue as estações do ano no hemisfério sul: outono, inverno, primavera e verão. As datas são as astronômicas de cada ano (por volta de 20/03, 21/06, 22/09 e 21/12), e cada estação começa à meia-noite (horário de Brasília) do seu primeiro dia. O ranking reinicia a cada estação, mas os pontos acumulados no perfil e os níveis são mantidos. A temporada continua mesmo se a premiação estiver desativada.</p>
+              <p class="box-desc">O ranking tem duas temporadas no hemisfério sul: Outono/Inverno, do início astronômico do outono ao início da primavera seguinte, e Primavera/Verão, da primavera ao início do outono seguinte. Cada período começa à meia-noite (horário de Brasília) do primeiro dia da estação. A nova regra começa na primavera de 2026; os períodos anteriores e seus campeões são preservados. O ranking reinicia a cada temporada, mas os pontos acumulados no perfil e os níveis são mantidos. A temporada continua mesmo se a premiação estiver desativada.</p>
               <form id="rankAwardForm" class="user-form" novalidate>
                 <div class="uf-grid">
                   <div class="field"><span class="flabel">Temporada atual</span><div class="season-info" id="rankSeasonInfo" aria-live="polite"></div></div>
@@ -1335,7 +1335,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               </form>
               <p class="admin-note">Para escolher o campeão da temporada e criar sua carta no carrossel, edite o slide “Premiação do ranking” e selecione um membro. A coroa acompanha essa escolha.</p>
               <h4 class="req-title">Calendário das temporadas</h4>
-              <p class="box-desc">Todas as estações desde o início do ranking, com as datas de cada uma. A contagem considera as capturas aprovadas no período.</p>
+              <p class="box-desc">As duas temporadas de cada ano, com as datas de início e fim. A contagem considera as capturas aprovadas no período.</p>
               <div class="season-cal" id="seasonCalendar"></div>
             </div>
             <div class="admin-box" data-admin-panel="users" hidden>
@@ -2419,7 +2419,7 @@ await new Promise(resolve => {
     if (changed) saveChamps(list);
   };
   const latestChampion = () => getChamps().filter(c => c.settled && c.champion).sort((a, b) => b.end - a.end)[0] || null;
-  /* ===== Temporadas do ranking: estações do ano (hemisfério sul) ===== */
+  /* ===== Temporadas do ranking: ciclos quente/frio (hemisfério sul) ===== */
   // Equinócios e solstícios pelo algoritmo de Jean Meeus (precisão de cerca de 1 minuto)
   const SEASON_COEF = [
     [2451623.80984, 365242.37404, 0.05169, -0.00411, -0.00057], // equinócio de março: outono
@@ -2440,13 +2440,19 @@ await new Promise(resolve => {
     const brt = new Date(instant - 3 * 3600000); // dia civil em Brasília (UTC−3)
     return (seasonStartCache[key] = Date.UTC(brt.getUTCFullYear(), brt.getUTCMonth(), brt.getUTCDate(), 3));
   };
-  const seasonAt = (year, k) => {
+  // Mantém os períodos antigos disponíveis para reconstruir o histórico anterior à mudança.
+  const legacySeasonAt = (year, k) => {
     const [ny, nk] = k === 3 ? [year + 1, 0] : [year, k + 1];
     return { mode: 'season', year, k, start: seasonStart(year, k), end: seasonStart(ny, nk), label: k === 3 ? `Verão ${year}/${String(year + 1).slice(2)}` : `${SEASON_NAMES[k]} ${year}` };
   };
+  // A nova regra começa no início da primavera de 2026; períodos anteriores preservam o calendário original.
+  const RANK_SEASON_MERGE_START = seasonStart(2026, 2);
+  const seasonAt = (year, k) => k === 0
+    ? { mode: 'season', year, k, start: seasonStart(year, 0), end: seasonStart(year, 2), label: `Outono/Inverno ${year}` }
+    : { mode: 'season', year, k, start: seasonStart(year, 2), end: seasonStart(year + 1, 0), label: `Primavera/Verão ${year}/${String(year + 1).slice(2)}` };
   const seasonContaining = ts => {
     const y = new Date(ts - 3 * 3600000).getUTCFullYear();
-    return [seasonAt(y - 1, 3), seasonAt(y, 0), seasonAt(y, 1), seasonAt(y, 2), seasonAt(y, 3)].find(s => ts >= s.start && ts < s.end);
+    return [seasonAt(y - 1, 1), seasonAt(y, 0), seasonAt(y, 1)].find(s => ts >= s.start && ts < s.end);
   };
   const seasonRange = s => `${fmtDay(s.start)} a ${fmtDay(s.end - 1)}`;
   const readRankAwardConfig = () => {
@@ -2454,17 +2460,18 @@ await new Promise(resolve => {
     return { enabled: saved.enabled !== false, period: 'season' };
   };
   let rankAwardConfig = readRankAwardConfig();
-  // Última estação já encerrada (a que recebe a premiação)
+  // Último período já encerrado (o que recebe a premiação)
   const completedRankAwardPeriod = (now = Date.now()) => {
-    const prev = seasonContaining(seasonContaining(now).start - 1);
-    return { ...prev, label: `Campeão ${prev.k === 2 ? 'da' : 'do'} ${prev.label}` };
+    const prev = completedRankPeriods(now).find(period => period.end <= now) || legacySeasonAt(2025, 3);
+    const article = /^(Outono|Inverno|Verão)\b/.test(prev.label) ? 'do' : 'da';
+    return { ...prev, label: `Campeão ${article} ${prev.label}` };
   };
   const currentRankSeason = (now = Date.now()) => seasonContaining(now);
   const currentRankSeasonPosts = () => {
     const season = currentRankSeason();
     return posts.filter(p => p.created >= season.start && p.created < season.end && isPostScored(p));
   };
-  // Calendário: todas as estações desde a primeira captura (ou desde o início do ano atual) até o fim do ano seguinte
+  // Calendário: dois períodos por ano, até o fim do ano seguinte.
   const renderSeasonCalendar = () => {
     const box = $('seasonCalendar'); if (!box) return;
     const now = Date.now(), cur = currentRankSeason(now), thisYear = new Date(now).getFullYear();
@@ -2475,8 +2482,7 @@ await new Promise(resolve => {
     const STATUS = { ended: 'Encerrada', current: 'Em andamento', next: 'Próxima', future: 'Futura' };
     const nextStart = cur.end;
     box.innerHTML = years.map(y => {
-      // cada ano mostra suas estações em ordem: o verão que começou em dezembro do ano anterior, outono, inverno e primavera
-      const rows = [seasonAt(y - 1, 3), seasonAt(y, 0), seasonAt(y, 1), seasonAt(y, 2)];
+      const rows = [seasonAt(y, 0), seasonAt(y, 1)];
       return `<section class="season-year"><h5>${y}</h5><table class="season-table"><thead><tr><th>Temporada</th><th>Período</th><th>Situação</th><th>Capturas</th></tr></thead><tbody>${rows.map(s => {
         const st = s.end <= now ? 'ended' : s.start <= now ? 'current' : s.start === nextStart ? 'next' : 'future';
         const n = st === 'ended' || st === 'current' ? posts.filter(p => p.created >= s.start && p.created < s.end && isPostScored(p)).length : null;
@@ -2496,7 +2502,7 @@ await new Promise(resolve => {
     const next = { enabled: $('rankAwardEnabled').checked, period: 'season' };
     if (!writeJSON('ajing-ranking-award-config', next)) { $('rankAwardError').textContent = 'Não foi possível salvar a configuração.'; return; }
     rankAwardConfig = next; $('rankAwardError').textContent = '';
-    $('rankAwardSaved').textContent = `Configuração salva. ${next.enabled ? 'Premiação ativada.' : 'Premiação desativada; o ranking continua reiniciando a cada estação.'}`;
+    $('rankAwardSaved').textContent = `Configuração salva. ${next.enabled ? 'Premiação ativada.' : 'Premiação desativada; o ranking continua reiniciando a cada temporada.'}`;
     renderChampion(); renderAll();
   });
 
@@ -2538,13 +2544,22 @@ await new Promise(resolve => {
     }
     return writeJSON('ajing-rank-champion-history', history);
   };
-  const completedRankPeriods = () => {
+  const completedRankPeriods = (now = Date.now()) => {
     const history = readRankChampionHistory(), years = posts.filter(isPostScored).map(p => new Date(p.created).getFullYear()).concat(history.map(h => new Date(h.start).getFullYear()).filter(Number.isFinite));
-    const now = Date.now(), currentYear = new Date(now).getFullYear(), firstYear = years.reduce((min, year) => Math.min(min, year), currentYear), periods = [];
+    const currentYear = new Date(now).getFullYear(), firstYear = years.reduce((min, year) => Math.min(min, year), currentYear), periods = [];
     const add = (start, end, label, mode = rankAwardConfig.period) => { if (end <= now) periods.push({ key: rankPeriodKey({ mode, start, end }), mode, start, end, label }); };
     const firstTs = Date.UTC(firstYear, 0, 1, 3);
-    for (let year = firstYear - 1; year <= currentYear; year++) for (let k = 0; k < 4; k++) { const s = seasonAt(year, k); if (s.end > firstTs) add(s.start, s.end, s.label, 'season'); }
-    history.forEach(h => { const key = historyPeriodKey(h); if (!periods.some(p => p.key === key)) periods.push({ key, mode: h.mode, start: h.start, end: h.end, label: h.label }); });
+    for (let year = firstYear - 1; year <= currentYear; year++) {
+      for (let k = 0; k < 4; k++) {
+        const s = legacySeasonAt(year, k);
+        if (s.end > firstTs && s.end <= RANK_SEASON_MERGE_START) add(s.start, s.end, s.label, 'season');
+      }
+      for (let k = 0; k < 2; k++) {
+        const s = seasonAt(year, k);
+        if (s.end > firstTs && s.start >= RANK_SEASON_MERGE_START) add(s.start, s.end, s.label, 'season');
+      }
+    }
+    history.forEach(h => { const key = historyPeriodKey(h); if (h.end <= now && !periods.some(p => p.key === key)) periods.push({ key, mode: h.mode, start: h.start, end: h.end, label: h.label }); });
     return periods.sort((a, b) => b.start - a.start);
   };
   const renderRankChampionHistory = () => {
