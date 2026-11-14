@@ -1767,7 +1767,10 @@ const fbRead = k => {
     case 'ajing-species-requests': return Object.values(C.speciesRequests).map(clean);
     case 'ajing-rank-champion-history': return Object.values(C.rankHistory).map(clean);
     case 'ajing-ranking-award-config': return C.config.rankAward ? clean(C.config.rankAward) : null;
-    case 'ajing-level-config': return C.config.levelSystem ? clean(C.config.levelSystem) : null;
+    case 'ajing-level-config': {
+      const saved = C.config.levelSystem;
+      return Array.isArray(saved) ? clean(saved) : saved && Array.isArray(saved.levels) ? clean(saved.levels) : null;
+    }
   }
   if (k.startsWith(PROFILE)) { const p = C.profiles[k.slice(PROFILE.length)]; return p ? { ...p } : null; }
   return null;
@@ -1788,8 +1791,8 @@ const fbWriteQuiet = (k, v) => {
       C.config = { ...C.config, rankAward: clean(v) };
       return fbIsAdmin() ? setDoc(fsDoc(fdb, 'config', 'rankAward'), clean(v)) : Promise.resolve();
     case 'ajing-level-config':
-      C.config = { ...C.config, levelSystem: clean(v) };
-      return fbIsAdmin() ? setDoc(fsDoc(fdb, 'config', 'levelSystem'), clean(v)) : Promise.resolve();
+      C.config = { ...C.config, levelSystem: { levels: clean(v) } };
+      return fbIsAdmin() ? setDoc(fsDoc(fdb, 'config', 'levelSystem'), { levels: clean(v) }) : Promise.resolve();
   }
   if (k.startsWith(PROFILE)) {
     const u = k.slice(PROFILE.length); C.profiles = { ...C.profiles, [u]: clean(v) };
@@ -1857,14 +1860,14 @@ const fb = {
   saveLevelSystem: async levels => {
     if (!fbIsAdmin()) throw { code: 'permission-denied' };
     const batch = writeBatch(fdb), levelConfig = clean(levels).map(({ image, ...level }) => level), nextIcons = { ...C.levelIcons };
-    batch.set(fsDoc(fdb, 'config', 'levelSystem'), levelConfig);
+    batch.set(fsDoc(fdb, 'config', 'levelSystem'), { levels: levelConfig });
     levels.forEach(level => {
       const id = String(level.n), ref = fsDoc(fdb, 'levelIcons', id), image = level.image || '';
       if (image) { batch.set(ref, { data: image }); nextIcons[id] = { data: image }; }
       else { if (nextIcons[id]) batch.delete(ref); delete nextIcons[id]; }
     });
     await batch.commit();
-    C.config = { ...C.config, levelSystem: levelConfig };
+    C.config = { ...C.config, levelSystem: { levels: levelConfig } };
     C.levelIcons = nextIcons;
   },
   setLike: async (id, username, liked) => {
