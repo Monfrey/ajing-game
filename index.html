@@ -1711,7 +1711,7 @@ const fbApp = initializeApp(FIREBASE_CONFIG), fbAuth = getAuth(fbApp);
 let fdb;
 try { fdb = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
 catch (_) { fdb = getFirestore(fbApp); }
-const PUBLIC_COLS = ['users', 'species', 'championships', 'rankHistory', 'config', 'profiles', 'posts', 'speciesPhotos', 'banners', 'slides'];
+const PUBLIC_COLS = ['users', 'species', 'championships', 'rankHistory', 'config', 'profiles', 'posts', 'speciesPhotos', 'banners', 'slides', 'levelIcons'];
 const MEMBER_COLS = ['eventRequests', 'speciesRequests', 'requestPhotos'];
 const C = {}; [...PUBLIC_COLS, ...MEMBER_COLS].forEach(n => { C[n] = {}; });
 const fbHooks = { refresh: null };
@@ -2031,7 +2031,8 @@ await new Promise(resolve => {
       const row = rows.find(item => Number(item && item.n) === base.n) || {};
       const min = Number(row.min), desc = typeof row.desc === 'string' ? row.desc.trim() : '';
       const name = typeof row.name === 'string' ? row.name.trim().slice(0, 40) : '';
-      return { ...base, name: name || base.name, image: safeImageSrc(row.image) ? row.image : '', min: Number.isInteger(min) && min >= 0 && min <= 1000000 ? min : base.min, desc: desc.slice(0, 180) || base.desc };
+      const cachedImage = C.levelIcons && C.levelIcons[String(base.n)] && C.levelIcons[String(base.n)].data;
+      return { ...base, name: name || base.name, image: safeImageSrc(row.image) ? row.image : safeImageSrc(cachedImage) ? cachedImage : '', min: Number.isInteger(min) && min >= 0 && min <= 1000000 ? min : base.min, desc: desc.slice(0, 180) || base.desc };
     });
     const valid = normalized[0].min === 0 && normalized.every((row, i) => i === 0 || row.min > normalized[i - 1].min);
     return valid ? normalized : DEFAULT_LEVELS.map(row => ({ ...row }));
@@ -2104,7 +2105,13 @@ await new Promise(resolve => {
       }
     }
     try {
-      await fb.write(LEVEL_CONFIG_KEY, next);
+      const levelConfig = next.map(({ image, ...level }) => level);
+      const iconWrites = next.map(level => {
+        const current = C.levelIcons[String(level.n)] && C.levelIcons[String(level.n)].data || '';
+        return current === level.image ? Promise.resolve() : fb.setBlob('levelIcons', String(level.n), level.image);
+      });
+      await Promise.all(iconWrites);
+      await fb.write(LEVEL_CONFIG_KEY, levelConfig);
       LEVELS = normalizeLevels(next); renderLevelsAdminForm(); renderAll();
       saved.textContent = 'Nomes, símbolos, descrições e pontuações dos níveis foram salvos.';
     } catch (err) { error.textContent = `Não foi possível salvar. ${fb.errMsg(err)}`; }
