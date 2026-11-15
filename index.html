@@ -639,9 +639,9 @@ select{font:inherit;color:inherit}
 .partner-admin-list{max-height:480px}
 .partner-admin-thumb{width:68px;height:48px;flex:none;object-fit:contain;padding:4px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface)}
 .partner-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:24px}
-.partner-card{display:block;min-width:0;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
-.partner-card img{display:block;width:100%;height:auto;margin:0;object-fit:contain}
-.partner-card a{display:block;width:100%;height:auto;margin:0;padding:0;color:inherit;text-decoration:none}
+.partner-card{display:block;min-width:0;aspect-ratio:4/3;margin:0;padding:0;overflow:hidden;border:0;border-radius:0;background:transparent;box-shadow:none}
+.partner-card img{display:block;width:100%;height:100%;margin:0;object-fit:contain}
+.partner-card a{display:block;width:100%;height:100%;margin:0;padding:0;color:inherit;text-decoration:none}
 @media(max-width:720px){.partner-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}
 @media(max-width:560px){.sf-grid,.site-copy-group{grid-template-columns:minmax(0,1fr)}.sf-grid .full,.site-copy-group .field.full{grid-column:auto}.site-copy-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.site-copy-nav button{min-height:38px;border-radius:var(--radius-sm)}}
 .img-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
