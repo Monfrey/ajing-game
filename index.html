@@ -1404,6 +1404,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                 <button type="button" data-req-sec="posts">Postagens<span class="count" id="cntReqPosts"></span></button>
                 <button type="button" data-req-sec="events">Inscrições<span class="count" id="cntReqEvents"></span></button>
                 <button type="button" data-req-sec="species">Espécies<span class="count" id="cntReqSpecies"></span></button>
+                <button type="button" data-req-sec="members">Novos membros<span class="count" id="cntReqMembers"></span></button>
               </nav>
               <div class="form-error" id="reqAdminError" role="alert"></div>
               <p class="saved" id="reqAdminSaved" aria-live="polite"></p>
@@ -1431,6 +1432,11 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                 <div class="hist-tools" data-hist="species"><label class="feed-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input type="search" data-hist-q placeholder="Buscar por espécie ou membro" aria-label="Buscar por espécie ou membro"></label><select data-hist-st aria-label="Filtrar por resultado"><option value="all">Todas</option><option value="approved">Aprovadas</option><option value="rejected">Recusadas</option></select><span class="hist-count" id="speciesHistCount" aria-live="polite"></span></div>
                 <ul class="admin-list req-list hist-list" id="reqHistory"></ul>
                 <div class="hist-more" id="speciesHistMore"></div>
+              </section>
+              <section data-req-panel="members" hidden>
+                <h4 class="req-title">Solicitações de novos membros</h4>
+                <p class="box-desc">Aprove somente pessoas que poderão acessar a área de membros. A conta será liberada após a aprovação.</p>
+                <ul class="admin-list req-list req-queue" id="memberApplicationList"></ul>
               </section>
             </div>
             <div class="admin-box" data-admin-panel="award" hidden>
@@ -1733,7 +1739,16 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <div class="form-error" id="loginError" role="alert"></div>
         <button class="btn btn-primary" type="submit">Entrar</button>
         <button class="link-btn" id="forgotPass" type="button">Esqueci minha senha</button>
+        <button class="link-btn" id="showSignup" type="button">Ainda não tem cadastro? Solicite acesso</button>
         <p class="saved" id="loginInfo" aria-live="polite"></p>
+      </form>
+      <form class="form" id="signupForm" autocomplete="on" novalidate hidden>
+        <div class="field"><label for="signupName">Nome para exibição</label><input id="signupName" name="name" type="text" maxlength="30" autocomplete="nickname" required><span class="hint">De 3 a 30 caracteres.</span></div>
+        <div class="field"><label for="signupEmail">E-mail</label><input id="signupEmail" name="email" type="email" maxlength="120" autocomplete="email" inputmode="email" required></div>
+        <div class="field"><label for="signupPass">Senha</label><input id="signupPass" name="new-password" type="password" minlength="6" autocomplete="new-password" required><span class="hint">Use pelo menos 6 caracteres.</span></div>
+        <div class="form-error" id="signupError" role="alert"></div>
+        <button class="btn btn-primary" id="signupSubmit" type="submit">Enviar solicitação</button>
+        <button class="link-btn" id="backToLogin" type="button">Voltar para entrar</button>
       </form>
     </div>
   </div>
@@ -1785,7 +1800,7 @@ try { fdb = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabM
 catch (_) { fdb = getFirestore(fbApp); }
 const PUBLIC_COLS = ['users', 'species', 'championships', 'rankHistory', 'config', 'profiles', 'posts', 'speciesPhotos', 'banners', 'slides', 'levelIcons', 'partners'];
 const MEMBER_COLS = ['eventRequests', 'speciesRequests', 'requestPhotos'];
-const C = {}; [...PUBLIC_COLS, ...MEMBER_COLS].forEach(n => { C[n] = {}; });
+const C = {}; [...PUBLIC_COLS, ...MEMBER_COLS].forEach(n => { C[n] = {}; }); C.memberApplications = {};
 C.postAudits = {}; C.memberMessages = {};
 const fbHooks = { refresh: null };
 const clean = x => JSON.parse(JSON.stringify(x ?? null));
@@ -1809,11 +1824,11 @@ const fbUser = () => authUid ? C.users[authUid] || null : null;
 const fbIsAdmin = () => { const u = fbUser(); return !!u && u.role === 'admin' && u.active !== false; };
 const attachMember = async on => {
   memberUnsubs.forEach(u => u()); memberUnsubs = [];
-  if (!on) { MEMBER_COLS.forEach(n => { C[n] = {}; }); C.postAudits = {}; C.memberMessages = {}; return; }
+  if (!on) { MEMBER_COLS.forEach(n => { C[n] = {}; }); C.postAudits = {}; C.memberMessages = {}; C.memberApplications = {}; return; }
   const username = fbUser().username;
   const refs = MEMBER_COLS.map(name => [name, fsCol(fdb, name)]);
   refs.push(['memberMessages', fsCol(fdb, 'memberMessages', username, 'messages')]);
-  if (fbIsAdmin()) refs.push(['postAudits', fsCol(fdb, 'postAudits')]);
+  if (fbIsAdmin()) { refs.push(['postAudits', fsCol(fdb, 'postAudits')]); refs.push(['memberApplications', fsCol(fdb, 'memberApplications')]); }
   memberUnsubs = await Promise.all(refs.map(([name, ref]) => listen(name, ref)));
 };
 
@@ -1966,6 +1981,7 @@ const fb = {
   postsDB, kvDB, setBlob, memberMessagesDB,
   createSpeciesRequest,
   user: fbUser, authUid: () => authUid,
+  memberApplications: () => clean(C.memberApplications || {}),
   config: id => C.config[id] ? clean(C.config[id]) : null,
   partners: () => Object.values(C.partners || {}).map(clean),
   setConfig: (id, data) => { C.config = { ...C.config, [id]: clean(data) }; return setDoc(fsDoc(fdb, 'config', id), clean(data)); },
@@ -2003,6 +2019,21 @@ const fb = {
     const cred = await signInWithEmailAndPassword(fbAuth, email, pass);
     for (let i = 0; i < 200 && authUid !== cred.user.uid; i++) await new Promise(r => setTimeout(r, 25));
     await authSeq; return cred.user.uid;
+  },
+  registerAccount: async (email, pass) => (await createUserWithEmailAndPassword(fbAuth, email, pass)).user.uid,
+  submitMemberApplication: async (uid, data) => {
+    const app = { ...clean(data), uid, status: 'pending', created: Date.now() };
+    await setDoc(fsDoc(fdb, 'memberApplications', uid), app); C.memberApplications = { ...C.memberApplications, [uid]: app };
+  },
+  memberApplication: async uid => { const s = await getDoc(fsDoc(fdb, 'memberApplications', uid)); return s.exists() ? s.data() : null; },
+  approveMemberApplication: async (uid, username, email) => {
+    const batch = writeBatch(fdb);
+    batch.set(fsDoc(fdb, 'users', uid), { username, role: 'member', active: true, seasonChampion: false, goldHooks: 0 });
+    batch.set(fsDoc(fdb, 'private', uid), { email });
+    batch.delete(fsDoc(fdb, 'memberApplications', uid));
+    await batch.commit();
+    C.users = { ...C.users, [uid]: { username, role: 'member', active: true, seasonChampion: false, goldHooks: 0 } };
+    const applications = { ...C.memberApplications }; delete applications[uid]; C.memberApplications = applications;
   },
   signOut: () => signOut(fbAuth),
   reset: email => sendPasswordResetEmail(fbAuth, email),
@@ -2363,10 +2394,11 @@ await new Promise(resolve => {
   }));
 
   /* ===== Login ===== */
-  const modal = $('loginModal'), loginForm = $('loginForm'), loginError = $('loginError');
+  const modal = $('loginModal'), loginForm = $('loginForm'), loginError = $('loginError'), signupForm = $('signupForm');
   let lastFocus = null;
   const openLogin = () => {
     lastFocus = document.activeElement;
+    loginForm.hidden = false; signupForm.hidden = true; loginError.textContent = ''; $('signupError').textContent = '';
     modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
     setTimeout(() => softFocus($('loginUser')), 30);
@@ -2378,6 +2410,8 @@ await new Promise(resolve => {
   };
   $('membersBtn').addEventListener('click', () => { closeMenu(); currentUser() ? showMembers() : openLogin(); });
   $('loginClose').addEventListener('click', closeLogin);
+  $('showSignup').addEventListener('click', () => { loginForm.hidden = true; signupForm.hidden = false; $('signupError').textContent = ''; setTimeout(() => softFocus($('signupName')), 0); });
+  $('backToLogin').addEventListener('click', () => { signupForm.hidden = true; loginForm.hidden = false; $('loginError').textContent = ''; setTimeout(() => softFocus($('loginUser')), 0); });
   modal.addEventListener('click', e => { if (e.target === modal) closeLogin(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('open')) closeLogin(); });
   loginForm.addEventListener('submit', async e => {
@@ -2387,14 +2421,39 @@ await new Promise(resolve => {
     if (!email || !pass) { loginError.textContent = 'Preencha e-mail e senha para entrar.'; return; }
     const btn = loginForm.querySelector('button[type=submit]'); btn.disabled = true; loginError.textContent = '';
     try {
-      await fb.signIn(email, pass);
+      const uid = await fb.signIn(email, pass);
       const u = fb.user();
-      if (!u) { await fb.signOut(); loginError.textContent = 'Este login ainda não tem cadastro no Ajing Game. Fale com um administrador.'; return; }
+      if (!u) {
+        let application = null; try { application = await fb.memberApplication(uid); } catch (_) {}
+        await fb.signOut();
+        loginError.textContent = application?.status === 'pending' ? 'Seu cadastro está aguardando aprovação dos administradores.' : application?.status === 'rejected' ? 'Seu cadastro não foi aprovado. Fale com um administrador.' : 'Este login ainda não tem cadastro aprovado no Ajing Game. Solicite acesso ou fale com um administrador.';
+        return;
+      }
       if (u.active === false) { await fb.signOut(); loginError.textContent = 'Esta conta está desativada. Fale com um administrador.'; return; }
       await Promise.all([loadPosts(), loadReqPhotos()]);
       loginForm.reset(); closeLogin(); showMembers(); showTab('social'); seedSpecies();
     } catch (err) { loginError.textContent = fb.errMsg(err); }
     finally { btn.disabled = false; }
+  });
+  signupForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const name = $('signupName').value.normalize('NFC').trim().replace(/\s+/g, ' '), email = $('signupEmail').value.trim().toLowerCase(), pass = $('signupPass').value, err = $('signupError');
+    err.textContent = '';
+    if (name.length < 3 || name.length > 30 || !/^[\p{L}\p{N}](?:[\p{L}\p{N} ._'-]*[\p{L}\p{N}.])?$/u.test(name)) { err.textContent = 'Informe um nome de 3 a 30 caracteres, começando e terminando com letra ou número.'; $('signupName').focus(); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Informe um e-mail válido.'; $('signupEmail').focus(); return; }
+    if (pass.length < 6) { err.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; $('signupPass').focus(); return; }
+    const btn = $('signupSubmit'); btn.disabled = true;
+    let uid = null;
+    try {
+      if (getUsers().some(u => norm(u.username) === norm(name))) { err.textContent = 'Esse nome já está em uso. Escolha outro.'; $('signupName').focus(); return; }
+      uid = await fb.registerAccount(email, pass);
+      await fb.submitMemberApplication(uid, { username: name, email });
+      await fb.signOut(); signupForm.reset(); signupForm.hidden = true; loginForm.hidden = false;
+      $('loginInfo').textContent = 'Solicitação enviada. Você poderá entrar na área de membros depois que um administrador aprovar seu cadastro.';
+    } catch (signupErr) {
+      if (uid) { try { await fb.signOut(); } catch (_) {} }
+      err.textContent = fb.errMsg(signupErr);
+    } finally { btn.disabled = false; }
   });
   $('forgotPass').addEventListener('click', async () => {
     const email = $('loginUser').value.trim().toLowerCase();
@@ -3075,7 +3134,7 @@ await new Promise(resolve => {
   document.querySelectorAll('[data-hab-filter]').forEach(b => b.addEventListener('click', () => { habFilter = b.dataset.habFilter; renderSpecies(); }));
 
   /* ===== Solicitações: submenus e históricos ===== */
-  const REQ_SECS = ['posts', 'events', 'species'];
+  const REQ_SECS = ['posts', 'events', 'species', 'members'];
   const showReqSec = sec => {
     if (!REQ_SECS.includes(sec)) sec = 'posts';
     document.querySelectorAll('[data-req-sec]').forEach(b => b.setAttribute('aria-current', String(b.dataset.reqSec === sec)));
@@ -4432,11 +4491,13 @@ await new Promise(resolve => {
       .sort((a, b) => (b.reviewed || 0) - (a.reviewed || 0));
     const pendingPosts = posts.filter(p => p.status === 'pending').sort((a, b) => a.created - b.created);
     const postHistory = posts.filter(p => p.status === 'approved' || p.status === 'rejected').sort((a, b) => (b.reviewed || 0) - (a.reviewed || 0));
-    const pendingTotal = pending.length + eventRequests.length + pendingPosts.length;
-    [['cntReqPosts', pendingPosts.length], ['cntReqEvents', eventRequests.length], ['cntReqSpecies', pending.length]].forEach(([id, n]) => { const el = $(id); el.textContent = n || ''; el.classList.toggle('alert', n > 0); });
+    const memberApplications = isAdmin() ? Object.entries(fb.memberApplications()).map(([uid, app]) => ({ ...app, uid })).filter(app => app.status === 'pending').sort((a, b) => (a.created || 0) - (b.created || 0)) : [];
+    const pendingTotal = pending.length + eventRequests.length + pendingPosts.length + memberApplications.length;
+    [['cntReqPosts', pendingPosts.length], ['cntReqEvents', eventRequests.length], ['cntReqSpecies', pending.length], ['cntReqMembers', memberApplications.length]].forEach(([id, n]) => { const el = $(id); el.textContent = n || ''; el.classList.toggle('alert', n > 0); });
     const badge = $('adminBadge'); badge.hidden = !isAdmin() || !pendingTotal; badge.textContent = pendingTotal;
     const cnt = $('cntReq'); cnt.textContent = pendingTotal || ''; cnt.classList.toggle('alert', pendingTotal > 0);
     if (!isAdmin()) return;
+    $('memberApplicationList').innerHTML = memberApplications.length ? memberApplications.map(app => `<li class="review-history-row" data-member-application="${esc(app.uid)}"><span class="grow"><b>${esc(app.username || 'Novo membro')}</b><small>${esc(app.email || '')} · Solicitação em ${fmtShort(app.created)}</small></span><button class="btn btn-primary" type="button" data-member-application-approve>Aprovar acesso</button></li>`).join('') : '<li class="empty-row">Nenhum novo cadastro aguardando aprovação.</li>';
     $('reqAdminList').innerHTML = pending.length ? pending.map(r => `<li class="req-card" data-req="${esc(r.id)}">
         <div class="rphoto" ${safeImageSrc(reqPhotos[r.id]) ? `style="background-image:url('${safeImageSrc(reqPhotos[r.id])}')"` : ''} role="img" aria-label="Foto enviada para ${esc(r.name)}"></div>
         <div>
@@ -4491,6 +4552,21 @@ await new Promise(resolve => {
     const eh = histApply('events', eventHistory, r => `${r.championshipName} ${displayName(r.user)} ${r.user}`); histFooter('events', eh, 'eventHistCount', 'eventHistMore');
     $('eventRegHistory').innerHTML = eh.shown.length ? eh.shown.map(r => `<li class="review-history-row" data-event-history="${esc(r.id)}" data-champ="${esc(r.championshipId)}"><span class="grow"><b>${esc(r.championshipName)}</b><small>${esc(displayName(r.user))} · ${r.status === 'approved' ? 'aprovada' : 'recusada'} por ${esc(displayName(r.reviewer || ''))} em ${fmtShort(r.reviewed)}</small></span><span class="req-status ${r.status === 'approved' ? 'approved' : 'rejected'}">${r.status === 'approved' ? 'Aprovada' : 'Recusada'}</span><button class="btn btn-ghost review-edit-btn" type="button" data-review-edit="event"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar análise</button><form class="review-edit-panel" data-review-form="event" hidden><div class="field"><label>Resultado da análise</label><select data-edit-field="status"><option value="approved" ${r.status === 'approved' ? 'selected' : ''}>Aprovada</option><option value="rejected" ${r.status === 'rejected' ? 'selected' : ''}>Recusada</option><option value="pending">Voltar para análise</option></select></div><div class="form-error" data-edit-error role="alert"></div><div class="form-actions"><button class="btn btn-primary" type="submit">Salvar revisão</button><button class="btn btn-ghost" type="button" data-review-cancel>Cancelar</button></div></form></li>`).join('') : `<li class="empty-row">${eh.all ? 'Nenhuma análise encontrada com esse filtro.' : 'Nenhuma inscrição analisada ainda.'}</li>`;
   };
+
+  $('memberApplicationList').addEventListener('click', async e => {
+    const button = e.target.closest('[data-member-application-approve]'); if (!button || !isAdmin()) return;
+    const row = button.closest('[data-member-application]'), uid = row?.dataset.memberApplication, app = fb.memberApplications()[uid];
+    if (!app || app.status !== 'pending') return renderRequests();
+    const username = String(app.username || '').normalize('NFC').trim().replace(/\s+/g, ' '), email = String(app.email || '').trim().toLowerCase();
+    const userKey = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (!username || !email || getUsers().some(u => userKey(u.username) === userKey(username))) { $('reqAdminError').textContent = `Não foi possível aprovar ${username || 'este cadastro'}: confira os dados e se o nome já está sendo usado.`; return; }
+    button.disabled = true; $('reqAdminError').textContent = ''; $('reqAdminSaved').textContent = '';
+    try {
+      await fb.approveMemberApplication(uid, username, email);
+      $('reqAdminSaved').textContent = `Acesso de ${username} aprovado. A pessoa já pode entrar com o e-mail e a senha cadastrados.`;
+      renderRequests();
+    } catch (approveErr) { $('reqAdminError').textContent = fb.errMsg(approveErr); button.disabled = false; }
+  });
 
   $('reqAdminList').addEventListener('click', async e => { if (!isAdmin()) return;
     const b = e.target.closest('[data-req-act]'); if (!b) return;
@@ -4990,20 +5066,23 @@ await new Promise(resolve => {
   /* ===== Renderização geral ===== */
   const resetTabHome = name => {
     if (name === 'social') {
+      const needsRender = !!feedQuery || !!$('feedSearch').value;
       feedQuery = ''; $('feedSearch').value = ''; $('feedSearchClear').hidden = true;
       if (postView.classList.contains('open')) closePostView();
-      renderFeed();
+      if (needsRender) renderFeed();
     } else if (name === 'members') {
+      const needsRender = !!memberFilter || !!$('memberSearch').value;
       portfolioUser = null; memberFilter = ''; $('memberSearch').value = '';
       $('memberPortfolio').hidden = true; $('membersDirectory').hidden = false;
-      renderMembers();
+      if (needsRender) renderMembers();
     } else if (name === 'ranking') {
+      const needsRender = rankScope !== 'season' || rankMode !== 'points';
       rankView = 'current'; rankScope = 'season'; rankMode = 'points';
-      setRankView('current'); renderRanking();
+      setRankView('current'); if (needsRender) renderRanking();
     } else if (name === 'species') {
-      habFilter = 'all'; renderSpecies();
+      const needsRender = habFilter !== 'all'; habFilter = 'all'; if (needsRender) renderSpecies();
     } else if (name === 'events') {
-      selectedEventId = null; renderEvents();
+      const needsRender = selectedEventId !== null; selectedEventId = null; if (needsRender) renderEvents();
     } else if (name === 'profile') {
       if (!$('profileForm').hidden) $('cancelEdit').click();
       if (!$('passForm').hidden) $('passCancel').click();
@@ -5011,7 +5090,7 @@ await new Promise(resolve => {
     } else if (name === 'admin') {
       showAdminSec('carousel'); showReqSec('posts');
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
   function renderAll() { renderAward(); renderEvents(); updateUserChip(); renderProfile(); renderMembers(); renderMyCaptures(); renderMemberMessages(); renderRequests(); const profSubnav = document.getElementById('profSubnav'); profSubnav.hidden = false; profSubnav.querySelector('[data-prof-sec="request"]').hidden = isAdmin(); if (isAdmin() && store.get('ajing-prof-sec', true) === 'request') showProfSec('card'); renderSpeciesSelect(); renderFeed(); renderSpecies(); renderRanking(); renderAdmin(); renderSlideAdmin(); }
 
