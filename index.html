@@ -90,6 +90,7 @@ p{margin:0}
 .slide.image-overlay .slide-bg-image{position:absolute;z-index:-2;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}
 .slide.image-overlay::before{content:"";position:absolute;z-index:-1;inset:0;background:linear-gradient(90deg,rgba(5,20,30,.86),rgba(5,20,30,.64) 46%,rgba(5,20,30,.08));pointer-events:none}
 .slide.image-overlay[data-slide-tone="on-light"]::before{background:linear-gradient(90deg,rgba(255,255,255,.9),rgba(255,255,255,.7) 46%,rgba(255,255,255,.08))}
+.slide.image-overlay.image-only::before{display:none}
 .slide-overlay-content{position:relative;z-index:1;display:flex;min-height:inherit;flex-direction:column;align-items:flex-start;justify-content:center;padding:clamp(24px,5vw,62px);color:#fff}
 .image-overlay[data-slide-tone="on-light"] .slide-overlay-content{color:#0e1e2a}
 .image-overlay .slide-title span,.image-overlay .hero-copy{color:inherit;opacity:.94}
@@ -484,6 +485,7 @@ select{font:inherit;color:inherit}
 .inline-form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
 .inline-form .field{flex:1 1 140px}
 .admin-list{list-style:none;margin:6px 0 0;padding:0;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);max-height:320px;overflow:auto}
+.admin-list.slide-list{max-height:min(75vh,max(240px,calc(100dvh - 280px)))}
 #speciesAdminList{max-height:min(65vh,680px)}
 .admin-list li{display:flex;align-items:center;gap:10px;padding:8px 10px;font-size:.88rem}
 .admin-list li+li{border-top:1px solid var(--line)}
@@ -1378,7 +1380,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
             <ul class="admin-list slide-list" id="slideAdminList"></ul>
             <form class="slide-form" id="slideForm" hidden novalidate>
               <div class="sf-grid">
-                <div class="field"><label for="sTitle">Título</label><input id="sTitle" maxlength="60" required></div>
+                <div class="field"><label for="sTitle">Título <span class="muted">(opcional)</span></label><input id="sTitle" maxlength="60"></div>
                 <div class="field"><label for="sSub">Subtítulo <span class="muted">(opcional)</span></label><input id="sSub" maxlength="60"></div>
                 <div class="field full"><label for="sText">Texto</label><textarea id="sText" rows="2" maxlength="220"></textarea></div>
                 <div class="field full" id="slideChampionPicker" hidden><label for="sChampionUser">Membro campeão (opcional)</label><select id="sChampionUser"><option value="">Sem campeão</option></select><span class="hint" id="sChampionHint"></span></div>
@@ -4070,19 +4072,22 @@ await new Promise(resolve => {
       }
       const img = resolveImage(s.image);
       const H = i === 0 ? 'h1' : 'h2';
-      if (s.layout === 'overlay' && img) return `<div class="slide image-overlay" data-slide-tone="on-dark" role="group" aria-roledescription="slide" aria-label="${i + 1} de ${list.length}">
+      if (s.layout === 'overlay' && img) {
+        const hasOverlayContent = !!(s.title || s.sub || s.text || s.b1?.label || s.b2?.label), onlyImage = !hasOverlayContent;
+        return `<div class="slide image-overlay${onlyImage ? ' image-only' : ''}" ${onlyImage ? '' : 'data-slide-tone="on-dark"'} role="group" aria-roledescription="slide" aria-label="${i + 1} de ${list.length}${s.title ? ': ' + esc(s.title) : ''}">
         <img class="slide-bg-image" src="${esc(img)}" alt="" aria-hidden="true">
-        <div class="slide-overlay-content"><div>
-          <${H} class="slide-title">${esc(s.title)}${s.sub ? `<span>${esc(s.sub)}</span>` : ''}</${H}>
-          <i class="brush" aria-hidden="true"></i>
+        ${hasOverlayContent ? `<div class="slide-overlay-content"><div>
+          ${s.title || s.sub ? `<${H} class="slide-title">${esc(s.title || '')}${s.sub ? `<span>${esc(s.sub)}</span>` : ''}</${H}>` : ''}
+          ${s.title || s.sub ? '<i class="brush" aria-hidden="true"></i>' : ''}
           ${s.text ? `<p class="hero-copy">${esc(s.text)}</p>` : ''}
           <div class="hero-cta">${buttonHTML(s.b1, 'btn-primary')}${buttonHTML(s.b2, 'btn-ghost')}</div>
-        </div></div>
+        </div></div>` : ''}
       </div>`;
+      }
       return `<div class="slide" role="group" aria-roledescription="slide" aria-label="${i + 1} de ${list.length}">
         <div>
-          <${H} class="slide-title">${esc(s.title)}${s.sub ? `<span>${esc(s.sub)}</span>` : ''}</${H}>
-          <i class="brush" aria-hidden="true"></i>
+          ${s.title || s.sub ? `<${H} class="slide-title">${esc(s.title || '')}${s.sub ? `<span>${esc(s.sub)}</span>` : ''}</${H}>` : ''}
+          ${s.title || s.sub ? '<i class="brush" aria-hidden="true"></i>' : ''}
           ${s.text ? `<p class="hero-copy">${esc(s.text)}</p>` : ''}
           <div class="hero-cta">${buttonHTML(s.b1, 'btn-primary')}${buttonHTML(s.b2, 'btn-ghost')}</div>
         </div>
@@ -4177,7 +4182,7 @@ await new Promise(resolve => {
       const src = resolveImage(s.image), hidden = s.visible === false;
       return `<li>
         <span class="thumb ${src ? (s.layout === 'overlay' ? 'photo' : '') : 'logo-img'}" ${src ? `style="background-image:url('${src}')"` : ''}></span>
-        <span class="grow"><b>${esc(s.title)}${s.type === 'champion' ? ' <span class="hidden-tag">Campeão do campeonato</span>' : s.type === 'ranking-champion' ? ' <span class="hidden-tag">Premiação do ranking</span>' : ''}${s.layout === 'overlay' ? ' <span class="hidden-tag">Imagem de fundo</span>' : ''}</b><small>${esc(s.championUser ? `Campeão selecionado: ${displayName(s.championUser)}` : s.sub || s.text || '')}</small></span>
+        <span class="grow"><b>${esc(s.title || 'Slide sem título')}${s.type === 'champion' ? ' <span class="hidden-tag">Campeão do campeonato</span>' : s.type === 'ranking-champion' ? ' <span class="hidden-tag">Premiação do ranking</span>' : ''}${s.layout === 'overlay' ? ' <span class="hidden-tag">Imagem de fundo</span>' : ''}</b><small>${esc(s.championUser ? `Campeão selecionado: ${displayName(s.championUser)}` : s.sub || s.text || '')}</small></span>
         ${hidden ? '<span class="hidden-tag">Oculto</span>' : ''}
         ${iconBtn('up', s.id, 'Mover para cima', ic.up, i === 0)}
         ${iconBtn('down', s.id, 'Mover para baixo', ic.down, i === heroSlides.length - 1)}
@@ -4244,7 +4249,6 @@ await new Promise(resolve => {
     e.preventDefault();
     if (slideImagePending) await slideImagePending;
     const title = $('sTitle').value.trim();
-    if (!title) { slideError.textContent = 'Informe o título do slide.'; $('sTitle').focus(); return; }
     const priorSlide = editingId && heroSlides.find(s => s.id === editingId), championSlide = priorSlide && (priorSlide.type === 'champion' || priorSlide.type === 'ranking-champion');
     const layout = championSlide ? (priorSlide.layout || 'split') : $('sLayout').value;
     if (layout === 'overlay' && !slideImage) { slideError.textContent = 'Adicione uma imagem para usar o modo de fundo.'; $('sImage').focus(); return; }
