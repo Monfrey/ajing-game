@@ -77,6 +77,9 @@ p{margin:0}
 /* ===== Hero ===== */
 .hero{padding:44px 0 36px;border-bottom:1px solid var(--line);background:var(--surface)}
 .slides{display:grid;min-height:300px}
+.slides{position:relative}
+.slides>.slide:not(.on){position:absolute;inset:0;width:100%;pointer-events:none}
+.slides>.slide.on{position:relative;z-index:1}
 .slide{grid-area:1/1;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:56px;align-items:center;opacity:0;visibility:hidden;transition:opacity .45s ease,visibility .45s}
 .slide.on{opacity:1;visibility:visible}
 .slide-title{font-size:clamp(2.3rem,4.6vw,3.6rem);font-weight:800;font-stretch:78%;letter-spacing:-.02em;line-height:1;margin:0}
@@ -230,6 +233,9 @@ section.alt{background:var(--surface);border-block:1px solid var(--line)}
 .m-tabs svg{width:16px;height:16px;flex:none}
 .m-user{display:flex;align-items:center;gap:8px;flex:none;font-size:.82rem;color:var(--muted)}
 .m-avatar{width:24px;height:24px;border-radius:50%;background:var(--surface-2) center/cover no-repeat;display:grid;place-items:center;font-size:.7rem;font-weight:700;color:var(--ink)}
+.m-avatar-link{width:28px;height:28px;display:grid;place-items:center;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;flex:none}
+.m-avatar-link:hover .m-avatar{outline:2px solid var(--accent);outline-offset:2px}
+.m-avatar-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .m-name{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .m-exit{width:28px;height:28px;display:grid;place-items:center;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--muted);cursor:pointer}
 .m-exit:hover{background:var(--surface-2);color:var(--danger)}
@@ -249,6 +255,7 @@ section.alt{background:var(--surface);border-block:1px solid var(--line)}
 .rank-rule{font-size:.82rem;color:var(--muted);margin:-6px 0 14px}
 .my-rank{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;margin-bottom:12px;border-radius:var(--radius-sm);background:color-mix(in srgb,var(--cyan) 10%,var(--bg));font-size:.88rem}
 .my-rank strong{font-size:1rem}
+.my-rank-label-short{display:none}
 .rank-list{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
 .rank-row{display:grid;grid-template-columns:36px 44px minmax(0,1fr) 90px 90px;align-items:center;gap:12px;padding:10px 14px;background:var(--surface)}
 .rank-row+.rank-row{border-top:1px solid var(--line)}
@@ -343,12 +350,26 @@ section.alt{background:var(--surface);border-block:1px solid var(--line)}
 .rank-filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px}
 .rank-filter-row .seg button{padding:5px 10px;font-size:.77rem;white-space:nowrap}
 .rank-view-menu{display:inline-flex;margin:0}
+.rank-filter-short{display:none}
 .rank-history-hook{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:2px;max-width:120px;color:#b88300}
 .rank-history-hook svg{width:13px;height:15px;fill:none;stroke:#d89b00;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 @media (hover:hover) and (pointer:fine) and (min-width:721px){#tcard{transform:rotateX(var(--rx)) rotateY(var(--ry));transition:transform .25s ease}}
 @media (hover:none), (pointer:coarse), (max-width:720px){#tcard{transform:none!important;transition:none}}
 @media (prefers-reduced-motion:reduce){#tcard{transform:none!important;transition:none}}
 @media (max-width:720px){.rank-filter-row{align-items:flex-start}.rank-controls{flex-wrap:wrap}.rank-filter-row .seg button{padding:5px 8px;font-size:.74rem}}
+@media (max-width:720px){
+  .panel[data-panel="ranking"]>.panel-head{margin-bottom:8px}
+  .panel[data-panel="ranking"]>.panel-head p{display:none}
+  .rank-filter-row{gap:5px;margin-bottom:8px}
+  .rank-filter-row .seg button{padding:5px 7px;font-size:.72rem}
+  .rank-filter-long{display:none}.rank-filter-short{display:inline}
+  .rank-controls{gap:5px;flex-wrap:nowrap}
+  .edition-bar{gap:4px 8px;padding:7px 9px;margin:-2px 0 7px;font-size:.76rem;line-height:1.25}
+  .edition-bar .ed-pill{max-width:100%;font-size:.64rem;padding:2px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rank-rule{font-size:.74rem;line-height:1.25;margin:-2px 0 7px}
+  .my-rank{gap:6px;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;padding:8px 10px;margin-bottom:8px;font-size:.78rem}
+  .my-rank-label-long{display:none}.my-rank-label-short{display:inline}
+}
 @media (max-width:720px){.profile-layout{grid-template-columns:minmax(0,1fr);gap:20px}.tcard-stage{display:grid;justify-items:center}.tcard{width:min(320px,100%)}}
 .profile-form{margin-top:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
 .profile-form .full{grid-column:1/-1}
@@ -1313,7 +1334,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <button type="button" role="tab" data-tab="admin" aria-selected="false" class="admin-only" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/></svg>Administração<span class="tab-badge" id="adminBadge" hidden></span></button>
       </nav>
       <div class="m-user">
-        <span class="m-avatar" id="miniAvatar" aria-hidden="true"></span>
+        <button class="m-avatar-link" id="miniAvatarProfile" type="button" aria-label="Abrir meu perfil" title="Meu perfil"><span class="m-avatar" id="miniAvatar" aria-hidden="true"></span></button>
         <span class="m-name" id="membersGreeting">Pescador</span>
         <button class="m-exit" id="logoutBtn" type="button" aria-label="Sair da área de membros" title="Sair">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4"/></svg>
@@ -1336,15 +1357,15 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         </section>
         <section class="panel" role="tabpanel" data-panel="ranking" hidden>
           <div class="panel-head"><div><h3>Ranking</h3><p>Alterne entre a classificação da temporada e o acumulado geral.</p></div></div>
-          <div class="rank-filter-row"><div class="rank-view-menu seg" role="group" aria-label="Visualização do ranking"><button type="button" data-rank-view="current" aria-pressed="true">Classificação</button><button type="button" data-rank-view="history" aria-pressed="false">Histórico de campeões</button></div>
+          <div class="rank-filter-row"><div class="rank-view-menu seg" role="group" aria-label="Visualização do ranking"><button type="button" data-rank-view="current" aria-pressed="true" aria-label="Classificação"><span class="rank-filter-long">Classificação</span><span class="rank-filter-short">Ranking</span></button><button type="button" data-rank-view="history" aria-pressed="false" aria-label="Histórico de campeões"><span class="rank-filter-long">Histórico de campeões</span><span class="rank-filter-short">Campeões</span></button></div>
           <div class="rank-controls" id="rankControls">
             <div class="seg" role="group" aria-label="Período do ranking">
-              <button type="button" data-rank-scope="season" aria-pressed="true">Por temporada</button>
+              <button type="button" data-rank-scope="season" aria-pressed="true" aria-label="Por temporada"><span class="rank-filter-long">Por temporada</span><span class="rank-filter-short">Temporada</span></button>
               <button type="button" data-rank-scope="general" aria-pressed="false">Geral</button>
             </div>
             <div class="seg" role="group" aria-label="Métrica do ranking">
               <button type="button" data-rank="points" aria-pressed="true">Pontuação</button>
-              <button type="button" data-rank="count" aria-pressed="false">Quantidade</button>
+              <button type="button" data-rank="count" aria-pressed="false" aria-label="Quantidade de capturas"><span class="rank-filter-long">Quantidade</span><span class="rank-filter-short">Capturas</span></button>
             </div>
           </div></div>
           <div id="rankCurrentView">
@@ -2895,11 +2916,50 @@ await new Promise(resolve => {
   let feedQuery = '', feedShownCount = 12;
   const FEED_BATCH_SIZE = 8;
   const normalizeFeedSearch = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const feedRenderCache = new Map();
+  const feedSignature = (p, pointsByUser) => {
+    const profile = readProfileOf(p.user), account = getUsers().find(u => u.username === p.user), level = levelInfo(pointsByUser.get(p.user) || 0).cur;
+    const likes = Array.isArray(p.likes) ? [...new Set(p.likes)].sort().join('\u001f') : '';
+    return [p.id, p.user, p.photo, p.speciesName, p.speciesId, p.place, p.created, p.captureDate, p.caption, p.status, postPoints(p), likes,
+      currentUser(), displayName(p.user), profile.name, profile.fishingName, profile.photo, account?.seasonChampion, account?.goldHooks,
+      level?.n, level?.name, level?.symbol, level?.image, timeAgo(p.created)];
+  };
+  const sameFeedSignature = (a, b) => !!a && a.length === b.length && a.every((value, index) => value === b[index]);
   const renderFeed = () => {
     const query = normalizeFeedSearch(feedQuery);
     const visiblePosts = query ? posts.filter(p => [p.user, displayName(p.user), p.speciesName].some(value => normalizeFeedSearch(value).includes(query))) : posts;
-    $('feed').innerHTML = visiblePosts.length ? visiblePosts.slice(0, feedShownCount).map(p => postHTML(p, true)).join('') : query ? '<div class="empty feed-empty"><h4>Nenhuma captura encontrada</h4><p>Tente buscar por outro membro ou nome de peixe.</p></div>' : '';
-    const hasMore = visiblePosts.length > feedShownCount, more = $('feedMore');
+    const feed = $('feed'), shown = visiblePosts.slice(0, feedShownCount), pointsByUser = new Map(), shownUsers = new Set(shown.map(p => p.user));
+    posts.forEach(p => { if (shownUsers.has(p.user) && isPostScored(p)) pointsByUser.set(p.user, (pointsByUser.get(p.user) || 0) + postPoints(p)); });
+    if (!shown.length) {
+      for (const cached of feedRenderCache.values()) cached.node.remove();
+      feedRenderCache.clear();
+      feed.innerHTML = query ? '<div class="empty feed-empty"><h4>Nenhuma captura encontrada</h4><p>Tente buscar por outro membro ou nome de peixe.</p></div>' : '';
+    } else {
+      if (feed.firstElementChild?.classList.contains('feed-empty')) feed.replaceChildren();
+      const ids = new Set(), orderedNodes = [];
+      shown.forEach(p => {
+        ids.add(p.id);
+        const signature = feedSignature(p, pointsByUser), cached = feedRenderCache.get(p.id);
+        if (!cached || !sameFeedSignature(cached.signature, signature)) {
+          const html = postHTML(p, true);
+          const template = document.createElement('template'); template.innerHTML = html.trim();
+          const node = template.content.firstElementChild;
+          if (cached && cached.node.parentNode === feed) cached.node.replaceWith(node);
+          feedRenderCache.set(p.id, { node, signature });
+        }
+        orderedNodes.push(feedRenderCache.get(p.id).node);
+      });
+      for (const [id, cached] of feedRenderCache) if (!ids.has(id)) { cached.node.remove(); feedRenderCache.delete(id); }
+      let cursor = feed.firstElementChild;
+      orderedNodes.forEach(node => {
+        if (node === cursor) cursor = cursor.nextElementSibling;
+        else feed.insertBefore(node, cursor);
+      });
+    }
+    updateFeedMore(visiblePosts.length);
+  };
+  const updateFeedMore = total => {
+    const hasMore = total > feedShownCount, more = $('feedMore');
     more.hidden = !hasMore;
     $('feedMoreLabel').textContent = hasMore && 'IntersectionObserver' in window ? 'Role para carregar mais publicações' : '';
     $('feedLoadMore').hidden = !hasMore || 'IntersectionObserver' in window;
@@ -2907,7 +2967,8 @@ await new Promise(resolve => {
   const loadMoreFeed = () => {
     const query = normalizeFeedSearch(feedQuery), visiblePosts = query ? posts.filter(p => [p.user, displayName(p.user), p.speciesName].some(value => normalizeFeedSearch(value).includes(query))) : posts;
     if (feedShownCount >= visiblePosts.length) return;
-    feedShownCount = Math.min(visiblePosts.length, feedShownCount + FEED_BATCH_SIZE); renderFeed();
+    feedShownCount = Math.min(visiblePosts.length, feedShownCount + FEED_BATCH_SIZE);
+    renderFeed();
   };
   const feedObserver = 'IntersectionObserver' in window ? new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) loadMoreFeed(); }, { rootMargin: '300px 0px' }) : null;
   if (feedObserver) feedObserver.observe($('feedMore'));
@@ -3306,17 +3367,17 @@ await new Promise(resolve => {
     const key = rankMode, season = currentRankSeason();
     const sourcePosts = rankScope === 'season' ? currentRankSeasonPosts() : posts.filter(isPostScored);
     const rows = rankRows(key, sourcePosts), scopeLabel = rankScope === 'season' ? (season.continuous ? 'Ranking contínuo' : `Temporada · ${season.label}`) : 'Ranking geral';
-    const scopeDetail = rankScope === 'season' ? (season.continuous ? 'desde a última temporada ativa' : 'nesta temporada') : 'em todo o histórico';
-    const scopeRange = season.continuous ? `Acumulando desde ${season.start ? fmtDay(season.start) : 'o início do histórico'} · ` : `${seasonRange(season)} · `;
-    $('editionBar').innerHTML = `<span class="ed-pill">${esc(scopeLabel)}</span><span class="muted">${rankScope === 'season' ? scopeRange : ''}${fmtNum(sourcePosts.length)} ${sourcePosts.length === 1 ? 'captura aprovada' : 'capturas aprovadas'} ${scopeDetail}</span>`;
+    const scopeRange = rankScope !== 'season' ? '' : season.continuous ? `Desde ${season.start ? fmtDay(season.start) : 'o início do histórico'}` : seasonRange(season);
+    const scopeSummary = [scopeRange, `${fmtNum(sourcePosts.length)} ${sourcePosts.length === 1 ? 'captura' : 'capturas'}`].filter(Boolean).join(' · ');
+    $('editionBar').innerHTML = `<span class="ed-pill">${esc(scopeLabel)}</span><span class="muted">${esc(scopeSummary)}</span>`;
     $('rankRule').textContent = key === 'points'
-      ? `Soma dos pontos das capturas aprovadas ${scopeDetail}. Empates são desempatados pela quantidade de capturas.`
-      : `Total de capturas aprovadas ${scopeDetail}. Empates são desempatados pela pontuação.`;
+      ? 'Pontos das capturas aprovadas; empate por quantidade de capturas.'
+      : 'Quantidade de capturas aprovadas; empate por pontuação.';
     document.querySelectorAll('[data-rank-scope]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.rankScope === rankScope)));
     document.querySelectorAll('[data-rank]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.rank === key)));
     const me = currentUser(), mine = rows.find(r => r.user === me);
     $('myRank').hidden = !mine;
-    if (mine) $('myRank').innerHTML = `${rankScope === 'season' ? (season.continuous ? 'Sua posição no ranking contínuo' : 'Sua posição nesta temporada') : 'Sua posição geral'}: <strong>${mine.pos}º</strong> <span class="muted">·</span> ${ptsLabel(mine.points)} <span class="muted">·</span> ${mine.count} ${mine.count === 1 ? 'captura' : 'capturas'}`;
+    if (mine) $('myRank').innerHTML = `<span class="my-rank-label"><span class="my-rank-label-long">${rankScope === 'season' ? (season.continuous ? 'Sua posição no ranking contínuo' : 'Sua posição nesta temporada') : 'Sua posição geral'}</span><span class="my-rank-label-short">Você</span></span><strong>${mine.pos}º</strong><span class="muted">·</span>${ptsLabel(mine.points)}<span class="muted">·</span>${mine.count} ${mine.count === 1 ? 'captura' : 'capturas'}`;
     $('rankEmpty').hidden = rows.length > 0; $('rankList').hidden = !rows.length;
     $('rankEmpty').querySelector('h4').textContent = 'Ranking ainda vazio';
     $('rankEmpty').querySelector('p').textContent = rankScope === 'season'
@@ -5441,6 +5502,7 @@ await new Promise(resolve => {
     }
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
+  $('miniAvatarProfile').addEventListener('click', () => { showTab('profile'); resetTabHome('profile'); });
   function renderAll() { renderAward(); renderEvents(); updateUserChip(); renderProfile(); renderMembers(); renderMyCaptures(); renderMemberMessages(); renderRequests(); const profSubnav = document.getElementById('profSubnav'); profSubnav.hidden = false; profSubnav.querySelector('[data-prof-sec="request"]').hidden = isAdmin(); if (isAdmin() && store.get('ajing-prof-sec', true) === 'request') showProfSec('card'); renderSpeciesSelect(); renderFeed(); renderSpecies(); renderRanking(); renderAdmin(); renderSlideAdmin(); }
 
   /* ===== Atualização em tempo real ===== */
