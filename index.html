@@ -1042,6 +1042,39 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .pq-edit textarea{resize:vertical}
 @media (max-width:720px){.pq-edit{grid-template-columns:minmax(0,1fr);width:100%;min-width:0;padding:10px;gap:10px}.pq-edit>.field,.pq-edit>.form-error,.pq-edit>.form-actions{grid-column:1/-1;min-width:0;width:100%}.pq-edit .pq-species{grid-row:auto}.pq-edit .pq-full{grid-column:1/-1}.pq-edit .field input,.pq-edit .field select,.pq-edit .field textarea,.pq-edit select[size]{width:100%;min-width:0;max-width:100%}.pq-edit .form-actions{display:flex;flex-wrap:wrap;gap:8px}.pq-edit .form-actions .btn{max-width:100%;white-space:normal}}
 </style>
+<script>
+(() => {
+  const targets = {
+    carousel: '#home .hero', facts: '.facts', conceito: '#conceito', origem: '#origem',
+    adaptacoes: '#adaptacoes', trabalhos: '#trabalhos', fundamentos: '#fundamentos',
+    manifesto: '.manifesto', referencias: '.refs', parceiros: '#parceiros', nav: '#navLinks'
+  };
+  const navTargets = {
+    conceito: '#navLinks a[href="#conceito"]', origem: '#navLinks a[href="#origem"]',
+    adaptacoes: '#navLinks a[href="#adaptacoes"]', trabalhos: '#navLinks a[href="#trabalhos"]',
+    fundamentos: '#navLinks a[href="#fundamentos"]', parceiros: '#navLinks a[href="#parceiros"]'
+  };
+  window.__ajingSiteVisibilityTargets = targets;
+  window.__ajingSiteVisibilityNavTargets = navTargets;
+  window.__ajingSiteContentCache = {};
+  window.__ajingApplySiteContentCache = saved => {
+    window.__ajingSiteContentCache = saved || {};
+    try { localStorage.setItem('ajing-site-content-cache', JSON.stringify(saved || {})); } catch (_) {}
+    const previous = document.getElementById('siteVisibilityBootstrap'); if (previous) previous.remove();
+    const visibility = saved && saved.visibility || {};
+    const selectors = Object.entries(targets).filter(([group]) => visibility[group] === false).map(([, selector]) => selector);
+    Object.entries(navTargets).forEach(([group, selector]) => { if (visibility[group] === false) selectors.push(selector); });
+    if (!selectors.length) return;
+    const style = document.createElement('style'); style.id = 'siteVisibilityBootstrap';
+    style.textContent = selectors.map(selector => `${selector}{display:none!important}`).join('\n');
+    document.head.appendChild(style);
+  };
+  try {
+    const saved = JSON.parse(localStorage.getItem('ajing-site-content-cache') || 'null');
+    if (saved) window.__ajingApplySiteContentCache(saved);
+  } catch (_) {}
+})();
+</script>
 </head>
 <body>
 
@@ -1437,6 +1470,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                 <h4 class="req-title">Solicitações de novos membros</h4>
                 <p class="box-desc">Aprove somente pessoas que poderão acessar a área de membros. A conta será liberada após a aprovação.</p>
                 <ul class="admin-list req-list req-queue" id="memberApplicationList"></ul>
+                <h4 class="req-title">Acessos recusados</h4>
+                <ul class="admin-list req-list" id="memberApplicationHistory"></ul>
               </section>
             </div>
             <div class="admin-box" data-admin-panel="award" hidden>
@@ -1732,7 +1767,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     </div>
     <div class="modal-body">
       <h2 id="loginTitle">Entrar na comunidade</h2>
-      <p>Compartilhe pescarias, acompanhe o ranking e construa seu perfil de pescador.</p>
+      <p id="loginDescription">Compartilhe pescarias, acompanhe o ranking e construa seu perfil de pescador.</p>
       <form class="form" id="loginForm" autocomplete="on" novalidate>
         <div class="field"><label for="loginUser">E-mail</label><input id="loginUser" name="username" type="email" autocomplete="username" inputmode="email" required></div>
         <div class="field"><label for="loginPass">Senha</label><input id="loginPass" name="password" type="password" autocomplete="current-password" required></div>
@@ -1750,6 +1785,11 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <button class="btn btn-primary" id="signupSubmit" type="submit">Enviar solicitação</button>
         <button class="link-btn" id="backToLogin" type="button">Voltar para entrar</button>
       </form>
+      <section id="signupSuccess" aria-labelledby="signupSuccessTitle" hidden>
+        <h2 id="signupSuccessTitle">Solicitação enviada</h2>
+        <p>Você receberá um e-mail com a resposta da análise do seu cadastro.</p>
+        <button class="btn btn-primary" id="signupContinue" type="button">Continuar</button>
+      </section>
     </div>
   </div>
 </div>
@@ -1798,8 +1838,9 @@ const fbApp = initializeApp(FIREBASE_CONFIG), fbAuth = getAuth(fbApp);
 let fdb;
 try { fdb = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
 catch (_) { fdb = getFirestore(fbApp); }
-const PUBLIC_COLS = ['users', 'species', 'championships', 'rankHistory', 'config', 'profiles', 'posts', 'speciesPhotos', 'banners', 'slides', 'levelIcons', 'partners'];
-const MEMBER_COLS = ['eventRequests', 'speciesRequests', 'requestPhotos'];
+const PUBLIC_COLS = ['users', 'species', 'championships', 'rankHistory', 'config', 'profiles', 'posts', 'slides', 'levelIcons', 'partners'];
+// Imagens usadas apenas na área autenticada não são baixadas para visitantes da página pública.
+const MEMBER_COLS = ['speciesPhotos', 'banners', 'eventRequests', 'speciesRequests', 'requestPhotos'];
 const C = {}; [...PUBLIC_COLS, ...MEMBER_COLS].forEach(n => { C[n] = {}; }); C.memberApplications = {};
 C.postAudits = {}; C.memberMessages = {};
 const fbHooks = { refresh: null };
@@ -1809,14 +1850,23 @@ const same = (a, b) => JSON.stringify(sortKeys(a)) === JSON.stringify(sortKeys(b
 
 // Escuta uma coleção em tempo real; usa o primeiro snapshot (cache local ou servidor) para liberar a interface.
 const listen = (name, ref = fsCol(fdb, name)) => new Promise(resolve => {
-  let first = true, unsub = () => {};
-  const done = () => { if (first) { first = false; resolve(() => unsub()); } };
+  let first = true, timedOut = false, unsub = () => {};
+  const done = timeout => { if (first) { first = false; timedOut = !!timeout; resolve(() => unsub()); } };
   unsub = onSnapshot(ref, { includeMetadataChanges: true }, snap => {
-    const m = {}; snap.forEach(d => { m[d.id] = d.data(); }); C[name] = m;
-    if (first) done();
-    else if (!snap.metadata.fromCache && snap.docChanges().length && fbHooks.refresh) fbHooks.refresh();
+    if (name === 'config' && (!snap.metadata.fromCache || snap.docs.some(d => d.id === 'siteContent'))) window.__ajingSiteConfigLoaded = true;
+    if (first) {
+      const initial = {}; snap.forEach(d => { initial[d.id] = d.data(); }); C[name] = initial; done();
+    } else {
+      const changes = snap.docChanges();
+      if (changes.length) {
+        const current = C[name] || {};
+        changes.forEach(change => { if (change.type === 'removed') delete current[change.doc.id]; else current[change.doc.id] = change.doc.data(); });
+        C[name] = current;
+      }
+      if ((!snap.metadata.fromCache && (changes.length || name === 'config') || (timedOut && changes.length)) && fbHooks.refresh) fbHooks.refresh(name);
+    }
   }, err => { console.warn('Firestore:', name, err && err.code); done(); });
-  setTimeout(done, 1500);
+  setTimeout(() => done(true), 1500);
 });
 
 let authUid = null, memberUnsubs = [], authSeq = Promise.resolve();
@@ -1966,7 +2016,7 @@ const AUTH_MSG = {
   'auth/invalid-credential': 'E-mail ou senha incorretos.', 'auth/wrong-password': 'E-mail ou senha incorretos.',
   'auth/user-not-found': 'E-mail ou senha incorretos.', 'auth/invalid-email': 'E-mail inválido.',
   'auth/missing-email': 'Informe o e-mail.', 'auth/too-many-requests': 'Muitas tentativas seguidas. Aguarde alguns minutos ou redefina a senha.',
-  'auth/email-already-in-use': 'Esse e-mail já tem um login no Firebase. Use outro e-mail ou remova o login antigo em Authentication.',
+  'auth/email-already-in-use': 'E-mail já cadastrado. Solicite a recuperação de senha.',
   'auth/weak-password': 'Senha fraca: use pelo menos 6 caracteres.', 'auth/network-request-failed': 'Sem conexão com o servidor. Verifique a internet.',
   'auth/requires-recent-login': 'Por segurança, saia e entre de novo antes de alterar a senha.',
   'auth/operation-not-allowed': 'O login por e-mail e senha não está ativado no Firebase (Authentication › Método de login).',
@@ -1984,7 +2034,7 @@ const fb = {
   memberApplications: () => clean(C.memberApplications || {}),
   config: id => C.config[id] ? clean(C.config[id]) : null,
   partners: () => Object.values(C.partners || {}).map(clean),
-  setConfig: (id, data) => { C.config = { ...C.config, [id]: clean(data) }; return setDoc(fsDoc(fdb, 'config', id), clean(data)); },
+  setConfig: (id, data) => { C.config = { ...C.config, [id]: clean(data) }; if (id === 'siteContent') window.__ajingSiteConfigLoaded = true; return setDoc(fsDoc(fdb, 'config', id), clean(data)); },
   saveLevelSystem: async levels => {
     if (!fbIsAdmin()) throw { code: 'permission-denied' };
     const batch = writeBatch(fdb), levelConfig = clean(levels).map(({ image, ...level }) => level), nextIcons = { ...C.levelIcons };
@@ -2027,13 +2077,28 @@ const fb = {
   },
   memberApplication: async uid => { const s = await getDoc(fsDoc(fdb, 'memberApplications', uid)); return s.exists() ? s.data() : null; },
   approveMemberApplication: async (uid, username, email) => {
-    const batch = writeBatch(fdb);
+    const batch = writeBatch(fdb), sent = Date.now();
     batch.set(fsDoc(fdb, 'users', uid), { username, role: 'member', active: true, seasonChampion: false, goldHooks: 0 });
     batch.set(fsDoc(fdb, 'private', uid), { email });
     batch.delete(fsDoc(fdb, 'memberApplications', uid));
+    batch.set(fsDoc(fdb, 'mail', `${uid}_approved_${sent}`), { to: email, message: { subject: 'Cadastro aprovado — Ajing Game', text: `Olá, ${username}! Seu cadastro foi aprovado. Você já pode acessar a área de membros do Ajing Game com o e-mail e a senha informados no cadastro.` } });
     await batch.commit();
     C.users = { ...C.users, [uid]: { username, role: 'member', active: true, seasonChampion: false, goldHooks: 0 } };
     const applications = { ...C.memberApplications }; delete applications[uid]; C.memberApplications = applications;
+  },
+  rejectMemberApplication: async (uid, reviewer) => {
+    const app = C.memberApplications[uid]; if (!app || app.status !== 'pending') throw { code: 'not-found' };
+    const reviewed = Date.now(), batch = writeBatch(fdb);
+    batch.update(fsDoc(fdb, 'memberApplications', uid), { status: 'rejected', reviewed, reviewer });
+    batch.set(fsDoc(fdb, 'mail', `${uid}_rejected_${reviewed}`), { to: app.email, message: { subject: 'Resposta ao cadastro — Ajing Game', text: `Olá, ${app.username}! Sua solicitação de acesso à área de membros do Ajing Game foi analisada e não foi aprovada. Em caso de dúvidas, entre em contato com a administração do Ajing Game.` } });
+    await batch.commit();
+    C.memberApplications = { ...C.memberApplications, [uid]: { ...app, status: 'rejected', reviewed, reviewer } };
+  },
+  reopenMemberApplication: async uid => {
+    const app = C.memberApplications[uid]; if (!app || app.status !== 'rejected') throw { code: 'not-found' };
+    const reopened = { uid, username: app.username, email: app.email, status: 'pending', created: app.created };
+    await setDoc(fsDoc(fdb, 'memberApplications', uid), reopened);
+    C.memberApplications = { ...C.memberApplications, [uid]: reopened };
   },
   signOut: () => signOut(fbAuth),
   reset: email => sendPasswordResetEmail(fbAuth, email),
@@ -2394,11 +2459,17 @@ await new Promise(resolve => {
   }));
 
   /* ===== Login ===== */
-  const modal = $('loginModal'), loginForm = $('loginForm'), loginError = $('loginError'), signupForm = $('signupForm');
-  let lastFocus = null;
+  const modal = $('loginModal'), loginForm = $('loginForm'), loginError = $('loginError'), signupForm = $('signupForm'), signupSuccess = $('signupSuccess');
+  let lastFocus = null, showingSignupSuccess = false;
+  const setSignupSuccess = visible => {
+    showingSignupSuccess = visible; signupSuccess.hidden = !visible;
+    loginForm.hidden = visible; signupForm.hidden = true;
+    $('loginTitle').hidden = visible; $('loginDescription').hidden = visible; $('loginClose').hidden = visible;
+    modal.querySelector('[role="dialog"]').setAttribute('aria-labelledby', visible ? 'signupSuccessTitle' : 'loginTitle');
+  };
   const openLogin = () => {
     lastFocus = document.activeElement;
-    loginForm.hidden = false; signupForm.hidden = true; loginError.textContent = ''; $('signupError').textContent = '';
+    setSignupSuccess(false); loginForm.hidden = false; loginError.textContent = ''; $('signupError').textContent = ''; $('loginInfo').textContent = '';
     modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
     setTimeout(() => softFocus($('loginUser')), 30);
@@ -2410,10 +2481,10 @@ await new Promise(resolve => {
   };
   $('membersBtn').addEventListener('click', () => { closeMenu(); currentUser() ? showMembers() : openLogin(); });
   $('loginClose').addEventListener('click', closeLogin);
-  $('showSignup').addEventListener('click', () => { loginForm.hidden = true; signupForm.hidden = false; $('signupError').textContent = ''; setTimeout(() => softFocus($('signupName')), 0); });
+  $('showSignup').addEventListener('click', () => { signupSuccess.hidden = true; loginForm.hidden = true; signupForm.hidden = false; $('signupError').textContent = ''; setTimeout(() => softFocus($('signupName')), 0); });
   $('backToLogin').addEventListener('click', () => { signupForm.hidden = true; loginForm.hidden = false; $('loginError').textContent = ''; setTimeout(() => softFocus($('loginUser')), 0); });
-  modal.addEventListener('click', e => { if (e.target === modal) closeLogin(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('open')) closeLogin(); });
+  modal.addEventListener('click', e => { if (e.target === modal && !showingSignupSuccess) closeLogin(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('open') && !showingSignupSuccess) closeLogin(); });
   loginForm.addEventListener('submit', async e => {
     e.preventDefault();
     const email = $('loginUser').value.trim().toLowerCase(), pass = $('loginPass').value;
@@ -2448,13 +2519,13 @@ await new Promise(resolve => {
       if (getUsers().some(u => norm(u.username) === norm(name))) { err.textContent = 'Esse nome já está em uso. Escolha outro.'; $('signupName').focus(); return; }
       uid = await fb.registerAccount(email, pass);
       await fb.submitMemberApplication(uid, { username: name, email });
-      await fb.signOut(); signupForm.reset(); signupForm.hidden = true; loginForm.hidden = false;
-      $('loginInfo').textContent = 'Solicitação enviada. Você poderá entrar na área de membros depois que um administrador aprovar seu cadastro.';
+      await fb.signOut(); signupForm.reset(); setSignupSuccess(true);
     } catch (signupErr) {
       if (uid) { try { await fb.signOut(); } catch (_) {} }
       err.textContent = fb.errMsg(signupErr);
     } finally { btn.disabled = false; }
   });
+  $('signupContinue').addEventListener('click', () => { setSignupSuccess(false); closeLogin(); });
   $('forgotPass').addEventListener('click', async () => {
     const email = $('loginUser').value.trim().toLowerCase();
     loginError.textContent = ''; $('loginInfo').textContent = '';
@@ -3184,6 +3255,7 @@ await new Promise(resolve => {
   const siteVisibilityDescriptions = { carousel:'Carrossel de destaque no topo da página.', facts:'Faixa de informações abaixo do carrossel.', conceito:'Seção Conceito e seu link no menu público.', origem:'Seção Origem e seu link no menu público.', adaptacoes:'Seção Adaptações e seu link no menu público.', trabalhos:'Seção Trabalhos da isca e seu link no menu público.', fundamentos:'Seção Fundamentos e seu link no menu público.', manifesto:'Faixa do manifesto.', referencias:'Seção de referências técnicas.', parceiros:'Seção Parceiros e seu link no menu público.', nav:'Links de navegação pública no cabeçalho.' };
   const siteCopyParts = { title:'Título', text:'Texto', intro:'Apresentação', label:'Chamada', quote:'Citação', paragraph1:'Texto 1', paragraph2:'Texto 2', paragraph3:'Texto 3', important:'Aviso', componentsTitle:'Título dos componentes', tip:'Dica', stepsTitle:'Título da sequência', actionLabel:'Rótulo da ação', indicationLabel:'Rótulo da indicação' };
   let activeSiteCopyGroup = 'facts';
+  const savedSiteContent = () => window.__ajingSiteConfigLoaded ? (fb.config('siteContent') || {}) : (window.__ajingSiteContentCache || {});
   const siteCopyLabel = key => key.split('.').slice(1).map(part => {
     if (siteCopyParts[part]) return siteCopyParts[part];
     const card = part.match(/^card(\d+)$/); if (card) return `Cartão ${card[1]}`;
@@ -3195,7 +3267,7 @@ await new Promise(resolve => {
     return part.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([a-z])([0-9]+)/gi, '$1 $2').replace(/^./, c => c.toUpperCase());
   }).join(' · ');
   const renderSiteCopy = () => {
-    const saved = fb.config('siteContent') || {};
+    const saved = savedSiteContent();
     siteCopyNodes.forEach(node => {
       const value = saved[node.dataset.siteCopy];
       if (typeof value === 'string') node.textContent = value;
@@ -3210,10 +3282,11 @@ await new Promise(resolve => {
       const link = document.querySelector(`#navLinks ${selector}`);
       if (link) link.classList.toggle('site-content-disabled', visibility[group] === false);
     });
+    if (window.__ajingSiteConfigLoaded && window.__ajingApplySiteContentCache) window.__ajingApplySiteContentCache(saved);
   };
   const renderSiteContentAdmin = () => {
     const host = $('siteContentFields'); if (!host) return;
-    const saved = fb.config('siteContent') || {}, keys = [...new Set(siteCopyNodes.map(node => node.dataset.siteCopy))];
+    const saved = savedSiteContent(), keys = [...new Set(siteCopyNodes.map(node => node.dataset.siteCopy))];
     const groups = siteCopyGroupOrder.filter(group => group === 'carousel' || keys.some(key => key.split('.')[0] === group));
     if (!groups.includes(activeSiteCopyGroup)) activeSiteCopyGroup = groups[0] || '';
     const visibility = saved.visibility || {};
@@ -3234,7 +3307,7 @@ await new Promise(resolve => {
   $('siteContentForm').addEventListener('submit', async e => {
     e.preventDefault(); if (!isAdmin()) return;
     const error = $('siteContentError'), status = $('siteContentStatus'); error.textContent = ''; status.textContent = 'Salvando…';
-    const value = { ...(fb.config('siteContent') || {}) };
+    const value = { ...savedSiteContent() };
     $('siteContentFields').querySelectorAll('[data-site-copy-edit]').forEach(field => { value[field.dataset.siteCopyEdit] = field.value.trim(); });
     value.visibility = { ...(value.visibility || {}) };
     $('siteContentFields').querySelectorAll('[data-site-copy-visible]').forEach(toggle => { value.visibility[toggle.dataset.siteCopyVisible] = toggle.checked; });
@@ -4491,13 +4564,16 @@ await new Promise(resolve => {
       .sort((a, b) => (b.reviewed || 0) - (a.reviewed || 0));
     const pendingPosts = posts.filter(p => p.status === 'pending').sort((a, b) => a.created - b.created);
     const postHistory = posts.filter(p => p.status === 'approved' || p.status === 'rejected').sort((a, b) => (b.reviewed || 0) - (a.reviewed || 0));
-    const memberApplications = isAdmin() ? Object.entries(fb.memberApplications()).map(([uid, app]) => ({ ...app, uid })).filter(app => app.status === 'pending').sort((a, b) => (a.created || 0) - (b.created || 0)) : [];
+    const allMemberApplications = isAdmin() ? Object.entries(fb.memberApplications()).map(([uid, app]) => ({ ...app, uid })) : [];
+    const memberApplications = allMemberApplications.filter(app => app.status === 'pending').sort((a, b) => (a.created || 0) - (b.created || 0));
+    const rejectedMemberApplications = allMemberApplications.filter(app => app.status === 'rejected').sort((a, b) => (b.reviewed || 0) - (a.reviewed || 0));
     const pendingTotal = pending.length + eventRequests.length + pendingPosts.length + memberApplications.length;
     [['cntReqPosts', pendingPosts.length], ['cntReqEvents', eventRequests.length], ['cntReqSpecies', pending.length], ['cntReqMembers', memberApplications.length]].forEach(([id, n]) => { const el = $(id); el.textContent = n || ''; el.classList.toggle('alert', n > 0); });
     const badge = $('adminBadge'); badge.hidden = !isAdmin() || !pendingTotal; badge.textContent = pendingTotal;
     const cnt = $('cntReq'); cnt.textContent = pendingTotal || ''; cnt.classList.toggle('alert', pendingTotal > 0);
     if (!isAdmin()) return;
-    $('memberApplicationList').innerHTML = memberApplications.length ? memberApplications.map(app => `<li class="review-history-row" data-member-application="${esc(app.uid)}"><span class="grow"><b>${esc(app.username || 'Novo membro')}</b><small>${esc(app.email || '')} · Solicitação em ${fmtShort(app.created)}</small></span><button class="btn btn-primary" type="button" data-member-application-approve>Aprovar acesso</button></li>`).join('') : '<li class="empty-row">Nenhum novo cadastro aguardando aprovação.</li>';
+    $('memberApplicationList').innerHTML = memberApplications.length ? memberApplications.map(app => `<li class="review-history-row" data-member-application="${esc(app.uid)}"><span class="grow"><b>${esc(app.username || 'Novo membro')}</b><small>${esc(app.email || '')} · Solicitação em ${fmtShort(app.created)}</small></span><button class="btn btn-primary" type="button" data-member-application-act="approve">Aprovar acesso</button><button class="btn btn-danger" type="button" data-member-application-act="reject">Recusar acesso</button></li>`).join('') : '<li class="empty-row">Nenhum novo cadastro aguardando aprovação.</li>';
+    $('memberApplicationHistory').innerHTML = rejectedMemberApplications.length ? rejectedMemberApplications.map(app => `<li class="review-history-row" data-member-application="${esc(app.uid)}"><span class="grow"><b>${esc(app.username || 'Novo membro')}</b><small>${esc(app.email || '')} · Recusado em ${fmtShort(app.reviewed)}</small></span><button class="btn btn-ghost" type="button" data-member-application-act="reopen">Reabrir solicitação</button></li>`).join('') : '<li class="empty-row">Nenhum acesso recusado.</li>';
     $('reqAdminList').innerHTML = pending.length ? pending.map(r => `<li class="req-card" data-req="${esc(r.id)}">
         <div class="rphoto" ${safeImageSrc(reqPhotos[r.id]) ? `style="background-image:url('${safeImageSrc(reqPhotos[r.id])}')"` : ''} role="img" aria-label="Foto enviada para ${esc(r.name)}"></div>
         <div>
@@ -4553,17 +4629,32 @@ await new Promise(resolve => {
     $('eventRegHistory').innerHTML = eh.shown.length ? eh.shown.map(r => `<li class="review-history-row" data-event-history="${esc(r.id)}" data-champ="${esc(r.championshipId)}"><span class="grow"><b>${esc(r.championshipName)}</b><small>${esc(displayName(r.user))} · ${r.status === 'approved' ? 'aprovada' : 'recusada'} por ${esc(displayName(r.reviewer || ''))} em ${fmtShort(r.reviewed)}</small></span><span class="req-status ${r.status === 'approved' ? 'approved' : 'rejected'}">${r.status === 'approved' ? 'Aprovada' : 'Recusada'}</span><button class="btn btn-ghost review-edit-btn" type="button" data-review-edit="event"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar análise</button><form class="review-edit-panel" data-review-form="event" hidden><div class="field"><label>Resultado da análise</label><select data-edit-field="status"><option value="approved" ${r.status === 'approved' ? 'selected' : ''}>Aprovada</option><option value="rejected" ${r.status === 'rejected' ? 'selected' : ''}>Recusada</option><option value="pending">Voltar para análise</option></select></div><div class="form-error" data-edit-error role="alert"></div><div class="form-actions"><button class="btn btn-primary" type="submit">Salvar revisão</button><button class="btn btn-ghost" type="button" data-review-cancel>Cancelar</button></div></form></li>`).join('') : `<li class="empty-row">${eh.all ? 'Nenhuma análise encontrada com esse filtro.' : 'Nenhuma inscrição analisada ainda.'}</li>`;
   };
 
-  $('memberApplicationList').addEventListener('click', async e => {
-    const button = e.target.closest('[data-member-application-approve]'); if (!button || !isAdmin()) return;
+  document.querySelector('[data-req-panel="members"]').addEventListener('click', async e => {
+    const button = e.target.closest('[data-member-application-act]'); if (!button || !isAdmin()) return;
     const row = button.closest('[data-member-application]'), uid = row?.dataset.memberApplication, app = fb.memberApplications()[uid];
-    if (!app || app.status !== 'pending') return renderRequests();
+    if (!app) return renderRequests();
     const username = String(app.username || '').normalize('NFC').trim().replace(/\s+/g, ' '), email = String(app.email || '').trim().toLowerCase();
     const userKey = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-    if (!username || !email || getUsers().some(u => userKey(u.username) === userKey(username))) { $('reqAdminError').textContent = `Não foi possível aprovar ${username || 'este cadastro'}: confira os dados e se o nome já está sendo usado.`; return; }
+    const action = button.dataset.memberApplicationAct;
+    if (action === 'reopen') {
+      if (app.status !== 'rejected' || !(await askConfirm(`Reabrir a solicitação de ${username || email} para uma nova análise?`, { confirmText: 'Reabrir solicitação' }))) return;
+      button.disabled = true; $('reqAdminError').textContent = ''; $('reqAdminSaved').textContent = '';
+      try { await fb.reopenMemberApplication(uid); $('reqAdminSaved').textContent = `Solicitação de ${username || email} reaberta para análise.`; renderRequests(); }
+      catch (reopenErr) { $('reqAdminError').textContent = fb.errMsg(reopenErr); button.disabled = false; }
+      return;
+    }
+    if (app.status !== 'pending') return renderRequests();
+    if (action === 'approve' && (!username || !email || getUsers().some(u => userKey(u.username) === userKey(username)))) { $('reqAdminError').textContent = `Não foi possível aprovar ${username || 'este cadastro'}: confira os dados e se o nome já está sendo usado.`; return; }
+    if (action === 'reject' && !(await askConfirm(`Recusar o pedido de acesso de ${username || email}? A pessoa receberá a resposta por e-mail.`, { danger: true, confirmText: 'Recusar acesso' }))) return;
     button.disabled = true; $('reqAdminError').textContent = ''; $('reqAdminSaved').textContent = '';
     try {
-      await fb.approveMemberApplication(uid, username, email);
-      $('reqAdminSaved').textContent = `Acesso de ${username} aprovado. A pessoa já pode entrar com o e-mail e a senha cadastrados.`;
+      if (action === 'approve') {
+        await fb.approveMemberApplication(uid, username, email);
+        $('reqAdminSaved').textContent = `Acesso de ${username} aprovado. A pessoa receberá um e-mail e já pode entrar com a senha cadastrada.`;
+      } else {
+        await fb.rejectMemberApplication(uid, currentUser());
+        $('reqAdminSaved').textContent = `Acesso de ${username || email} recusado. A pessoa receberá um e-mail com a resposta.`;
+      }
       renderRequests();
     } catch (approveErr) { $('reqAdminError').textContent = fb.errMsg(approveErr); button.disabled = false; }
   });
@@ -5097,27 +5188,51 @@ await new Promise(resolve => {
   /* ===== Atualização em tempo real ===== */
   // Mudanças feitas por outros membros chegam pelo Firestore; a tela só é redesenhada quando ninguém está digitando.
   let refreshTimer = null;
+  const refreshCollections = new Set();
   const busy = () => {
     const a = document.activeElement;
     if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.id !== 'feedSearch' && a.closest('#membersPage, .modal.open')) return true;
     return !!document.querySelector('.modal.open, #slideForm:not([hidden]), #champForm:not([hidden]), #userForm:not([hidden]), #profileForm:not([hidden]), #passForm:not([hidden]), [data-review-form]:not([hidden]), .reject-box:not([hidden])');
   };
   const doRefresh = async () => {
+    const changed = [...refreshCollections]; refreshCollections.clear();
     refreshTimer = null;
-    if (busy()) { refreshTimer = setTimeout(doRefresh, 1500); return; }
+    if (!changed.length) return;
+    if (busy()) { changed.forEach(name => refreshCollections.add(name)); refreshTimer = setTimeout(doRefresh, 1500); return; }
     if (fb.authUid() && !currentUser()) { await logout(); return; } // conta desativada ou excluída
-    await Promise.all([loadPosts(), loadSpeciesPhotos(), loadReqPhotos(), loadChampBanners(), loadSlides()]);
-    reloadLevels(); rankAwardConfig = readRankAwardConfig(); renderRankAwardForm();
-    renderSiteCopy(); renderSiteContentAdmin();
-    sitePartners = readSitePartners();
-    renderPartners(); renderPartnerAdmin();
-    renderChampion();
+    const touches = (...names) => changed.includes('*') || names.some(name => changed.includes(name));
+    const loads = [];
+    if (touches('posts')) loads.push(loadPosts());
+    if (touches('speciesPhotos')) loads.push(loadSpeciesPhotos());
+    if (touches('requestPhotos')) loads.push(loadReqPhotos());
+    if (touches('banners')) loads.push(loadChampBanners());
+    if (touches('slides')) loads.push(loadSlides());
+    await Promise.all(loads);
+    if (touches('config', 'levelIcons')) reloadLevels();
+    if (touches('config')) {
+      rankAwardConfig = readRankAwardConfig(); renderRankAwardForm(); renderSiteCopy();
+      if (isAdmin()) renderSiteContentAdmin();
+    }
+    if (touches('partners')) { sitePartners = readSitePartners(); renderPartners(); if (isAdmin()) renderPartnerAdmin(); }
+    if (touches('posts', 'rankHistory', 'championships', 'slides', 'config', 'users', 'profiles')) renderChampion();
     if (!membersPage.hidden) {
-      document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
-      renderAll(); showTab(store.get('ajing-member-tab', true) || 'social');
+      if (touches('users')) document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
+      const memberDataChanged = touches('users', 'species', 'championships', 'rankHistory', 'profiles', 'posts', 'speciesPhotos', 'banners', 'slides', 'levelIcons', 'eventRequests', 'speciesRequests', 'requestPhotos', 'postAudits', 'memberMessages', 'memberApplications');
+      if (memberDataChanged) { renderAll(); showTab(store.get('ajing-member-tab', true) || 'social'); }
+      else {
+        const activeTab = store.get('ajing-member-tab', true) || 'social';
+        if (activeTab === 'ranking' && touches('config')) renderRanking();
+        if (activeTab === 'admin' && isAdmin()) {
+          if (touches('config')) renderAdmin();
+          if (touches('partners')) renderPartnerAdmin();
+        }
+      }
     }
   };
-  fb.hooks.refresh = () => { if (!refreshTimer) refreshTimer = setTimeout(doRefresh, 150); };
+  fb.hooks.refresh = name => {
+    refreshCollections.add(name || '*');
+    if (!refreshTimer) refreshTimer = setTimeout(doRefresh, 150);
+  };
   let writeErrAt = 0;
   window.addEventListener('fb-write-error', e => {
     if (Date.now() - writeErrAt < 4000) return; writeErrAt = Date.now();
