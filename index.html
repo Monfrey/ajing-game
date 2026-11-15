@@ -431,6 +431,9 @@ select{font:inherit;color:inherit}
 .drop-empty b{color:var(--ink);font-size:.9rem}
 .drop-empty small{font-size:.76rem}
 .post-del{width:26px;height:26px;display:grid;place-items:center;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--muted);cursor:pointer}
+.post-owner-actions{display:flex;align-items:center;gap:4px;flex:none}
+.post-owner-actions .post-owner-action{width:24px;height:24px}
+.post-owner-actions [data-post-action="edit"]:hover{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}
 .post-del:hover{background:var(--surface-2);color:var(--danger)}
 .post-del svg{width:15px;height:15px}
 .post-del.crown-btn{color:#967000}
@@ -2332,7 +2335,7 @@ await new Promise(resolve => {
     const today = new Date(), min = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2);
     postCaptureDate.min = localDateValue(min); postCaptureDate.max = localDateValue(today); postCaptureDate.value = localDateValue(today);
   };
-  let postImage = '', postImagePending = null, postLastFocus = null;
+  let postImage = '', postImagePending = null, postLastFocus = null, editingPostId = null;
   const POST_W = 720, POST_H = 900; // padrão vertical 4:5 para todas as publicações
   const preparePostImage = file => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -2381,6 +2384,9 @@ await new Promise(resolve => {
 
   const openPostModal = () => {
     if (!currentUser()) { openLogin(); return; }
+    editingPostId = null;
+    $('postTitle').textContent = 'Nova publicação'; $('postSubmit').textContent = 'Publicar';
+    $('postNoScore').closest('.post-noscore').hidden = false;
     postLastFocus = document.activeElement;
     postForm.reset(); setPostImage(''); postError.textContent = '';
     setCaptureDateLimits();
@@ -2389,10 +2395,13 @@ await new Promise(resolve => {
     document.body.style.overflow = 'hidden';
     setTimeout(() => dropZone.focus(), 30);
   };
-  const closePostModal = () => {
+  const closePostModal = (restorePost = true) => {
+    const reopenId = editingPostId;
+    editingPostId = null;
     postModal.classList.remove('open'); postModal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
     postLastFocus && postLastFocus.focus && postLastFocus.focus();
+    if (restorePost && reopenId) openPostView(reopenId);
   };
   $('newPostBtn').addEventListener('click', openPostModal);
   $('postClose').addEventListener('click', closePostModal);
@@ -2492,10 +2501,12 @@ await new Promise(resolve => {
   };
   const fullDate = ts => new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long', timeStyle: 'short' }).format(ts);
   const pinIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
-  const delBtn = id => `<button class="post-del" type="button" data-del="${esc(id)}" aria-label="Excluir publicação" title="Excluir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>`;
+  const postActionBtn = (id, action, label, path) => `<button class="post-del post-owner-action" type="button" data-post-action="${action}" data-post-id="${esc(id)}" aria-label="${label}" title="${label}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg></button>`;
+  const delBtn = id => postActionBtn(id, 'delete', 'Excluir publicação', '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>');
+  const editBtn = id => postActionBtn(id, 'edit', 'Editar publicação', '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/>');
   // compact = cartão da grade; sem compact = publicação completa (janela)
   const postHTML = (p, compact, withPortfolioControl = false) => {
-    const me = currentUser(), canDel = isAdmin() || p.user === me, name = displayName(p.user);
+    const me = currentUser(), canManage = !compact && !!me && p.user === me, name = displayName(p.user);
     const photo = safeImageSrc(p.photo);
     const likes = Array.isArray(p.likes) ? [...new Set(p.likes)] : [], liked = !!me && likes.includes(me);
     const alt = `Captura de ${esc(p.speciesName)}${p.place ? ' em ' + esc(p.place) : ''}`;
@@ -2511,7 +2522,7 @@ await new Promise(resolve => {
         <header class="post-head">
           ${miniCard(p.user, compact ? 'sm' : '')}
           <div class="who"><b>${esc(name)}</b>${p.place ? `<small>${pinIcon}${esc(p.place)}</small>` : ''}</div>
-          ${canDel ? delBtn(p.id) : ''}
+          ${canManage ? `<div class="post-owner-actions">${editBtn(p.id)}${delBtn(p.id)}</div>` : ''}
         </header>
         ${compact
           ? `<div class="post-media-wrap"><button class="post-photo" type="button" data-open-post="${esc(p.id)}" aria-label="Abrir publicação de ${esc(name)}: ${esc(p.speciesName)}${isPostScored(p) ? ', ' + ptsLabel(postPoints(p)) : ''}"><img src="${esc(photo)}" alt="${alt}" loading="lazy">${isPostScored(p) ? `<span class="post-points-badge" aria-hidden="true">+${ptsLabel(postPoints(p))}</span>` : ''}</button>${likeButton}</div>`
@@ -2545,25 +2556,39 @@ await new Promise(resolve => {
     postView.classList.add('open'); postView.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden';
     setTimeout(() => $('postViewClose').focus(), 30);
   };
+  const openPostEdit = id => {
+    const post = posts.find(p => p.id === id);
+    if (!post || post.user !== currentUser()) return;
+    closePostView(); openPostModal();
+    editingPostId = id;
+    $('postTitle').textContent = 'Editar publicação'; $('postSubmit').textContent = 'Salvar alterações';
+    $('postNoScore').closest('.post-noscore').hidden = true;
+    $('postNoScore').checked = post.status === 'unscored';
+    setPostImage(post.photo); postSpecies.value = post.speciesId || ''; spPickSync();
+    postPlace.value = post.place || '';
+    postCaptureDate.min = ''; postCaptureDate.max = localDateValue(new Date()); postCaptureDate.value = post.captureDate || localDateValue(new Date());
+    postCaption.value = post.caption || ''; updateCaptionCount();
+    setTimeout(() => { spPickSync(); postCaption.focus(); }, 30);
+  };
   const closePostView = () => {
     postView.classList.remove('open'); postView.setAttribute('aria-hidden', 'true'); document.body.style.overflow = '';
     postViewFocus && postViewFocus.focus && postViewFocus.focus();
   };
   const handlePostListClick = async e => {
     const open = e.target.closest('[data-open-post]'); if (open) { openPostView(open.dataset.openPost); return; }
-    const b = e.target.closest('[data-del]'); if (!b) return;
-    if (!(await askConfirm('Excluir esta publicação?', { danger: true, confirmText: 'Excluir' }))) return;
-    try { await postsDB.del(b.dataset.del); } catch(_) {}
-    await loadPosts(); renderChampion(); renderAll();
   };
   $('feed').addEventListener('click', handlePostListClick);
   $('myCaptureFeed').addEventListener('click', handlePostListClick);
   $('postViewClose').addEventListener('click', closePostView);
   postView.addEventListener('click', async e => {
     if (e.target === postView) return closePostView();
-    const b = e.target.closest('[data-del]'); if (!b) return;
+    const action = e.target.closest('[data-post-action]'); if (!action) return;
+    const post = posts.find(p => p.id === action.dataset.postId);
+    if (!post || post.user !== currentUser()) return;
+    if (action.dataset.postAction === 'edit') { openPostEdit(post.id); return; }
     if (!(await askConfirm('Excluir esta publicação?', { danger: true, confirmText: 'Excluir' }))) return;
-    try { await postsDB.del(b.dataset.del); } catch(_) {}
+    try { await postsDB.del(post.id); }
+    catch(_) { await showNotice('Não foi possível excluir a publicação. Verifique a conexão e tente novamente.'); return; }
     closePostView(); await loadPosts(); renderChampion(); renderAll();
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && postView.classList.contains('open')) closePostView(); });
@@ -2585,24 +2610,39 @@ await new Promise(resolve => {
     e.preventDefault();
     if (!currentUser()) { closePostModal(); openLogin(); return; }
     if (postImagePending) await postImagePending;
-    if (!postImage) { postError.textContent = 'Adicione a foto da captura.'; dropZone.focus(); return; }
+    if (!editingPostId && !postImage) { postError.textContent = 'Adicione a foto da captura.'; dropZone.focus(); return; }
     const sp = getSpecies().find(s => s.id === postSpecies.value);
     if (!sp) { postError.textContent = 'Busque e escolha a espécie na lista.'; spPickInput.focus(); return; }
     const place = postPlace.value.trim();
     if (!place) { postError.textContent = 'Informe o local da captura.'; postPlace.focus(); return; }
     const today = new Date(), earliest = localDateValue(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2)), captureDate = postCaptureDate.value;
-    if (!captureDate || captureDate < earliest || captureDate > localDateValue(today)) { postError.textContent = 'A data da captura precisa ser hoje ou uma das duas datas anteriores.'; postCaptureDate.focus(); return; }
+    if (!captureDate || captureDate > localDateValue(today) || (!editingPostId && captureDate < earliest)) { postError.textContent = editingPostId ? 'A data da captura não pode ser futura.' : 'A data da captura precisa ser hoje ou uma das duas datas anteriores.'; postCaptureDate.focus(); return; }
     const btn = $('postSubmit'), noScore = $('postNoScore').checked; btn.disabled = true;
     try {
-      await postsDB.put({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate, caption: postCaption.value.trim().slice(0, 300), photo: postImage, created: Date.now(), status: noScore ? 'unscored' : 'pending' });
-      closePostModal();
+      if (editingPostId) {
+        const original = posts.find(p => p.id === editingPostId);
+        if (!original || original.user !== currentUser()) throw new Error('Publicação não encontrada.');
+        const speciesChanged = original.speciesId !== sp.id;
+        const updated = { ...original, place, captureDate, caption: postCaption.value.trim().slice(0, 300), photo: postImage || original.photo };
+        if (speciesChanged) {
+          updated.speciesId = sp.id; updated.speciesName = sp.name; updated.points = sp.points;
+          updated.status = noScore ? 'unscored' : 'pending';
+          delete updated.pointsOverride; delete updated.reviewed; delete updated.reviewer;
+        }
+        await postsDB.put(updated);
+      } else {
+        await postsDB.put({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate, caption: postCaption.value.trim().slice(0, 300), photo: postImage, created: Date.now(), status: noScore ? 'unscored' : 'pending' });
+      }
+      const editedId = editingPostId;
+      closePostModal(false);
       await loadPosts(); renderChampion(); renderAll();
+      if (editedId) openPostView(editedId);
       showToast(noScore
-        ? '<div><b>Publicação enviada ao feed</b><small>Publicada sem pontuar: não entra no ranking nem na carta.</small></div>'
-        : '<div><b>Publicação enviada ao feed</b><small>A pontuação será adicionada após a validação de um administrador.</small></div>');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+        ? `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>Publicada sem pontuar: não entra no ranking nem na carta.</small></div>`
+        : `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>${editedId ? 'Alterações salvas.' : 'A pontuação será adicionada após a validação de um administrador.'}</small></div>`);
+      if (!editedId) window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch(_) {
-      postError.textContent = 'Não foi possível publicar. Verifique a conexão e tente de novo; se persistir, use uma foto menor.';
+      postError.textContent = `Não foi possível ${editingPostId ? 'salvar as alterações' : 'publicar'}. Verifique a conexão e tente de novo; se persistir, use uma foto menor.`;
     } finally { btn.disabled = false; }
   });
 
