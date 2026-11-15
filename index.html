@@ -360,6 +360,7 @@ select{font:inherit;color:inherit}
 .feed-search button{position:absolute;right:7px;padding:4px 9px;border:0;border-radius:5px;background:var(--surface-2);color:var(--muted);font-size:.76rem;font-weight:600;cursor:pointer}
 .feed-empty{grid-column:1/-1}
 .feed{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.feed-more{display:flex;justify-content:center;align-items:center;min-height:52px;padding:12px;color:var(--muted);font-size:.86rem}
 .post{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
 .post-head{display:flex;align-items:center;gap:10px;padding:10px 12px}
 .post-head .who{flex:1;min-width:0;line-height:1.25}
@@ -1301,6 +1302,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
           <div class="panel-head social-head"><div><h3>Social Fish</h3><p>Capturas da comunidade, das mais recentes para as mais antigas.</p></div><label class="feed-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="feedSearch" type="search" placeholder="Buscar por membro ou peixe" aria-label="Buscar publicações por membro ou nome do peixe"><button id="feedSearchClear" type="button" hidden>Limpar</button></label></div>
           <div class="timeline">
             <div class="feed" id="feed"></div>
+            <div class="feed-more" id="feedMore" role="status" aria-live="polite" hidden><span id="feedMoreLabel"></span><button class="btn btn-ghost" id="feedLoadMore" type="button" hidden>Carregar mais publicações</button></div>
           </div>
         </section>
         <section class="panel" role="tabpanel" data-panel="ranking" hidden>
@@ -1611,9 +1613,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                 <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar nova senha</button><button class="btn btn-ghost" id="passCancel" type="button">Cancelar</button></div>
               </form>
           <form class="profile-form" id="profileForm" hidden novalidate>
-                <div class="field"><label for="profileName">Nome</label><input id="profileName" maxlength="70" placeholder="Como deseja ser chamado?" required></div>
-                <div class="field"><label for="profileFishingName">Nome de pesca</label><input id="profileFishingName" maxlength="50" placeholder="Seu nome na comunidade"></div>
-                <div class="field"><label for="profileLocation">Local</label><input id="profileLocation" maxlength="80" placeholder="Ex.: Vila Velha - ES"></div>
+                <div class="field"><label for="profileName">Nome completo</label><input id="profileName" maxlength="80" placeholder="Seu nome completo" required></div>
+                <div class="field"><label for="profileFishingName">Nome de Pescador</label><input id="profileFishingName" maxlength="50" placeholder="Seu nome na comunidade" required></div>
+                <div class="field"><label for="profileLocation">Cidade</label><input id="profileLocation" maxlength="100" placeholder="Ex.: Vila Velha - ES" required></div>
+                <div class="field"><label for="profileCpf">CPF</label><input id="profileCpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00" required></div>
                 <div class="field full"><label for="profileBio">Breve descrição</label><textarea id="profileBio" rows="3" maxlength="100" placeholder="Conte um pouco sobre seu estilo de pesca"></textarea><span class="hint" id="bioCount">0 / 100 caracteres</span></div>
                 <div class="field full social-fields" role="group" aria-labelledby="socialLegend">
                   <span class="social-legend" id="socialLegend">Redes sociais <small>(opcional)</small></span>
@@ -1778,7 +1781,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <p class="saved" id="loginInfo" aria-live="polite"></p>
       </form>
       <form class="form" id="signupForm" autocomplete="on" novalidate hidden>
-        <div class="field"><label for="signupName">Nome para exibição</label><input id="signupName" name="name" type="text" maxlength="30" autocomplete="nickname" required><span class="hint">De 3 a 30 caracteres.</span></div>
+        <div class="field"><label for="signupName">Nome de Pescador</label><input id="signupName" name="nickname" type="text" maxlength="30" autocomplete="nickname" required><span class="hint">De 3 a 30 caracteres.</span></div>
+        <div class="field"><label for="signupFullName">Nome completo</label><input id="signupFullName" name="full-name" type="text" maxlength="80" autocomplete="name" required></div>
+        <div class="field"><label for="signupCity">Cidade</label><input id="signupCity" name="address-level2" type="text" maxlength="100" autocomplete="address-level2" required></div>
+        <div class="field"><label for="signupCpf">CPF</label><input id="signupCpf" name="tax-id" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00" required></div>
         <div class="field"><label for="signupEmail">E-mail</label><input id="signupEmail" name="email" type="email" maxlength="120" autocomplete="email" inputmode="email" required></div>
         <div class="field"><label for="signupPass">Senha</label><input id="signupPass" name="new-password" type="password" minlength="6" autocomplete="new-password" required><span class="hint">Use pelo menos 6 caracteres.</span></div>
         <div class="form-error" id="signupError" role="alert"></div>
@@ -2076,14 +2082,19 @@ const fb = {
     await setDoc(fsDoc(fdb, 'memberApplications', uid), app); C.memberApplications = { ...C.memberApplications, [uid]: app };
   },
   memberApplication: async uid => { const s = await getDoc(fsDoc(fdb, 'memberApplications', uid)); return s.exists() ? s.data() : null; },
-  approveMemberApplication: async (uid, username, email) => {
+  approveMemberApplication: async (uid, application) => {
+    const { username, email, fullName, city, cpf } = application;
+    const profile = { name: fullName || username, fishingName: username, location: city || '', bio: '', photo: '', social: {} };
     const batch = writeBatch(fdb), sent = Date.now();
     batch.set(fsDoc(fdb, 'users', uid), { username, role: 'member', active: true, seasonChampion: false, goldHooks: 0 });
     batch.set(fsDoc(fdb, 'private', uid), { email });
+    batch.set(fsDoc(fdb, 'profiles', username), profile);
+    batch.set(fsDoc(fdb, 'privateProfiles', uid), { cpf: cpf || '' });
     batch.delete(fsDoc(fdb, 'memberApplications', uid));
     batch.set(fsDoc(fdb, 'mail', `${uid}_approved_${sent}`), { to: email, message: { subject: 'Cadastro aprovado — Ajing Game', text: `Olá, ${username}! Seu cadastro foi aprovado. Você já pode acessar a área de membros do Ajing Game com o e-mail e a senha informados no cadastro.` } });
     await batch.commit();
     C.users = { ...C.users, [uid]: { username, role: 'member', active: true, seasonChampion: false, goldHooks: 0 } };
+    C.profiles = { ...C.profiles, [username]: profile };
     const applications = { ...C.memberApplications }; delete applications[uid]; C.memberApplications = applications;
   },
   rejectMemberApplication: async (uid, reviewer) => {
@@ -2096,7 +2107,8 @@ const fb = {
   },
   reopenMemberApplication: async uid => {
     const app = C.memberApplications[uid]; if (!app || app.status !== 'rejected') throw { code: 'not-found' };
-    const reopened = { uid, username: app.username, email: app.email, status: 'pending', created: app.created };
+    const { reviewed, reviewer, ...details } = app;
+    const reopened = { ...details, uid, status: 'pending', created: app.created };
     await setDoc(fsDoc(fdb, 'memberApplications', uid), reopened);
     C.memberApplications = { ...C.memberApplications, [uid]: reopened };
   },
@@ -2116,6 +2128,8 @@ const fb = {
   setPrivate: (uid, data) => setDoc(fsDoc(fdb, 'private', uid), clean(data)),
   syncPartners: entries => syncCol('partners', entries, fbIsAdmin()),
   getEmail: async uid => { const s = await getDoc(fsDoc(fdb, 'private', uid)); return s.exists() ? s.data().email || '' : ''; },
+  getPrivateProfile: async uid => { const s = await getDoc(fsDoc(fdb, 'privateProfiles', uid)); return s.exists() ? s.data() : {}; },
+  setPrivateProfile: (uid, data) => setDoc(fsDoc(fdb, 'privateProfiles', uid), clean(data)),
   deletePrivate: uid => deleteDoc(fsDoc(fdb, 'private', uid)),
   errMsg: e => {
     if (e && e.code === 'invalid-argument') return `O Firestore rejeitou os dados enviados (${String(e.message || 'invalid-argument').slice(0, 260)}).`;
@@ -2467,6 +2481,20 @@ await new Promise(resolve => {
     $('loginTitle').hidden = visible; $('loginDescription').hidden = visible; $('loginClose').hidden = visible;
     modal.querySelector('[role="dialog"]').setAttribute('aria-labelledby', visible ? 'signupSuccessTitle' : 'loginTitle');
   };
+  const cpfDigits = value => String(value || '').replace(/\D/g, '').slice(0, 11);
+  const formatCPF = value => {
+    const d = cpfDigits(value);
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+    if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+  };
+  const validCPF = value => {
+    const d = cpfDigits(value); if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+    const digitAt = length => { let sum = 0; for (let i = 0; i < length; i++) sum += Number(d[i]) * (length + 1 - i); const remainder = (sum * 10) % 11; return remainder === 10 ? 0 : remainder; };
+    return digitAt(9) === Number(d[9]) && digitAt(10) === Number(d[10]);
+  };
+  ['signupCpf', 'profileCpf'].forEach(id => $(id).addEventListener('input', e => { e.target.value = formatCPF(e.target.value); }));
   const openLogin = () => {
     lastFocus = document.activeElement;
     setSignupSuccess(false); loginForm.hidden = false; loginError.textContent = ''; $('signupError').textContent = ''; $('loginInfo').textContent = '';
@@ -2508,9 +2536,12 @@ await new Promise(resolve => {
   });
   signupForm.addEventListener('submit', async e => {
     e.preventDefault();
-    const name = $('signupName').value.normalize('NFC').trim().replace(/\s+/g, ' '), email = $('signupEmail').value.trim().toLowerCase(), pass = $('signupPass').value, err = $('signupError');
+    const name = $('signupName').value.normalize('NFC').trim().replace(/\s+/g, ' '), fullName = $('signupFullName').value.normalize('NFC').trim().replace(/\s+/g, ' '), city = $('signupCity').value.normalize('NFC').trim().replace(/\s+/g, ' '), cpf = cpfDigits($('signupCpf').value), email = $('signupEmail').value.trim().toLowerCase(), pass = $('signupPass').value, err = $('signupError');
     err.textContent = '';
     if (name.length < 3 || name.length > 30 || !/^[\p{L}\p{N}](?:[\p{L}\p{N} ._'-]*[\p{L}\p{N}.])?$/u.test(name)) { err.textContent = 'Informe um nome de 3 a 30 caracteres, começando e terminando com letra ou número.'; $('signupName').focus(); return; }
+    if (fullName.length < 2 || fullName.length > 80) { err.textContent = 'Informe seu nome completo (de 2 a 80 caracteres).'; $('signupFullName').focus(); return; }
+    if (!city || city.length > 100) { err.textContent = 'Informe sua cidade (até 100 caracteres).'; $('signupCity').focus(); return; }
+    if (!validCPF(cpf)) { err.textContent = 'Confira o CPF informado.'; $('signupCpf').focus(); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Informe um e-mail válido.'; $('signupEmail').focus(); return; }
     if (pass.length < 6) { err.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; $('signupPass').focus(); return; }
     const btn = $('signupSubmit'); btn.disabled = true;
@@ -2518,7 +2549,7 @@ await new Promise(resolve => {
     try {
       if (getUsers().some(u => norm(u.username) === norm(name))) { err.textContent = 'Esse nome já está em uso. Escolha outro.'; $('signupName').focus(); return; }
       uid = await fb.registerAccount(email, pass);
-      await fb.submitMemberApplication(uid, { username: name, email });
+      await fb.submitMemberApplication(uid, { username: name, fullName, city, cpf, email });
       await fb.signOut(); signupForm.reset(); setSignupSuccess(true);
     } catch (signupErr) {
       if (uid) { try { await fb.signOut(); } catch (_) {} }
@@ -2816,15 +2847,28 @@ await new Promise(resolve => {
         </div>
       </article>`;
   };
-  let feedQuery = '';
+  let feedQuery = '', feedShownCount = 12;
+  const FEED_BATCH_SIZE = 5;
   const normalizeFeedSearch = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   const renderFeed = () => {
     const query = normalizeFeedSearch(feedQuery);
     const visiblePosts = query ? posts.filter(p => [p.user, displayName(p.user), p.speciesName].some(value => normalizeFeedSearch(value).includes(query))) : posts;
-    $('feed').innerHTML = visiblePosts.length ? visiblePosts.map(p => postHTML(p, true)).join('') : query ? '<div class="empty feed-empty"><h4>Nenhuma captura encontrada</h4><p>Tente buscar por outro membro ou nome de peixe.</p></div>' : '';
+    $('feed').innerHTML = visiblePosts.length ? visiblePosts.slice(0, feedShownCount).map(p => postHTML(p, true)).join('') : query ? '<div class="empty feed-empty"><h4>Nenhuma captura encontrada</h4><p>Tente buscar por outro membro ou nome de peixe.</p></div>' : '';
+    const hasMore = visiblePosts.length > feedShownCount, more = $('feedMore');
+    more.hidden = !hasMore;
+    $('feedMoreLabel').textContent = hasMore && 'IntersectionObserver' in window ? 'Role para carregar mais publicações' : '';
+    $('feedLoadMore').hidden = !hasMore || 'IntersectionObserver' in window;
   };
-  $('feedSearch').addEventListener('input', () => { feedQuery = $('feedSearch').value; $('feedSearchClear').hidden = !feedQuery; renderFeed(); });
-  $('feedSearchClear').addEventListener('click', () => { $('feedSearch').value = ''; feedQuery = ''; $('feedSearchClear').hidden = true; renderFeed(); $('feedSearch').focus(); });
+  const loadMoreFeed = () => {
+    const query = normalizeFeedSearch(feedQuery), visiblePosts = query ? posts.filter(p => [p.user, displayName(p.user), p.speciesName].some(value => normalizeFeedSearch(value).includes(query))) : posts;
+    if (feedShownCount >= visiblePosts.length) return;
+    feedShownCount = Math.min(visiblePosts.length, feedShownCount + FEED_BATCH_SIZE); renderFeed();
+  };
+  const feedObserver = 'IntersectionObserver' in window ? new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) loadMoreFeed(); }, { rootMargin: '300px 0px' }) : null;
+  if (feedObserver) feedObserver.observe($('feedMore'));
+  $('feedLoadMore').addEventListener('click', loadMoreFeed);
+  $('feedSearch').addEventListener('input', () => { feedQuery = $('feedSearch').value; feedShownCount = 12; $('feedSearchClear').hidden = !feedQuery; renderFeed(); });
+  $('feedSearchClear').addEventListener('click', () => { $('feedSearch').value = ''; feedQuery = ''; feedShownCount = 12; $('feedSearchClear').hidden = true; renderFeed(); $('feedSearch').focus(); });
 
   // Publicação completa em janela
   const postView = $('postView'); let postViewFocus = null;
@@ -4335,7 +4379,7 @@ await new Promise(resolve => {
     const own = u === currentUser(), catches = portfolioPostList(u);
     $('membersDirectory').hidden = true; $('memberPortfolio').hidden = false;
     $('memberPortfolio').innerHTML = `<div class="portfolio-head"><button class="btn btn-ghost" id="portfolioBack" type="button">← Todos os membros</button><span class="muted">Portfólio do pescador</span></div>
-      <section class="portfolio-profile"><div class="tcard-stage"></div><div class="portfolio-copy"><h2>${esc(displayName(u))}</h2><p class="portfolio-fish-name">Nome de pesca: <b>${esc(fishingName(u))}</b></p><p class="portfolio-description">${esc(p.bio || 'Este pescador ainda não adicionou uma descrição.')}</p>${own ? '<button class="btn btn-ghost" type="button" data-edit-portfolio-profile>Editar meu perfil</button>' : ''}</div></section>
+      <section class="portfolio-profile"><div class="tcard-stage"></div><div class="portfolio-copy"><h2>${esc(displayName(u))}</h2><p class="portfolio-fish-name">Nome de Pescador: <b>${esc(fishingName(u))}</b></p><p class="portfolio-description">${esc(p.bio || 'Este pescador ainda não adicionou uma descrição.')}</p>${own ? '<button class="btn btn-ghost" type="button" data-edit-portfolio-profile>Editar meu perfil</button>' : ''}</div></section>
       <div class="panel-head"><div><h3>Espécies capturadas (${catches.length})</h3><p>Uma publicação para cada espécie selecionada pelo pescador.</p></div></div>
       <div class="portfolio-species">${catches.map(post => postHTML(post, true)).join('')}</div>${catches.length ? '' : '<div class="empty"><h4>Portfólio vazio</h4><p>Este pescador ainda não selecionou espécies para exibir.</p></div>'}`;
     $('memberPortfolio').querySelector('.tcard-stage').appendChild(clone);
@@ -4413,17 +4457,24 @@ await new Promise(resolve => {
   const updateCount = () => bioCount.textContent = `${bioInput.value.length} / 100 caracteres`;
   const closeEdit = () => { stopCrop(); form.hidden = true; card.hidden = false; renderProfile(); };
   bioInput.addEventListener('input', updateCount);
-  $('editProfileBtn').addEventListener('click', () => {
+  $('editProfileBtn').addEventListener('click', async () => {
+    const member = currentUser(), uid = fb.authUid(); if (!member || !uid) return;
+    $('editProfileBtn').disabled = true;
+    let privateProfile;
+    try { privateProfile = await fb.getPrivateProfile(uid); }
+    catch (err) { profileError.textContent = 'Não foi possível carregar os dados privados do perfil. ' + fb.errMsg(err); $('editProfileBtn').disabled = false; return; }
+    finally { $('editProfileBtn').disabled = false; }
+    if (currentUser() !== member) return;
     const p = readProfile();
     $('profileName').value = p.name || ''; $('profileFishingName').value = p.fishingName || ''; $('profileLocation').value = p.location || '';
+    $('profileCpf').value = formatCPF(privateProfile.cpf || '');
     Object.keys(SOCIALS).forEach(net => { const s = p.social && p.social[net]; $(SOCIALS[net].input).value = s ? (s.handle ? '@' + s.handle : s.url) : ''; });
     bioInput.value = (p.bio || '').slice(0, 100); photoData = p.photo || ''; photoInput.value = '';
     profileError.textContent = ''; saved.textContent = ''; updateCount();
     card.hidden = true; passForm.hidden = true; form.hidden = false; softFocus($('profileName'));
     const c = $('tcard'); ['--rx', '--ry'].forEach(v => c.style.setProperty(v, '0deg'));
-    const who = currentUser();
-    fb.getPhotoSource(who).then(src => {
-      if (form.hidden || currentUser() !== who) return;
+    fb.getPhotoSource(member).then(src => {
+      if (form.hidden || currentUser() !== member) return;
       const s = src && src.photoSrc ? src : null;
       const sourcePhoto = safeImageSrc(s && s.photoSrc), profilePhoto = safeImageSrc(p.photo);
       if (sourcePhoto || profilePhoto) return startCrop(sourcePhoto || profilePhoto, sourcePhoto ? s.crop : null);
@@ -4440,22 +4491,25 @@ await new Promise(resolve => {
   });
   form.addEventListener('submit', async e => {
     e.preventDefault();
-    const name = $('profileName').value.trim();
-    if (!name) { profileError.textContent = 'Informe um nome para o perfil.'; $('profileName').focus(); return; }
+    const name = $('profileName').value.normalize('NFC').trim().replace(/\s+/g, ' '), fishingName = $('profileFishingName').value.normalize('NFC').trim().replace(/\s+/g, ' '), location = $('profileLocation').value.normalize('NFC').trim().replace(/\s+/g, ' '), cpf = cpfDigits($('profileCpf').value);
+    if (name.length < 2 || name.length > 80) { profileError.textContent = 'Informe seu nome completo (de 2 a 80 caracteres).'; $('profileName').focus(); return; }
+    if (!fishingName || fishingName.length > 50) { profileError.textContent = 'Informe seu Nome de Pescador (até 50 caracteres).'; $('profileFishingName').focus(); return; }
+    if (!location || location.length > 100) { profileError.textContent = 'Informe sua cidade (até 100 caracteres).'; $('profileLocation').focus(); return; }
+    if (!validCPF(cpf)) { profileError.textContent = 'Confira o CPF informado.'; $('profileCpf').focus(); return; }
     const { social, invalid } = readSocialInputs();
     if (invalid.length) {
       const net = SOCIALS[invalid[0]], hint = { instagram: 'instagram.com/usuario', youtube: 'youtube.com/@canal', tiktok: 'tiktok.com/@usuario' }[invalid[0]];
       profileError.textContent = `Não reconheci o ${net.label} informado. Use o @ (ex.: @usuario) ou o link do perfil (${hint}).`; $(net.input).focus(); return;
     }
     if (photoPending) await photoPending;
-    const p = { ...readProfile(), name, fishingName: $('profileFishingName').value.trim(), location: $('profileLocation').value.trim(), bio: bioInput.value.slice(0, 100).trim(), photo: '', social };
+    const p = { ...readProfile(), name, fishingName, location, bio: bioInput.value.slice(0, 100).trim(), photo: '', social };
     let source = null;
     if (cropState) {
       try { p.photo = await bakeCrop(); } catch(_) { profileError.textContent = 'Não foi possível processar a foto. Tente outra imagem.'; return; }
       source = { photoSrc: cropState.src, crop: { z: cropState.z, cx: cropState.cx, cy: cropState.cy } };
     }
     const saveBtn = form.querySelector('button[type=submit]'); saveBtn.disabled = true;
-    try { await fb.saveProfile(currentUser(), p); await fb.setPhotoSource(currentUser(), source); }
+    try { await Promise.all([fb.saveProfile(currentUser(), p), fb.setPhotoSource(currentUser(), source), fb.setPrivateProfile(fb.authUid(), { cpf })]); }
     catch (e2) { profileError.textContent = 'Não foi possível salvar o perfil. ' + fb.errMsg(e2); return; }
     finally { saveBtn.disabled = false; }
     stopCrop();
@@ -4572,7 +4626,7 @@ await new Promise(resolve => {
     const badge = $('adminBadge'); badge.hidden = !isAdmin() || !pendingTotal; badge.textContent = pendingTotal;
     const cnt = $('cntReq'); cnt.textContent = pendingTotal || ''; cnt.classList.toggle('alert', pendingTotal > 0);
     if (!isAdmin()) return;
-    $('memberApplicationList').innerHTML = memberApplications.length ? memberApplications.map(app => `<li class="review-history-row" data-member-application="${esc(app.uid)}"><span class="grow"><b>${esc(app.username || 'Novo membro')}</b><small>${esc(app.email || '')} · Solicitação em ${fmtShort(app.created)}</small></span><button class="btn btn-primary" type="button" data-member-application-act="approve">Aprovar acesso</button><button class="btn btn-danger" type="button" data-member-application-act="reject">Recusar acesso</button></li>`).join('') : '<li class="empty-row">Nenhum novo cadastro aguardando aprovação.</li>';
+    $('memberApplicationList').innerHTML = memberApplications.length ? memberApplications.map(app => `<li class="review-history-row" data-member-application="${esc(app.uid)}"><span class="grow"><b>${esc(app.username || 'Novo membro')}</b><small>${esc(app.fullName || 'Nome completo não informado')} · ${esc(app.city || 'Cidade não informada')} · CPF ${app.cpf ? esc(formatCPF(app.cpf)) : 'não informado'}</small><small>${esc(app.email || '')} · Solicitação em ${fmtShort(app.created)}</small></span><button class="btn btn-primary" type="button" data-member-application-act="approve">Aprovar acesso</button><button class="btn btn-danger" type="button" data-member-application-act="reject">Recusar acesso</button></li>`).join('') : '<li class="empty-row">Nenhum novo cadastro aguardando aprovação.</li>';
     $('memberApplicationHistory').innerHTML = rejectedMemberApplications.length ? rejectedMemberApplications.map(app => `<li class="review-history-row" data-member-application="${esc(app.uid)}"><span class="grow"><b>${esc(app.username || 'Novo membro')}</b><small>${esc(app.email || '')} · Recusado em ${fmtShort(app.reviewed)}</small></span><button class="btn btn-ghost" type="button" data-member-application-act="reopen">Reabrir solicitação</button></li>`).join('') : '<li class="empty-row">Nenhum acesso recusado.</li>';
     $('reqAdminList').innerHTML = pending.length ? pending.map(r => `<li class="req-card" data-req="${esc(r.id)}">
         <div class="rphoto" ${safeImageSrc(reqPhotos[r.id]) ? `style="background-image:url('${safeImageSrc(reqPhotos[r.id])}')"` : ''} role="img" aria-label="Foto enviada para ${esc(r.name)}"></div>
@@ -4649,7 +4703,7 @@ await new Promise(resolve => {
     button.disabled = true; $('reqAdminError').textContent = ''; $('reqAdminSaved').textContent = '';
     try {
       if (action === 'approve') {
-        await fb.approveMemberApplication(uid, username, email);
+        await fb.approveMemberApplication(uid, app);
         $('reqAdminSaved').textContent = `Acesso de ${username} aprovado. A pessoa receberá um e-mail e já pode entrar com a senha cadastrada.`;
       } else {
         await fb.rejectMemberApplication(uid, currentUser());
@@ -5157,8 +5211,8 @@ await new Promise(resolve => {
   /* ===== Renderização geral ===== */
   const resetTabHome = name => {
     if (name === 'social') {
-      const needsRender = !!feedQuery || !!$('feedSearch').value;
-      feedQuery = ''; $('feedSearch').value = ''; $('feedSearchClear').hidden = true;
+      const needsRender = !!feedQuery || !!$('feedSearch').value || feedShownCount !== 12;
+      feedQuery = ''; feedShownCount = 12; $('feedSearch').value = ''; $('feedSearchClear').hidden = true;
       if (postView.classList.contains('open')) closePostView();
       if (needsRender) renderFeed();
     } else if (name === 'members') {
