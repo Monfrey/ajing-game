@@ -1736,17 +1736,16 @@ const clean = x => JSON.parse(JSON.stringify(x ?? null));
 const sortKeys = x => Array.isArray(x) ? x.map(sortKeys) : x && typeof x === 'object' ? Object.keys(x).sort().reduce((o, k) => { o[k] = sortKeys(x[k]); return o; }, {}) : x;
 const same = (a, b) => JSON.stringify(sortKeys(a)) === JSON.stringify(sortKeys(b));
 
-// Escuta uma coleção em tempo real; resolve no primeiro retorno (ou após 12 s sem conexão)
+// Escuta uma coleção em tempo real; usa o primeiro snapshot (cache local ou servidor) para liberar a interface.
 const listen = (name, ref = fsCol(fdb, name)) => new Promise(resolve => {
   let first = true, unsub = () => {};
   const done = () => { if (first) { first = false; resolve(() => unsub()); } };
   unsub = onSnapshot(ref, { includeMetadataChanges: true }, snap => {
     const m = {}; snap.forEach(d => { m[d.id] = d.data(); }); C[name] = m;
-    // Na abertura, espera a confirmação do servidor (o cache pode estar desatualizado)
-    if (first) { if (!snap.metadata.fromCache) done(); }
-    else if (snap.docChanges().length && fbHooks.refresh) fbHooks.refresh();
+    if (first) done();
+    else if (!snap.metadata.fromCache && snap.docChanges().length && fbHooks.refresh) fbHooks.refresh();
   }, err => { console.warn('Firestore:', name, err && err.code); done(); });
-  setTimeout(done, 12000);
+  setTimeout(done, 1500);
 });
 
 let authUid = null, memberUnsubs = [], authSeq = Promise.resolve();
@@ -1978,6 +1977,10 @@ await new Promise(resolve => {
   onAuthStateChanged(fbAuth, user => {
     authSeq = authSeq.then(async () => {
       authUid = user ? user.uid : null;
+      if (user && !C.users[user.uid]) {
+        try { const account = await getDoc(fsDoc(fdb, 'users', user.uid)); if (account.exists()) C.users = { ...C.users, [user.uid]: account.data() }; }
+        catch (err) { console.warn('Firestore: usuário autenticado', err && err.code); }
+      }
       const u = fbUser();
       await attachMember(!!(u && u.active !== false));
       if (first) { first = false; resolve(); } else if (fbHooks.refresh) fbHooks.refresh();
