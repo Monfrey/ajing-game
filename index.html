@@ -1006,7 +1006,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .season-st.current{background:var(--accent);color:var(--accent-ink)}
 .season-st.next{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
 .season-st .st-short{display:none}
+.season-editor-row{display:grid;grid-template-columns:minmax(130px,1.3fr) repeat(2,minmax(125px,.8fr)) auto auto;gap:8px;align-items:end;padding:10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface)}
+.season-editor-row .field{min-width:0;margin:0}.season-editor-row input{min-width:0}.season-editor-row .inline-check{white-space:nowrap}.season-editor-list{display:grid;gap:8px;margin:10px 0}
 @media (max-width:560px){.season-table th:nth-child(4),.season-table td:nth-child(4){display:none}.season-table th:nth-child(1){width:34%}.season-table th:nth-child(2){width:38%}.season-table th:nth-child(3){width:28%}.season-table td,.season-table th{padding:7px 8px}.season-st .st-long{display:none}.season-st .st-short{display:inline}}
+@media (max-width:720px){.season-editor-row{grid-template-columns:1fr 1fr}.season-editor-row .field:first-child{grid-column:1/-1}}
 /* Solicitações: submenus, filas e históricos */
 .req-subnav{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
 .req-subnav button{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:99px;background:var(--surface);color:var(--muted);font:inherit;font-size:.86rem;font-weight:600;cursor:pointer}
@@ -1500,11 +1503,18 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
             </div>
             <div class="admin-box" data-admin-panel="rank-award" hidden>
               <h4 class="req-title">Temporada e premiação do ranking</h4>
-              <p class="box-desc">O ranking tem duas temporadas no hemisfério sul: Outono/Inverno, do início astronômico do outono ao início da primavera seguinte, e Primavera/Verão, da primavera ao início do outono seguinte. Cada período começa à meia-noite (horário de Brasília) do primeiro dia da estação. A nova regra começa na primavera de 2026; os períodos anteriores e seus campeões são preservados. O ranking reinicia a cada temporada, mas os pontos acumulados no perfil e os níveis são mantidos. A temporada continua mesmo se a premiação estiver desativada.</p>
+              <p class="box-desc">Escolha o calendário padrão das estações ou cadastre períodos manualmente. As capturas aprovadas só contam no período ativo. Se nenhum período estiver ativo, o ranking continua acumulando desde o início da última temporada ativa até a próxima. A pontuação vitalícia e os níveis nunca são zerados.</p>
               <form id="rankAwardForm" class="user-form" novalidate>
                 <div class="uf-grid">
                   <div class="field"><span class="flabel">Temporada atual</span><div class="season-info" id="rankSeasonInfo" aria-live="polite"></div></div>
                   <div class="field"><label for="rankAwardEnabled">Premiação</label><label class="inline-check"><input id="rankAwardEnabled" type="checkbox"> Ativar premiação e slide do campeão</label></div>
+                  <div class="field"><label for="rankScheduleMode">Calendário</label><select id="rankScheduleMode"><option value="standard">Datas padrão das estações</option><option value="custom">Períodos definidos pela administração</option></select></div>
+                </div>
+                <div id="rankCustomSeasonFields" hidden>
+                  <h5 class="req-title">Períodos definidos pela administração</h5>
+                  <p class="admin-note">Adicione ou edite temporadas com nome e datas. Desmarque “Ativa” para pular um período; a pontuação do ranking continua acumulando até o próximo período ativo.</p>
+                  <div id="rankCustomSeasonList" class="season-cal"></div>
+                  <button class="btn btn-ghost" id="rankAddSeason" type="button">Adicionar temporada</button>
                 </div>
                 <div class="form-error" id="rankAwardError" role="alert"></div>
                 <p class="saved" id="rankAwardSaved" aria-live="polite"></p>
@@ -1512,7 +1522,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               </form>
               <p class="admin-note">Para escolher o campeão da temporada e criar sua carta no carrossel, edite o slide “Premiação do ranking” e selecione um membro. A coroa acompanha essa escolha.</p>
               <h4 class="req-title">Calendário das temporadas</h4>
-              <p class="box-desc">As duas temporadas de cada ano, com as datas de início e fim. A contagem considera as capturas aprovadas no período.</p>
+              <p class="box-desc" id="rankCalendarDescription">Renomeie ou desative períodos padrão. A contagem considera as capturas aprovadas no período.</p>
               <div class="season-cal" id="seasonCalendar"></div>
             </div>
             <div class="admin-box" data-admin-panel="levels" hidden>
@@ -3043,7 +3053,7 @@ await new Promise(resolve => {
   const seasonRange = s => `${fmtDay(s.start)} a ${fmtDay(s.end - 1)}`;
   const readRankAwardConfig = () => {
     const saved = readJSON('ajing-ranking-award-config', {});
-    return { enabled: saved.enabled !== false, period: 'season' };
+    return { enabled: saved.enabled !== false, period: 'season', scheduleMode: saved.scheduleMode === 'custom' ? 'custom' : 'standard', periodOverrides: saved.periodOverrides && typeof saved.periodOverrides === 'object' ? saved.periodOverrides : {}, customPeriods: Array.isArray(saved.customPeriods) ? saved.customPeriods : [] };
   };
   let rankAwardConfig = readRankAwardConfig();
   // Último período já encerrado (o que recebe a premiação)
@@ -3052,44 +3062,112 @@ await new Promise(resolve => {
     const article = /^(Outono|Inverno|Verão)\b/.test(prev.label) ? 'do' : 'da';
     return { ...prev, label: `Campeão ${article} ${prev.label}` };
   };
-  const currentRankSeason = (now = Date.now()) => seasonContaining(now);
+  const periodKeyFor = p => `${p.start}:${p.end}`;
+  const parseBrtDate = value => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return NaN;
+    const [year, month, day] = value.split('-').map(Number), ts = Date.UTC(year, month - 1, day, 3);
+    const check = new Date(ts - 3 * 3600000);
+    return check.getUTCFullYear() === year && check.getUTCMonth() === month - 1 && check.getUTCDate() === day ? ts : NaN;
+  };
+  const inputDate = ts => new Date(ts - 3 * 3600000).toISOString().slice(0, 10);
+  const generatedRankSeasons = (fromYear, toYear) => {
+    const periods = [];
+    for (let year = fromYear; year <= toYear; year++) for (let k = 0; k < 2; k++) {
+      const period = seasonAt(year, k), override = rankAwardConfig.periodOverrides[periodKeyFor(period)] || {};
+      periods.push({ ...period, label: typeof override.label === 'string' && override.label.trim() ? override.label.trim() : period.label, enabled: override.enabled !== false });
+    }
+    return periods;
+  };
+  const rankSchedulePeriods = (now = Date.now(), fromYear = null, toYear = null) => {
+    if (rankAwardConfig.scheduleMode === 'custom') return rankAwardConfig.customPeriods.map(p => {
+      const start = parseBrtDate(p.start), endDay = parseBrtDate(p.end), end = endDay + 86400000;
+      return { mode: 'season', start, end, label: String(p.label || '').trim(), enabled: p.enabled !== false, id: p.id };
+    }).filter(p => Number.isFinite(p.start) && Number.isFinite(p.end) && p.end > p.start);
+    const year = new Date(now - 3 * 3600000).getUTCFullYear();
+    const firstPost = posts.reduce((min, p) => Math.min(min, p.created || Infinity), Infinity), firstYear = Number.isFinite(firstPost) ? new Date(firstPost - 3 * 3600000).getUTCFullYear() : year - 2;
+    return generatedRankSeasons(fromYear == null ? Math.min(year - 2, firstYear) : fromYear, toYear == null ? year + 3 : toYear);
+  };
+  const currentRankSeason = (now = Date.now()) => {
+    const periods = rankSchedulePeriods(now).sort((a, b) => a.start - b.start), active = periods.find(p => p.enabled && now >= p.start && now < p.end);
+    if (active) return active;
+    const previous = periods.filter(p => p.enabled && p.start <= now).sort((a, b) => b.start - a.start)[0];
+    return { mode: 'continuous', start: previous ? previous.start : 0, end: now + 86400000, label: 'Ranking contínuo', continuous: true };
+  };
   const currentRankSeasonPosts = () => {
     const season = currentRankSeason();
     return posts.filter(p => p.created >= season.start && p.created < season.end && isPostScored(p));
   };
-  // Calendário: dois períodos por ano, até o fim do ano seguinte.
+  let customSeasonDraft = rankAwardConfig.customPeriods.map(p => ({ ...p }));
+  const renderCustomSeasonEditor = () => {
+    const box = $('rankCustomSeasonList'); if (!box) return;
+    customSeasonDraft.sort((a, b) => String(a.start).localeCompare(String(b.start)));
+    box.innerHTML = customSeasonDraft.length ? `<div class="season-editor-list">${customSeasonDraft.map(p => `<div class="season-editor-row" data-custom-season-row="${esc(p.id)}"><div class="field"><label>Nome da temporada</label><input type="text" maxlength="60" data-season-label value="${esc(p.label || '')}" placeholder="Ex.: Temporada de verão"></div><div class="field"><label>Início</label><input type="date" data-season-start value="${esc(p.start || '')}"></div><div class="field"><label>Fim</label><input type="date" data-season-end value="${esc(p.end || '')}"></div><label class="inline-check"><input type="checkbox" data-season-enabled ${p.enabled !== false ? 'checked' : ''}> Ativa</label><button class="btn btn-ghost" type="button" data-season-remove="${esc(p.id)}" aria-label="Remover temporada">Remover</button></div>`).join('')}</div>` : '<p class="muted">Nenhuma temporada cadastrada. O ranking acumulará continuamente até o primeiro período ativo.</p>';
+  };
   const renderSeasonCalendar = () => {
     const box = $('seasonCalendar'); if (!box) return;
-    const now = Date.now(), cur = currentRankSeason(now), thisYear = new Date(now).getFullYear();
-    const firstPost = posts.reduce((min, p) => Math.min(min, p.created || Infinity), Infinity);
-    const firstYear = Math.min(thisYear, Number.isFinite(firstPost) ? new Date(firstPost).getFullYear() : thisYear);
-    const years = [];
-    for (let y = thisYear + 1; y >= firstYear; y--) years.push(y);
-    const STATUS = { ended: 'Encerrada', current: 'Em andamento', next: 'Próxima', future: 'Futura' };
-    const nextStart = cur.end;
-    box.innerHTML = years.map(y => {
-      const rows = [seasonAt(y, 0), seasonAt(y, 1)];
-      return `<section class="season-year"><h5>${y}</h5><table class="season-table"><thead><tr><th>Temporada</th><th>Período</th><th>Situação</th><th>Capturas</th></tr></thead><tbody>${rows.map(s => {
-        const st = s.end <= now ? 'ended' : s.start <= now ? 'current' : s.start === nextStart ? 'next' : 'future';
-        const n = st === 'ended' || st === 'current' ? posts.filter(p => p.created >= s.start && p.created < s.end && isPostScored(p)).length : null;
-        return `<tr class="st-${st}"><td><b>${esc(s.label)}</b></td><td>${seasonRange(s)}</td><td><span class="season-st ${st}">${st === 'current' ? '<span class="st-long">Em andamento</span><span class="st-short">Atual</span>' : STATUS[st]}</span></td><td>${n == null ? '—' : fmtNum(n)}</td></tr>`;
-      }).join('')}</tbody></table></section>`;
-    }).join('');
+    const now = Date.now(), cur = currentRankSeason(now), standard = rankAwardConfig.scheduleMode === 'standard';
+    $('rankCustomSeasonFields').hidden = standard;
+    $('rankCalendarDescription').textContent = standard ? 'Renomeie ou desative períodos padrão. A contagem considera as capturas aprovadas no período.' : 'Períodos personalizados. Períodos desativados não zeram o ranking; ele acumula até o início do próximo período ativo.';
+    if (!standard) {
+      const periods = rankSchedulePeriods(now).sort((a, b) => b.start - a.start);
+      box.innerHTML = periods.length ? `<section class="season-year"><table class="season-table"><thead><tr><th>Temporada</th><th>Período</th><th>Situação</th><th>Capturas</th></tr></thead><tbody>${periods.map(s => {
+        const st = !s.enabled ? 'disabled' : s.end <= now ? 'ended' : s.start <= now ? 'current' : 'future';
+        const n = s.enabled && s.start <= now ? posts.filter(p => p.created >= s.start && p.created < Math.min(s.end, now + 1) && isPostScored(p)).length : null;
+        return `<tr class="st-${st}"><td><b>${esc(s.label)}</b></td><td>${seasonRange(s)}</td><td><span class="season-st ${st}">${st === 'current' ? 'Em andamento' : st === 'disabled' ? 'Desativada' : st === 'ended' ? 'Encerrada' : 'Futura'}</span></td><td>${n == null ? '—' : fmtNum(n)}</td></tr>`;
+      }).join('')}</tbody></table></section>` : '<p class="muted">Cadastre períodos acima para exibir o calendário.</p>';
+    } else {
+      const thisYear = new Date(now - 3 * 3600000).getUTCFullYear(), firstPost = posts.reduce((min, p) => Math.min(min, p.created || Infinity), Infinity), firstYear = Math.min(thisYear, Number.isFinite(firstPost) ? new Date(firstPost - 3 * 3600000).getUTCFullYear() : thisYear), periods = generatedRankSeasons(firstYear, thisYear + 1).sort((a, b) => b.start - a.start), STATUS = { ended: 'Encerrada', current: 'Em andamento', next: 'Próxima', future: 'Futura', disabled: 'Desativada' };
+      box.innerHTML = periods.reduce((html, s, i) => {
+        const year = new Date(s.start - 3 * 3600000).getUTCFullYear(), prevYear = i ? new Date(periods[i - 1].start - 3 * 3600000).getUTCFullYear() : null;
+        const st = !s.enabled ? 'disabled' : s.end <= now ? 'ended' : s.start <= now ? 'current' : s.start === cur.end ? 'next' : 'future';
+        const n = s.enabled && s.start <= now ? posts.filter(p => p.created >= s.start && p.created < Math.min(s.end, now + 1) && isPostScored(p)).length : null;
+        const key = periodKeyFor(s), saved = rankAwardConfig.periodOverrides[key] || {};
+        if (year !== prevYear) html += `<section class="season-year"><h5>${year}</h5><table class="season-table"><thead><tr><th>Temporada</th><th>Período</th><th>Situação</th><th>Capturas</th></tr></thead><tbody>`;
+        html += `<tr class="st-${st}"><td><b>${esc(s.label)}</b><br><input type="text" maxlength="60" aria-label="Nome da temporada" data-standard-label="${esc(key)}" value="${esc(saved.label || s.label)}"></td><td>${seasonRange(s)}</td><td><span class="season-st ${st}">${STATUS[st]}</span><br><label class="inline-check"><input type="checkbox" data-standard-enabled="${esc(key)}" ${s.enabled ? 'checked' : ''}> Ativa</label></td><td>${n == null ? '—' : fmtNum(n)}</td></tr>`;
+        const nextYear = i + 1 < periods.length ? new Date(periods[i + 1].start - 3 * 3600000).getUTCFullYear() : null;
+        if (year !== nextYear) html += '</tbody></table></section>';
+        return html;
+      }, '');
+    }
+    renderCustomSeasonEditor();
   };
   const renderRankAwardForm = () => {
     renderSeasonCalendar();
-    const cur = currentRankSeason(), next = seasonContaining(cur.end);
-    $('rankSeasonInfo').innerHTML = `<b>${esc(cur.label)}</b><small>${seasonRange(cur)} · próxima: ${esc(next.label)}, a partir de ${fmtDay(next.start)}</small>`;
+    const cur = currentRankSeason(), next = rankSchedulePeriods().filter(p => p.enabled && p.start > Date.now()).sort((a, b) => a.start - b.start)[0];
+    $('rankSeasonInfo').innerHTML = `<b>${esc(cur.label)}</b><small>${cur.continuous ? `Acumulando desde ${cur.start ? fmtDay(cur.start) : 'o início do histórico'}; zera quando começar a próxima temporada ativa${next ? ` (${esc(next.label)} em ${fmtDay(next.start)})` : ''}` : `${seasonRange(cur)}${next ? ` · próxima: ${esc(next.label)}, a partir de ${fmtDay(next.start)}` : ''}`}</small>`;
     $('rankAwardEnabled').checked = rankAwardConfig.enabled;
+    $('rankScheduleMode').value = rankAwardConfig.scheduleMode;
   };
   renderRankAwardForm();
+  $('rankScheduleMode').addEventListener('change', () => { rankAwardConfig.scheduleMode = $('rankScheduleMode').value; renderSeasonCalendar(); renderRankAwardForm(); });
+  $('rankAddSeason').addEventListener('click', () => {
+    const today = inputDate(Date.now()), end = inputDate(Date.now() + 180 * 86400000);
+    customSeasonDraft.push({ id: uid(), label: `Temporada ${customSeasonDraft.length + 1}`, start: today, end, enabled: true }); renderCustomSeasonEditor();
+  });
+  $('rankCustomSeasonList').addEventListener('click', e => {
+    const remove = e.target.closest('[data-season-remove]'); if (!remove) return;
+    customSeasonDraft = customSeasonDraft.filter(p => p.id !== remove.dataset.seasonRemove); renderCustomSeasonEditor();
+  });
   $('rankAwardForm').addEventListener('submit', e => {
     e.preventDefault();
-    const next = { enabled: $('rankAwardEnabled').checked, period: 'season' };
+    const scheduleMode = $('rankScheduleMode').value, periodOverrides = { ...rankAwardConfig.periodOverrides }; let customPeriods = customSeasonDraft.map(p => ({ ...p }));
+    if (scheduleMode === 'standard') {
+      document.querySelectorAll('[data-standard-label]').forEach(input => {
+        const key = input.dataset.standardLabel, enabled = document.querySelector(`[data-standard-enabled="${CSS.escape(key)}"]`);
+        periodOverrides[key] = { label: input.value.trim(), enabled: !!(enabled && enabled.checked) };
+      });
+    } else {
+      customPeriods = [...document.querySelectorAll('[data-custom-season-row]')].map(row => ({ id: row.dataset.customSeasonRow, label: row.querySelector('[data-season-label]').value.trim(), start: row.querySelector('[data-season-start]').value, end: row.querySelector('[data-season-end]').value, enabled: row.querySelector('[data-season-enabled]').checked }));
+      const err = $('rankAwardError');
+      if (customPeriods.some(p => !p.label || p.label.length > 60 || !Number.isFinite(parseBrtDate(p.start)) || !Number.isFinite(parseBrtDate(p.end)) || parseBrtDate(p.end) < parseBrtDate(p.start))) { err.textContent = 'Confira o nome e as datas de cada temporada.'; return; }
+      const sorted = customPeriods.filter(p => p.enabled).sort((a, b) => parseBrtDate(a.start) - parseBrtDate(b.start));
+      if (sorted.some((p, i) => i > 0 && parseBrtDate(p.start) <= parseBrtDate(sorted[i - 1].end))) { err.textContent = 'As temporadas ativas não podem se sobrepor.'; return; }
+    }
+    const next = { enabled: $('rankAwardEnabled').checked, period: 'season', scheduleMode, periodOverrides, customPeriods };
     if (!writeJSON('ajing-ranking-award-config', next)) { $('rankAwardError').textContent = 'Não foi possível salvar a configuração.'; return; }
-    rankAwardConfig = next; $('rankAwardError').textContent = '';
-    $('rankAwardSaved').textContent = `Configuração salva. ${next.enabled ? 'Premiação ativada.' : 'Premiação desativada; o ranking continua reiniciando a cada temporada.'}`;
-    renderChampion(); renderAll();
+    rankAwardConfig = next; customSeasonDraft = customPeriods.map(p => ({ ...p })); $('rankAwardError').textContent = '';
+    $('rankAwardSaved').textContent = `Configuração salva. ${next.enabled ? 'Premiação ativada.' : 'Premiação desativada.'} ${currentRankSeason().continuous ? 'O ranking está em acumulação contínua.' : 'As temporadas ativas reiniciam a classificação; pontuação vitalícia e níveis são mantidos.'}`;
+    renderRankAwardForm(); renderChampion(); renderAll();
   });
 
   const rankRows = (key, list = champPosts(activeChamp())) => {
@@ -3135,14 +3213,16 @@ await new Promise(resolve => {
     const currentYear = new Date(now).getFullYear(), firstYear = years.reduce((min, year) => Math.min(min, year), currentYear), periods = [];
     const add = (start, end, label, mode = rankAwardConfig.period) => { if (end <= now) periods.push({ key: rankPeriodKey({ mode, start, end }), mode, start, end, label }); };
     const firstTs = Date.UTC(firstYear, 0, 1, 3);
-    for (let year = firstYear - 1; year <= currentYear; year++) {
+    if (rankAwardConfig.scheduleMode === 'custom') {
+      rankSchedulePeriods(now).forEach(s => { if (s.enabled && s.end > firstTs) add(s.start, s.end, s.label, 'season'); });
+    } else for (let year = firstYear - 1; year <= currentYear; year++) {
       for (let k = 0; k < 4; k++) {
         const s = legacySeasonAt(year, k);
         if (s.end > firstTs && s.end <= RANK_SEASON_MERGE_START) add(s.start, s.end, s.label, 'season');
       }
       for (let k = 0; k < 2; k++) {
-        const s = seasonAt(year, k);
-        if (s.end > firstTs && s.start >= RANK_SEASON_MERGE_START) add(s.start, s.end, s.label, 'season');
+        const s = seasonAt(year, k), override = rankAwardConfig.periodOverrides[periodKeyFor(s)] || {};
+        if (override.enabled !== false && s.end > firstTs && s.start >= RANK_SEASON_MERGE_START) add(s.start, s.end, typeof override.label === 'string' && override.label.trim() ? override.label.trim() : s.label, 'season');
       }
     }
     history.forEach(h => { const key = historyPeriodKey(h); if (h.end <= now && !periods.some(p => p.key === key)) periods.push({ key, mode: h.mode, start: h.start, end: h.end, label: h.label }); });
@@ -3190,9 +3270,10 @@ await new Promise(resolve => {
   const renderRanking = () => {
     const key = rankMode, season = currentRankSeason();
     const sourcePosts = rankScope === 'season' ? currentRankSeasonPosts() : posts.filter(isPostScored);
-    const rows = rankRows(key, sourcePosts), scopeLabel = rankScope === 'season' ? `Temporada · ${season.label}` : 'Ranking geral';
-    const scopeDetail = rankScope === 'season' ? 'nesta temporada' : 'em todo o histórico';
-    $('editionBar').innerHTML = `<span class="ed-pill">${esc(scopeLabel)}</span><span class="muted">${rankScope === 'season' ? `${seasonRange(season)} · ` : ''}${fmtNum(sourcePosts.length)} ${sourcePosts.length === 1 ? 'captura aprovada' : 'capturas aprovadas'} ${scopeDetail}</span>`;
+    const rows = rankRows(key, sourcePosts), scopeLabel = rankScope === 'season' ? (season.continuous ? 'Ranking contínuo' : `Temporada · ${season.label}`) : 'Ranking geral';
+    const scopeDetail = rankScope === 'season' ? (season.continuous ? 'desde a última temporada ativa' : 'nesta temporada') : 'em todo o histórico';
+    const scopeRange = season.continuous ? `Acumulando desde ${season.start ? fmtDay(season.start) : 'o início do histórico'} · ` : `${seasonRange(season)} · `;
+    $('editionBar').innerHTML = `<span class="ed-pill">${esc(scopeLabel)}</span><span class="muted">${rankScope === 'season' ? scopeRange : ''}${fmtNum(sourcePosts.length)} ${sourcePosts.length === 1 ? 'captura aprovada' : 'capturas aprovadas'} ${scopeDetail}</span>`;
     $('rankRule').textContent = key === 'points'
       ? `Soma dos pontos das capturas aprovadas ${scopeDetail}. Empates são desempatados pela quantidade de capturas.`
       : `Total de capturas aprovadas ${scopeDetail}. Empates são desempatados pela pontuação.`;
@@ -3200,11 +3281,11 @@ await new Promise(resolve => {
     document.querySelectorAll('[data-rank]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.rank === key)));
     const me = currentUser(), mine = rows.find(r => r.user === me);
     $('myRank').hidden = !mine;
-    if (mine) $('myRank').innerHTML = `${rankScope === 'season' ? 'Sua posição nesta temporada' : 'Sua posição geral'}: <strong>${mine.pos}º</strong> <span class="muted">·</span> ${ptsLabel(mine.points)} <span class="muted">·</span> ${mine.count} ${mine.count === 1 ? 'captura' : 'capturas'}`;
+    if (mine) $('myRank').innerHTML = `${rankScope === 'season' ? (season.continuous ? 'Sua posição no ranking contínuo' : 'Sua posição nesta temporada') : 'Sua posição geral'}: <strong>${mine.pos}º</strong> <span class="muted">·</span> ${ptsLabel(mine.points)} <span class="muted">·</span> ${mine.count} ${mine.count === 1 ? 'captura' : 'capturas'}`;
     $('rankEmpty').hidden = rows.length > 0; $('rankList').hidden = !rows.length;
     $('rankEmpty').querySelector('h4').textContent = 'Ranking ainda vazio';
     $('rankEmpty').querySelector('p').textContent = rankScope === 'season'
-      ? 'Ainda não há capturas aprovadas nesta temporada. Os pontos e níveis dos perfis continuam acumulados.'
+      ? (season.continuous ? 'Ainda não há capturas aprovadas no período contínuo. Os pontos e níveis dos perfis continuam acumulados.' : 'Ainda não há capturas aprovadas nesta temporada. Os pontos e níveis dos perfis continuam acumulados.')
       : 'Ainda não há capturas aprovadas no histórico do ranking geral.';
     const num = (r, k) => `<span class="rank-num ${k === key ? 'key' : ''}">${fmtNum(k === 'points' ? r.points : r.count)}</span>`;
     $('rankList').innerHTML = rows.length ? `<li class="rank-row head" aria-hidden="true"><span>#</span><span></span><span>Membro</span><span class="rank-num">Pontos</span><span class="rank-num">Capturas</span></li>` +
