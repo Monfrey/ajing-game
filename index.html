@@ -878,6 +878,11 @@ select{font:inherit;color:inherit}
   .slide-media.photo{width:100%;aspect-ratio:16/9}
   .slide.image-overlay{min-height:clamp(360px,108vw,500px)}
   .slide.image-overlay .slide-overlay-content{padding:24px 20px}
+  .slide.image-overlay .slide-bg-image{object-fit:contain}
+  .slides{min-height:0}
+  .slide.image-overlay.image-only{align-self:start;width:100%;min-height:0;aspect-ratio:var(--slide-aspect,16/9)}
+  .social-head>div{width:100%;min-width:0}
+  .social-head>div p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .slide.image-overlay::before{background:linear-gradient(180deg,rgba(5,20,30,.82),rgba(5,20,30,.56) 70%,rgba(5,20,30,.34))}
   .slide.image-overlay[data-slide-tone="on-light"]::before{background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.72) 70%,rgba(255,255,255,.5))}
   .facts{margin-top:24px}
@@ -4105,6 +4110,7 @@ await new Promise(resolve => {
   const playIcon = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>';
   const visibleSlides = () => heroSlides.filter(s => s.visible !== false && (s.type !== 'ranking-champion' || rankAwardConfig.enabled));
   const setSlideContrast = (slide, image) => {
+    if (image.naturalWidth && image.naturalHeight) slide.style.setProperty('--slide-aspect', `${image.naturalWidth} / ${image.naturalHeight}`);
     try {
       const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
       canvas.width = 80; canvas.height = 48; ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
