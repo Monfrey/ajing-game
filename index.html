@@ -2848,7 +2848,7 @@ await new Promise(resolve => {
       </article>`;
   };
   let feedQuery = '', feedShownCount = 12;
-  const FEED_BATCH_SIZE = 5;
+  const FEED_BATCH_SIZE = 8;
   const normalizeFeedSearch = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   const renderFeed = () => {
     const query = normalizeFeedSearch(feedQuery);
