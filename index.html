@@ -58,6 +58,7 @@ p{margin:0}
 .brand .logo-img{width:38px;height:38px;flex:none}
 .brand-name{font-weight:800;font-stretch:80%;font-size:.95rem;line-height:1.05;letter-spacing:.02em}
 .brand-name small{display:block;font-weight:500;font-size:.7rem;color:var(--muted);letter-spacing:.06em}
+.brand-logo-preview{width:58px;height:58px;flex:none}
 .nav-links{display:flex;align-items:center;gap:4px}
 .nav-links a{padding:7px 11px;border-radius:var(--radius-sm);font-size:.88rem;color:var(--muted);font-weight:500}
 .nav-links a:hover{color:var(--ink);background:var(--surface-2)}
@@ -796,6 +797,10 @@ select{font:inherit;color:inherit}
 .ev-hero.running{border-left:4px solid var(--accent);background:color-mix(in srgb,var(--cyan) 6%,var(--bg))}
 .ev-hero h4{font-size:1.25rem;font-weight:800;font-stretch:85%}
 .ev-hero p{font-size:.9rem}
+.event-season-link{width:100%;display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 12px;padding:14px 18px;border:1px solid color-mix(in srgb,var(--accent) 28%,var(--line));border-left:4px solid var(--accent);border-radius:var(--radius);background:color-mix(in srgb,var(--cyan) 7%,var(--surface));color:var(--ink);text-align:left;cursor:pointer;transition:background .15s,border-color .15s}
+.event-season-link:hover{background:color-mix(in srgb,var(--cyan) 13%,var(--surface));border-color:var(--accent)}
+.event-season-link span{display:grid;gap:4px}.event-season-link small{font-size:.82rem;color:var(--muted)}.event-season-link .event-season-cta{white-space:nowrap;font-weight:700;color:var(--accent)}
+@media(max-width:560px){.event-season-link{padding:12px;gap:8px}.event-season-link .event-season-cta{font-size:.78rem}}
 .ev-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;width:100%;margin-top:6px;font-size:.9rem}
 .ev-registration{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;width:100%;margin-top:6px;padding-top:10px;border-top:1px solid var(--line);font-size:.9rem}
 .ev-registration small{display:block;color:var(--muted)}
@@ -1101,8 +1106,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <header class="site-header">
   <div class="container nav">
     <a class="brand" href="#inicio" data-home aria-label="Ajing Game, início">
-      <span class="logo-img" role="img" aria-label="Logo Ajing Game"></span>
-      <span class="brand-name">AJING GAME<small>Extreme Finesse</small></span>
+      <span class="logo-img brand-logo-img" role="img" aria-label="Logo Ajing Game"></span>
+      <span class="brand-name"><span data-brand-title>AJING GAME</span><small data-brand-subtitle>Extreme Finesse</small></span>
     </a>
     <nav class="nav-links" id="navLinks" aria-label="Navegação principal">
       <a href="#conceito" data-home data-site-copy="nav.conceito">Conceito</a>
@@ -1401,6 +1406,14 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
           <div class="admin-box" data-admin-panel="site-content" hidden>
             <div class="panel-head"><div><h3>Conteúdo da página inicial</h3><p>Edite títulos, textos, chamadas e descrições das seções públicas. As alterações aparecem para todos os visitantes.</p></div></div>
             <form id="siteContentForm" novalidate>
+              <fieldset class="site-copy-group brand-admin-fields">
+                <legend>Marca do site</legend>
+                <div class="sf-grid">
+                  <div class="field"><label for="siteBrandTitle">Título da marca</label><input id="siteBrandTitle" type="text" maxlength="50" value="AJING GAME"></div>
+                  <div class="field"><label for="siteBrandSubtitle">Subtítulo <span class="muted">(opcional)</span></label><input id="siteBrandSubtitle" type="text" maxlength="60" value="Extreme Finesse"></div>
+                  <div class="field full"><label for="siteBrandLogo">Logo</label><div class="img-row"><span class="img-thumb brand-logo-preview" id="siteBrandLogoPreview" aria-label="Prévia da logo"></span><input id="siteBrandLogo" type="file" accept="image/*"><button class="btn btn-ghost" id="siteBrandLogoClear" type="button">Usar logo original</button></div><span class="hint">A logo atualiza o cabeçalho e o rodapé do site. Formatos JPG, PNG ou WebP.</span></div>
+                </div>
+              </fieldset>
               <div id="siteContentFields" class="site-copy-fields"></div>
               <div class="form-error" id="siteContentError" role="alert"></div>
               <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar conteúdo</button><button class="btn btn-ghost" id="siteContentReset" type="button">Restaurar padrão</button><span class="muted" id="siteContentStatus" role="status"></span></div>
@@ -1697,7 +1710,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 
 <footer class="footer">
   <div class="container footer-inner">
-    <a class="brand" href="#inicio" data-home><span class="logo-img" aria-hidden="true"></span><span class="brand-name">AJING GAME<small>Extreme Finesse</small></span></a>
+    <a class="brand" href="#inicio" data-home><span class="logo-img brand-logo-img" aria-hidden="true"></span><span class="brand-name"><span data-brand-title>AJING GAME</span><small data-brand-subtitle>Extreme Finesse</small></span></a>
     <span>Conteúdo educativo · Pesca responsável · Respeito às espécies</span>
     <span>© <span id="year"></span> Ajing Game Extreme Finesse</span>
   </div>
@@ -3398,6 +3411,25 @@ await new Promise(resolve => {
   const siteCopyParts = { title:'Título', text:'Texto', intro:'Apresentação', label:'Chamada', quote:'Citação', paragraph1:'Texto 1', paragraph2:'Texto 2', paragraph3:'Texto 3', important:'Aviso', componentsTitle:'Título dos componentes', tip:'Dica', stepsTitle:'Título da sequência', actionLabel:'Rótulo da ação', indicationLabel:'Rótulo da indicação' };
   let activeSiteCopyGroup = 'facts';
   const savedSiteContent = () => window.__ajingSiteConfigLoaded ? (fb.config('siteContent') || {}) : (window.__ajingSiteContentCache || {});
+  const SITE_BRAND_DEFAULTS = { title: 'AJING GAME', subtitle: 'Extreme Finesse' };
+  let siteBrandImage = '', siteBrandImagePending = null;
+  const applySiteBrand = brand => {
+    const title = typeof brand?.title === 'string' && brand.title.trim() ? brand.title.trim() : SITE_BRAND_DEFAULTS.title;
+    const subtitle = typeof brand?.subtitle === 'string' ? brand.subtitle.trim() : SITE_BRAND_DEFAULTS.subtitle;
+    document.querySelectorAll('[data-brand-title]').forEach(node => node.textContent = title);
+    document.querySelectorAll('[data-brand-subtitle]').forEach(node => { node.textContent = subtitle; node.hidden = !subtitle; });
+    document.querySelectorAll('.brand-logo-img').forEach(node => {
+      node.style.backgroundImage = brand?.image ? `url("${brand.image}")` : '';
+      if (node.getAttribute('role') === 'img') node.setAttribute('aria-label', `Logo ${title}`);
+    });
+    const headerBrand = document.querySelector('.site-header .brand');
+    if (headerBrand) headerBrand.setAttribute('aria-label', `${title}${subtitle ? `, ${subtitle}` : ''}, início`);
+    document.title = `${title}${subtitle ? ` | ${subtitle}` : ''}`;
+  };
+  const setSiteBrandPreview = () => {
+    const preview = $('siteBrandLogoPreview'); if (!preview) return;
+    preview.style.backgroundImage = siteBrandImage ? `url("${siteBrandImage}")` : getComputedStyle(document.querySelector('.brand-logo-img')).backgroundImage;
+  };
   const siteCopyLabel = key => key.split('.').slice(1).map(part => {
     if (siteCopyParts[part]) return siteCopyParts[part];
     const card = part.match(/^card(\d+)$/); if (card) return `Cartão ${card[1]}`;
@@ -3410,6 +3442,7 @@ await new Promise(resolve => {
   }).join(' · ');
   const renderSiteCopy = () => {
     const saved = savedSiteContent();
+    applySiteBrand(saved.brand || {});
     siteCopyNodes.forEach(node => {
       const value = saved[node.dataset.siteCopy];
       if (typeof value === 'string') node.textContent = value;
@@ -3429,6 +3462,10 @@ await new Promise(resolve => {
   const renderSiteContentAdmin = () => {
     const host = $('siteContentFields'); if (!host) return;
     const saved = savedSiteContent(), keys = [...new Set(siteCopyNodes.map(node => node.dataset.siteCopy))];
+    const brand = saved.brand || {};
+    $('siteBrandTitle').value = typeof brand.title === 'string' ? brand.title : SITE_BRAND_DEFAULTS.title;
+    $('siteBrandSubtitle').value = typeof brand.subtitle === 'string' ? brand.subtitle : SITE_BRAND_DEFAULTS.subtitle;
+    siteBrandImage = typeof brand.image === 'string' ? brand.image : ''; $('siteBrandLogo').value = ''; setSiteBrandPreview();
     const groups = siteCopyGroupOrder.filter(group => group === 'carousel' || keys.some(key => key.split('.')[0] === group));
     if (!groups.includes(activeSiteCopyGroup)) activeSiteCopyGroup = groups[0] || '';
     const visibility = saved.visibility || {};
@@ -3440,6 +3477,29 @@ await new Promise(resolve => {
     host.innerHTML = `<nav class="site-copy-nav" aria-label="Submenus do conteúdo do site">${groups.map(group => `<button type="button" data-site-copy-group-button="${esc(group)}" aria-current="${String(group === activeSiteCopyGroup)}">${esc(siteCopyGroups[group] || group)}</button>`).join('')}</nav>${groups.map(group => `<fieldset class="site-copy-group" data-site-copy-group="${esc(group)}"${group === activeSiteCopyGroup ? '' : ' hidden'}><legend>${esc(siteCopyGroups[group] || group)}</legend><div class="site-copy-visible"><label for="copy-visible-${esc(group)}"><input id="copy-visible-${esc(group)}" type="checkbox" data-site-copy-visible="${esc(group)}" ${visibility[group] === false ? '' : 'checked'}>Exibir na página inicial</label><span class="muted">${esc(siteVisibilityDescriptions[group] || '')}</span></div>${fields(group)}</fieldset>`).join('')}`;
   };
   renderSiteCopy(); renderSiteContentAdmin();
+  $('siteBrandLogo').addEventListener('change', () => {
+    const file = $('siteBrandLogo').files && $('siteBrandLogo').files[0]; if (!file) return;
+    const error = $('siteContentError'); error.textContent = '';
+    if (!file.type.startsWith('image/')) { error.textContent = 'Escolha um arquivo de imagem JPG, PNG ou WebP.'; $('siteBrandLogo').value = ''; return; }
+    if (file.size > 10 * 1024 * 1024) { error.textContent = 'A logo deve ter até 10 MB.'; $('siteBrandLogo').value = ''; return; }
+    siteBrandImagePending = new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image(); image.onload = () => {
+          const scale = Math.min(1, 480 / Math.max(image.naturalWidth, image.naturalHeight)), canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+          canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+          let data = canvas.toDataURL('image/webp', .84); if (!data.startsWith('data:image/webp')) data = canvas.toDataURL('image/png');
+          siteBrandImage = data; setSiteBrandPreview(); resolve();
+        };
+        image.onerror = () => { error.textContent = 'Não foi possível ler a logo. Tente outro arquivo.'; resolve(); };
+        image.src = String(reader.result || '');
+      };
+      reader.onerror = () => { error.textContent = 'Não foi possível carregar a logo.'; resolve(); };
+      reader.readAsDataURL(file);
+    }).finally(() => { siteBrandImagePending = null; });
+  });
+  $('siteBrandLogoClear').addEventListener('click', () => { siteBrandImage = ''; siteBrandImagePending = null; $('siteBrandLogo').value = ''; setSiteBrandPreview(); });
   $('siteContentFields').addEventListener('click', e => {
     const button = e.target.closest('[data-site-copy-group-button]'); if (!button) return;
     activeSiteCopyGroup = button.dataset.siteCopyGroupButton;
@@ -3448,8 +3508,12 @@ await new Promise(resolve => {
   });
   $('siteContentForm').addEventListener('submit', async e => {
     e.preventDefault(); if (!isAdmin()) return;
+    if (siteBrandImagePending) await siteBrandImagePending;
     const error = $('siteContentError'), status = $('siteContentStatus'); error.textContent = ''; status.textContent = 'Salvando…';
+    const brandTitle = $('siteBrandTitle').value.trim();
+    if (!brandTitle || brandTitle.length > 50) { status.textContent = ''; error.textContent = 'Informe um título para a marca (até 50 caracteres).'; $('siteBrandTitle').focus(); return; }
     const value = { ...savedSiteContent() };
+    value.brand = { title: brandTitle, subtitle: $('siteBrandSubtitle').value.trim(), image: siteBrandImage };
     $('siteContentFields').querySelectorAll('[data-site-copy-edit]').forEach(field => { value[field.dataset.siteCopyEdit] = field.value.trim(); });
     value.visibility = { ...(value.visibility || {}) };
     $('siteContentFields').querySelectorAll('[data-site-copy-visible]').forEach(toggle => { value.visibility[toggle.dataset.siteCopyVisible] = toggle.checked; });
@@ -3458,9 +3522,9 @@ await new Promise(resolve => {
   });
   $('siteContentReset').addEventListener('click', async () => {
     if (!isAdmin()) return;
-    if (!(await askConfirm('Restaurar o padrão da página inicial? Isso restaura os textos originais e volta a exibir todas as seções.'))) return;
+    if (!(await askConfirm('Restaurar o padrão da página inicial? Isso restaura os textos, a marca original e volta a exibir todas as seções.'))) return;
     $('siteContentError').textContent = ''; $('siteContentStatus').textContent = 'Restaurando…';
-    try { await fb.setConfig('siteContent', {}); renderSiteCopy(); renderSiteContentAdmin(); $('siteContentStatus').textContent = 'Textos originais restaurados.'; }
+    try { await fb.setConfig('siteContent', {}); renderSiteCopy(); renderSiteContentAdmin(); $('siteContentStatus').textContent = 'Textos e marca originais restaurados.'; }
     catch (err) { $('siteContentStatus').textContent = ''; $('siteContentError').textContent = fb.errMsg(err); }
   });
 
@@ -5149,11 +5213,18 @@ await new Promise(resolve => {
         <div class="ev-detail-grid"><section class="ev-detail-box"><h5>Prêmios</h5>${prizesHTML}</section><section class="ev-detail-box"><h5>Regras</h5><p class="ev-detail-copy">${c.rules ? esc(c.rules).replace(/\n/g, '<br>') : 'Regras não informadas.'}</p></section>
           <section class="ev-detail-box"><h5>Ranking</h5><p class="muted">Publicações dos inscritos aprovados no Social Fish entre ${champRange(c)}.</p>${rankHTML}</section><section class="ev-detail-box"><h5>Participantes inscritos (${count})</h5>${rosterHTML}</section></div></article>`;
   };
+  const eventSeasonLinkHTML = () => {
+    const season = currentRankSeason(), next = rankSchedulePeriods().filter(p => p.enabled && p.start > Date.now()).sort((a, b) => a.start - b.start)[0];
+    const period = season.continuous
+      ? `Acumulando desde ${season.start ? fmtDay(season.start) : 'o início do histórico'}${next ? ` · próxima temporada: ${esc(next.label)} a partir de ${fmtDay(next.start)}` : ''}`
+      : `Período: ${seasonRange(season)}`;
+    return `<button class="event-season-link" type="button" data-open-ranking><span><b>${season.continuous ? 'Ranking contínuo' : esc(season.label)}</b><small>${period}</small></span><span class="event-season-cta">Ver ranking →</span></button>`;
+  };
   const renderEvents = () => {
     const list = getChamps().sort((a, b) => b.start - a.start), me = currentUser();
     const cur = activeChamp(), upcoming = list.filter(c => champStatus(c) === 'scheduled').sort((a, b) => a.start - b.start);
     const selected = selectedEventId && list.find(c => c.id === selectedEventId && canAccessEvent(c));
-    if (selected) { $('eventsBody').innerHTML = eventDetailHTML(selected); return; }
+    if (selected) { $('eventsBody').innerHTML = eventSeasonLinkHTML() + eventDetailHTML(selected); return; }
     selectedEventId = null;
     let html = '';
     if (cur) {
@@ -5176,10 +5247,11 @@ await new Promise(resolve => {
     });
     const past = list.filter(c => champStatus(c) === 'ended');
     if (past.length) html += `<h4 class="req-title">Campeonatos encerrados</h4><ul class="admin-list req-list">${past.map(c => `<li><span class="grow"><b>${esc(c.name)}</b><small>${champRange(c)}${c.champion ? ` · campeão: ${esc(displayName(c.champion.user))} (${fmtNum(c.champion.points)} pts)` : ' · sem publicações'}</small></span>${canAccessEvent(c) ? `<button class="btn btn-ghost" type="button" data-open-event="${esc(c.id)}">Ver evento</button>` : '<span class="muted">Acesso restrito a inscritos</span>'}${c.champion ? `<button class="btn btn-ghost" type="button" data-card-user="${esc(c.champion.user)}">Ver carta</button>` : ''}</li>`).join('')}</ul>`;
-    $('eventsBody').innerHTML = html || '<div class="empty"><h4>Nenhum evento no momento</h4><p>Quando a administração abrir um campeonato, ele aparece aqui com as datas e o ranking.</p></div>';
+    $('eventsBody').innerHTML = eventSeasonLinkHTML() + (html || '<div class="empty"><h4>Nenhum evento no momento</h4><p>Quando a administração abrir um campeonato, ele aparece aqui com as datas e o ranking.</p></div>');
     $('eventsBody').querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => showTab(b.dataset.goto)));
   };
   $('eventsBody').addEventListener('click', e => {
+    if (e.target.closest('[data-open-ranking]')) { selectedEventId = null; showTab('ranking'); resetTabHome('ranking'); return; }
     const back = e.target.closest('[data-events-back]');
     if (back) { selectedEventId = null; renderEvents(); return; }
     const open = e.target.closest('[data-open-event]');
