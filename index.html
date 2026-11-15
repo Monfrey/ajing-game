@@ -1971,7 +1971,8 @@ const fb = {
 };
 
 // Inicialização: dados públicos, depois o login guardado e os dados de membro
-await Promise.all(PUBLIC_COLS.map(listen));
+// Array.map passa (item, índice, array); chame explicitamente para não confundir o índice com a referência Firestore.
+await Promise.all(PUBLIC_COLS.map(name => listen(name)));
 await new Promise(resolve => {
   let first = true;
   onAuthStateChanged(fbAuth, user => {
