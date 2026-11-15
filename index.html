@@ -627,6 +627,10 @@ select{font:inherit;color:inherit}
 .site-copy-nav{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .site-copy-nav button{padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted);font-size:.82rem;cursor:pointer}
 .site-copy-nav button[aria-current="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface));color:var(--ink);font-weight:650}
+.site-copy-visible{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg)}
+.site-copy-visible label{display:flex;align-items:center;gap:8px;margin:0;font-size:.86rem;font-weight:600;cursor:pointer}
+.site-copy-visible input{width:16px;height:16px;margin:0;accent-color:var(--accent)}
+.site-content-disabled{display:none!important}
 .site-copy-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0;padding:12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface)}
 .site-copy-group[hidden]{display:none}
 .site-copy-group legend{grid-column:1/-1;padding:0 6px;font-size:.9rem;font-weight:650}
@@ -635,11 +639,10 @@ select{font:inherit;color:inherit}
 .partner-admin-list{max-height:480px}
 .partner-admin-thumb{width:68px;height:48px;flex:none;object-fit:contain;padding:4px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface)}
 .partner-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:24px}
-.partner-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:150px;padding:16px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.12)}
-.partner-card img{display:block;width:100%;height:110px;object-fit:contain}
-.partner-card a{display:flex;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:inherit;text-decoration:none}
-.partner-name{font-size:.9rem;font-weight:650;text-align:center}
-@media(max-width:720px){.partner-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.partner-card{min-height:110px;padding:12px}.partner-card img{height:82px}}
+.partner-card{display:block;min-width:0;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.partner-card img{display:block;width:100%;height:auto;margin:0;object-fit:contain}
+.partner-card a{display:block;width:100%;height:auto;margin:0;padding:0;color:inherit;text-decoration:none}
+@media(max-width:720px){.partner-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}
 @media(max-width:560px){.sf-grid,.site-copy-group{grid-template-columns:minmax(0,1fr)}.sf-grid .full,.site-copy-group .field.full{grid-column:auto}.site-copy-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.site-copy-nav button{min-height:38px;border-radius:var(--radius-sm)}}
 .img-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .img-thumb{width:64px;height:48px;border-radius:4px;border:1px solid var(--line);background:var(--surface-2) center/contain no-repeat}
@@ -1345,14 +1348,14 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
             <form id="siteContentForm" novalidate>
               <div id="siteContentFields" class="site-copy-fields"></div>
               <div class="form-error" id="siteContentError" role="alert"></div>
-              <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar conteúdo</button><button class="btn btn-ghost" id="siteContentReset" type="button">Restaurar textos iniciais</button><span class="muted" id="siteContentStatus" role="status"></span></div>
+              <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar conteúdo</button><button class="btn btn-ghost" id="siteContentReset" type="button">Restaurar padrão</button><span class="muted" id="siteContentStatus" role="status"></span></div>
             </form>
           </div>
           <div class="admin-box" data-admin-panel="partners" hidden>
             <div class="panel-head"><div><h3>Marcas parceiras</h3><p>Cadastre cada parceiro com uma foto. As fotos aparecem na página pública em quatro colunas no computador e duas no celular.</p></div></div>
             <form id="partnerForm" novalidate>
               <div class="sf-grid">
-                <div class="field"><label for="partnerName">Nome da marca</label><input id="partnerName" maxlength="60" required></div>
+                <div class="field"><label for="partnerName">Nome da marca <span class="muted">(opcional)</span></label><input id="partnerName" maxlength="60"></div>
                 <div class="field"><label for="partnerUrl">Link da marca <span class="muted">(opcional)</span></label><input id="partnerUrl" type="url" maxlength="500" placeholder="https://"></div>
                 <div class="field full"><label for="partnerLogo">Foto do parceiro</label><input id="partnerLogo" type="file" accept="image/*" required><span class="hint" id="partnerLogoHint">A foto é reduzida e otimizada para a página. Formatos JPG, PNG ou WebP.</span></div>
               </div>
@@ -3115,8 +3118,11 @@ await new Promise(resolve => {
   const siteCopyNodes = [...document.querySelectorAll('[data-site-copy]')];
   const siteCopyDefaults = Object.fromEntries(siteCopyNodes.map(node => [node.dataset.siteCopy, node.textContent]));
   const siteCopyDefaultHTML = new Map(siteCopyNodes.map(node => [node, node.innerHTML]));
-  const siteCopyGroups = { facts:'Destaques', conceito:'Conceito', origem:'Origem', adaptacoes:'Adaptações', trabalhos:'Trabalhos da isca', fundamentos:'Fundamentos', manifesto:'Manifesto', referencias:'Referências', parceiros:'Parceiros', nav:'Menu público' };
-  const siteCopyGroupOrder = ['facts', 'conceito', 'origem', 'adaptacoes', 'trabalhos', 'fundamentos', 'manifesto', 'referencias', 'parceiros', 'nav'];
+  const siteCopyGroups = { carousel:'Carrossel', facts:'Destaques', conceito:'Conceito', origem:'Origem', adaptacoes:'Adaptações', trabalhos:'Trabalhos da isca', fundamentos:'Fundamentos', manifesto:'Manifesto', referencias:'Referências', parceiros:'Parceiros', nav:'Menu público' };
+  const siteCopyGroupOrder = ['carousel', 'facts', 'conceito', 'origem', 'adaptacoes', 'trabalhos', 'fundamentos', 'manifesto', 'referencias', 'parceiros', 'nav'];
+  const siteVisibilityTargets = { carousel:'#home .hero', facts:'.facts', conceito:'#conceito', origem:'#origem', adaptacoes:'#adaptacoes', trabalhos:'#trabalhos', fundamentos:'#fundamentos', manifesto:'.manifesto', referencias:'.refs', parceiros:'#parceiros', nav:'#navLinks' };
+  const siteVisibilityNavTargets = { conceito:'a[href="#conceito"]', origem:'a[href="#origem"]', adaptacoes:'a[href="#adaptacoes"]', trabalhos:'a[href="#trabalhos"]', fundamentos:'a[href="#fundamentos"]', parceiros:'a[href="#parceiros"]' };
+  const siteVisibilityDescriptions = { carousel:'Carrossel de destaque no topo da página.', facts:'Faixa de informações abaixo do carrossel.', conceito:'Seção Conceito e seu link no menu público.', origem:'Seção Origem e seu link no menu público.', adaptacoes:'Seção Adaptações e seu link no menu público.', trabalhos:'Seção Trabalhos da isca e seu link no menu público.', fundamentos:'Seção Fundamentos e seu link no menu público.', manifesto:'Faixa do manifesto.', referencias:'Seção de referências técnicas.', parceiros:'Seção Parceiros e seu link no menu público.', nav:'Links de navegação pública no cabeçalho.' };
   const siteCopyParts = { title:'Título', text:'Texto', intro:'Apresentação', label:'Chamada', quote:'Citação', paragraph1:'Texto 1', paragraph2:'Texto 2', paragraph3:'Texto 3', important:'Aviso', componentsTitle:'Título dos componentes', tip:'Dica', stepsTitle:'Título da sequência', actionLabel:'Rótulo da ação', indicationLabel:'Rótulo da indicação' };
   let activeSiteCopyGroup = 'facts';
   const siteCopyLabel = key => key.split('.').slice(1).map(part => {
@@ -3136,18 +3142,28 @@ await new Promise(resolve => {
       if (typeof value === 'string') node.textContent = value;
       else node.innerHTML = siteCopyDefaultHTML.get(node);
     });
+    const visibility = saved.visibility || {};
+    Object.entries(siteVisibilityTargets).forEach(([group, selector]) => {
+      const element = document.querySelector(selector);
+      if (element) element.classList.toggle('site-content-disabled', visibility[group] === false);
+    });
+    Object.entries(siteVisibilityNavTargets).forEach(([group, selector]) => {
+      const link = document.querySelector(`#navLinks ${selector}`);
+      if (link) link.classList.toggle('site-content-disabled', visibility[group] === false);
+    });
   };
   const renderSiteContentAdmin = () => {
     const host = $('siteContentFields'); if (!host) return;
     const saved = fb.config('siteContent') || {}, keys = [...new Set(siteCopyNodes.map(node => node.dataset.siteCopy))];
-    const groups = siteCopyGroupOrder.filter(group => keys.some(key => key.split('.')[0] === group));
+    const groups = siteCopyGroupOrder.filter(group => group === 'carousel' || keys.some(key => key.split('.')[0] === group));
     if (!groups.includes(activeSiteCopyGroup)) activeSiteCopyGroup = groups[0] || '';
+    const visibility = saved.visibility || {};
     const fields = group => keys.filter(key => key.split('.')[0] === group).map(key => {
       const id = `copy-${key.replace(/[^a-z0-9_-]/gi, '-')}`, value = typeof saved[key] === 'string' ? saved[key] : siteCopyDefaults[key];
       const long = value.length > 90, full = value.length > 170;
       return `<div class="field${full ? ' full' : ''}"><label for="${esc(id)}">${esc(siteCopyLabel(key))}</label>${long ? `<textarea id="${esc(id)}" data-site-copy-edit="${esc(key)}" rows="2" maxlength="1600">${esc(value)}</textarea>` : `<input id="${esc(id)}" data-site-copy-edit="${esc(key)}" type="text" maxlength="300" value="${esc(value)}">`}</div>`;
     }).join('');
-    host.innerHTML = `<nav class="site-copy-nav" aria-label="Submenus do conteúdo do site">${groups.map(group => `<button type="button" data-site-copy-group-button="${esc(group)}" aria-current="${String(group === activeSiteCopyGroup)}">${esc(siteCopyGroups[group] || group)}</button>`).join('')}</nav>${groups.map(group => `<fieldset class="site-copy-group" data-site-copy-group="${esc(group)}"${group === activeSiteCopyGroup ? '' : ' hidden'}><legend>${esc(siteCopyGroups[group] || group)}</legend>${fields(group)}</fieldset>`).join('')}`;
+    host.innerHTML = `<nav class="site-copy-nav" aria-label="Submenus do conteúdo do site">${groups.map(group => `<button type="button" data-site-copy-group-button="${esc(group)}" aria-current="${String(group === activeSiteCopyGroup)}">${esc(siteCopyGroups[group] || group)}</button>`).join('')}</nav>${groups.map(group => `<fieldset class="site-copy-group" data-site-copy-group="${esc(group)}"${group === activeSiteCopyGroup ? '' : ' hidden'}><legend>${esc(siteCopyGroups[group] || group)}</legend><div class="site-copy-visible"><label for="copy-visible-${esc(group)}"><input id="copy-visible-${esc(group)}" type="checkbox" data-site-copy-visible="${esc(group)}" ${visibility[group] === false ? '' : 'checked'}>Exibir na página inicial</label><span class="muted">${esc(siteVisibilityDescriptions[group] || '')}</span></div>${fields(group)}</fieldset>`).join('')}`;
   };
   renderSiteCopy(); renderSiteContentAdmin();
   $('siteContentFields').addEventListener('click', e => {
@@ -3161,12 +3177,14 @@ await new Promise(resolve => {
     const error = $('siteContentError'), status = $('siteContentStatus'); error.textContent = ''; status.textContent = 'Salvando…';
     const value = { ...(fb.config('siteContent') || {}) };
     $('siteContentFields').querySelectorAll('[data-site-copy-edit]').forEach(field => { value[field.dataset.siteCopyEdit] = field.value.trim(); });
+    value.visibility = { ...(value.visibility || {}) };
+    $('siteContentFields').querySelectorAll('[data-site-copy-visible]').forEach(toggle => { value.visibility[toggle.dataset.siteCopyVisible] = toggle.checked; });
     try { await fb.setConfig('siteContent', value); renderSiteCopy(); status.textContent = 'Conteúdo salvo.'; }
     catch (err) { status.textContent = ''; error.textContent = fb.errMsg(err); }
   });
   $('siteContentReset').addEventListener('click', async () => {
     if (!isAdmin()) return;
-    if (!(await askConfirm('Restaurar os textos originais da página inicial? Essa ação substitui os textos editados.'))) return;
+    if (!(await askConfirm('Restaurar o padrão da página inicial? Isso restaura os textos originais e volta a exibir todas as seções.'))) return;
     $('siteContentError').textContent = ''; $('siteContentStatus').textContent = 'Restaurando…';
     try { await fb.setConfig('siteContent', {}); renderSiteCopy(); renderSiteContentAdmin(); $('siteContentStatus').textContent = 'Textos originais restaurados.'; }
     catch (err) { $('siteContentStatus').textContent = ''; $('siteContentError').textContent = fb.errMsg(err); }
@@ -3183,7 +3201,10 @@ await new Promise(resolve => {
   const renderPartners = () => {
     const grid = $('partnerGrid'), empty = $('partnersEmpty'); if (!grid || !empty) return;
     const items = sitePartners.filter(p => p && typeof p.name === 'string' && safeImageSrc(p.photo || p.logo));
-    grid.innerHTML = items.map(p => `<article class="partner-card">${partnerUrl(p.url) ? `<a href="${esc(partnerUrl(p.url))}" target="_blank" rel="noopener noreferrer" aria-label="Abrir o site de ${esc(p.name)}">` : ''}<img src="${esc(safeImageSrc(p.photo || p.logo))}" alt="Foto de ${esc(p.name)}" loading="lazy"><span class="partner-name">${esc(p.name)}</span>${partnerUrl(p.url) ? '</a>' : ''}</article>`).join('');
+    grid.innerHTML = items.map(p => {
+      const href = partnerUrl(p.url), label = p.name ? `Foto de ${p.name}` : 'Foto de parceiro';
+      return `<article class="partner-card">${href ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(p.name ? `Abrir o site de ${p.name}` : 'Abrir o site do parceiro')}">` : ''}<img src="${esc(safeImageSrc(p.photo || p.logo))}" alt="${esc(label)}" loading="lazy">${href ? '</a>' : ''}</article>`;
+    }).join('');
     empty.hidden = items.length > 0;
   };
   let editingPartnerId = null;
@@ -3220,7 +3241,6 @@ await new Promise(resolve => {
     e.preventDefault(); if (!isAdmin()) return;
     const error = $('partnerError'), name = $('partnerName').value.trim(), url = $('partnerUrl').value.trim(), file = $('partnerLogo').files && $('partnerLogo').files[0];
     error.textContent = '';
-    if (!name) { error.textContent = 'Informe o nome da marca.'; $('partnerName').focus(); return; }
     if (url && (!partnerUrl(url) || url.length > 500)) { error.textContent = 'Informe um endereço válido com até 500 caracteres, começando com https:// ou http://.'; $('partnerUrl').focus(); return; }
     const previous = editingPartnerId && sitePartners.find(p => p.id === editingPartnerId);
     if (!file && !previous) { error.textContent = 'Selecione uma foto do parceiro.'; $('partnerLogo').focus(); return; }
