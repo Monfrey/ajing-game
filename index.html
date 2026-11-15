@@ -559,7 +559,7 @@ select{font:inherit;color:inherit}
 .review-edit-panel .field label{font-size:.76rem}
 .review-edit-panel .field input,.review-edit-panel .field select{min-width:0;padding:7px 9px}
 .review-edit-panel .form-error,.review-edit-panel .form-actions{grid-column:1/-1}
-@media (max-width:720px){.review-edit-panel{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:720px){.review-edit-panel{grid-template-columns:minmax(0,1fr);width:100%;min-width:0}.review-edit-panel>.field,.review-edit-panel>.form-error,.review-edit-panel>.form-actions{grid-column:1/-1;min-width:0;width:100%}.review-edit-panel .field input,.review-edit-panel .field select,.review-edit-panel .field textarea{width:100%;min-width:0;max-width:100%}.review-edit-panel .form-actions{display:flex;flex-wrap:wrap;gap:8px}.review-edit-panel .form-actions .btn{max-width:100%;white-space:normal}}
 .post-review-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .post-review-actions .btn{padding:6px 10px;font-size:.78rem}
 .post-audit-warning,.post-audit-ok{display:block;margin-top:5px;white-space:normal;font-size:.78rem!important}
@@ -1007,7 +1007,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .hist-more:empty{display:none}
 .review-edit-btn{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:5px 11px;font-size:.8rem;white-space:nowrap}
 .review-edit-btn svg{width:14px;height:14px;flex:none}
-@media (max-width:560px){.hist-count{margin-left:0;width:100%}.req-queue li{flex-wrap:wrap}.req-queue li .grow{flex:1 1 calc(100% - 80px);white-space:normal}.req-queue .post-review-actions{width:100%;justify-content:flex-start}.hist-list .review-history-row .grow{flex:1 1 100%;white-space:normal}}
+@media (max-width:560px){.hist-count{margin-left:0;width:100%}.req-queue li{flex-wrap:wrap;align-items:flex-start}.req-queue li .grow{flex:1 1 calc(100% - 68px);min-width:0;white-space:normal;overflow-wrap:anywhere}.req-queue .post-review-actions{width:100%;min-width:0;justify-content:flex-start}.req-queue .post-review-actions .btn{flex:1 1 135px;max-width:100%;white-space:normal}.hist-list .review-history-row .grow{flex:1 1 100%;white-space:normal}}
 /* Correção da publicação na fila de validação */
 .req-queue li{flex-wrap:wrap}
 .req-queue li .pq-edit{flex:1 1 100%}
@@ -1019,7 +1019,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .pq-edit select[size]{width:100%;margin-top:6px;padding:4px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg);color:var(--ink);font:inherit;font-size:.86rem}
 .pq-edit select[size] option{padding:4px 6px;border-radius:3px}
 .pq-edit textarea{resize:vertical}
-@media (max-width:720px){.pq-edit{grid-template-columns:minmax(0,1fr)}.pq-edit .pq-species{grid-row:auto}.pq-edit .pq-full{grid-column:1/-1}}
+@media (max-width:720px){.pq-edit{grid-template-columns:minmax(0,1fr);width:100%;min-width:0;padding:10px;gap:10px}.pq-edit>.field,.pq-edit>.form-error,.pq-edit>.form-actions{grid-column:1/-1;min-width:0;width:100%}.pq-edit .pq-species{grid-row:auto}.pq-edit .pq-full{grid-column:1/-1}.pq-edit .field input,.pq-edit .field select,.pq-edit .field textarea,.pq-edit select[size]{width:100%;min-width:0;max-width:100%}.pq-edit .form-actions{display:flex;flex-wrap:wrap;gap:8px}.pq-edit .form-actions .btn{max-width:100%;white-space:normal}}
 </style>
 </head>
 <body>
