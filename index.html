@@ -938,7 +938,7 @@ select{font:inherit;color:inherit}
   .slide.image-overlay .slide-overlay-content{padding:24px 20px}
   .slide.image-overlay .slide-bg-image{object-fit:contain}
   .slides{min-height:0}
-  .slide.image-overlay.image-only{width:95%;height:100%;min-height:0;aspect-ratio:auto}
+  .slide.image-overlay.image-only{width:95%;height:100%;min-height:clamp(180px,55vw,300px);aspect-ratio:auto}
   .social-head>div{width:100%;min-width:0}
   .social-head>div p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .slide.image-overlay::before{background:linear-gradient(180deg,rgba(5,20,30,.82),rgba(5,20,30,.56) 70%,rgba(5,20,30,.34))}
@@ -2597,11 +2597,8 @@ await new Promise(resolve => {
     window.scrollTo({ top: 0 });
   };
   document.querySelectorAll('[data-home]').forEach(a => a.addEventListener('click', e => {
-    closeMenu();
-    if (!home.hidden) return;
-    e.preventDefault(); showHome();
-    const target = document.querySelector(a.getAttribute('href'));
-    requestAnimationFrame(() => target && target.scrollIntoView({ behavior: 'smooth' }));
+    e.preventDefault(); e.stopPropagation();
+    showPublicContentPage(a.getAttribute('href') === '#ajing-game' ? 'ajing-game' : 'home');
   }));
   const showPublicContentPage = page => {
     const ajing = $('ajing-game'), hero = $('inicio'), partners = $('parceiros'), homeEntries = $('homeContentEntries');
