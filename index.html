@@ -1167,6 +1167,27 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 /* Espécies sem foto: cartões compactos */
 .species-card.sp-nophoto .sp-info{padding:12px 14px}
 #speciesGrid:has(.sp-nophoto){grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+/* Carta do campeão no carrossel: desenhada no tamanho real da carta do perfil (320 px)
+   e reduzida por inteiro, para textos, números e ícones manterem a proporção */
+.slide.champ-slide{--cs:.94;grid-template-columns:minmax(0,1fr) calc(320px * var(--cs) + 48px);gap:40px}
+.slide.champ-slide .champ-slide-media{width:calc(320px * var(--cs) + 28px);height:calc(447px * var(--cs) + 40px);justify-self:end;overflow:visible}
+.slide.champ-slide .champ-slide-card{position:relative;display:block;width:100%;height:100%;padding:0;perspective:none}
+.slide.champ-slide .champ-slide-card .tcard{position:absolute;left:50%;top:calc(50% - 10px);width:320px;max-width:none;margin:0;transform:translate(-50%,-50%) rotate(3deg) scale(var(--cs));transform-origin:center}
+@media (max-width:1100px){.slide.champ-slide{--cs:.82;gap:28px}}
+@media (max-width:920px){.slide.champ-slide{--cs:.72;gap:22px}}
+@media (max-width:720px){
+  .slide.champ-slide{--cs:.72;grid-template-columns:minmax(0,1fr);gap:18px}
+  .slide.champ-slide .champ-slide-media{justify-self:center;width:calc(320px * var(--cs) + 28px);height:calc(447px * var(--cs) + 40px)}
+}
+@media (max-width:380px){.slide.champ-slide{--cs:.64}}
+/* Conteúdo do site em abas */
+.sc-subnav{margin:6px 0 16px}
+/* Galeria: as fotos ocupam a largura toda do cartão, igual à do carrossel */
+.managed-article.is-gallery{padding-inline:0;padding-bottom:0;overflow:hidden}
+.managed-article.is-gallery>h2,.managed-article.is-gallery>.managed-subtitle{padding-inline:clamp(18px,3vw,32px)}
+.managed-article.is-gallery .managed-gallery{gap:clamp(6px,1vw,14px)}
+.managed-article.is-gallery .managed-gallery img{border-radius:0}
+@media (max-width:720px){.managed-article.is-gallery .managed-gallery{grid-template-columns:1fr}}
 </style>
 <script>
 (() => {
@@ -1507,8 +1528,12 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
             </form>
           </div>
           <div class="admin-box" data-admin-panel="site-content" hidden>
-            <div class="panel-head"><div><h3>Conteúdo do site</h3><p>Edite os textos existentes e crie novas publicações formatadas para Home ou Ajing Game.</p></div></div>
-            <form id="siteContentForm" novalidate>
+            <div class="panel-head"><div><h3>Conteúdo do site</h3><p>Edite a marca e os textos fixos do site, ou cadastre novos conteúdos (artigos e galerias) e escolha onde eles aparecem.</p></div></div>
+            <nav class="req-subnav sc-subnav" aria-label="Seções do conteúdo do site">
+              <button type="button" data-sc-view="copy">Marca e textos</button>
+              <button type="button" data-sc-view="content">Novos conteúdos<span class="count" id="cntManagedContent"></span></button>
+            </nav>
+            <form id="siteContentForm" data-sc-panel="copy" novalidate>
               <fieldset class="site-copy-group brand-admin-fields">
                 <legend>Marca do site</legend>
                 <div class="sf-grid">
@@ -1522,8 +1547,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               <div class="form-error" id="siteContentError" role="alert"></div>
               <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar conteúdo</button><button class="btn btn-ghost" id="siteContentReset" type="button">Restaurar padrão</button><span class="muted" id="siteContentStatus" role="status"></span></div>
             </form>
-            <section class="managed-content-admin" aria-labelledby="managedContentTitle">
-              <div class="panel-head"><div><h3 id="managedContentTitle">Novos conteúdos</h3><p>Crie artigos formatados ou galerias de até três imagens para Home ou Ajing Game.</p></div></div>
+            <section class="managed-content-admin" data-sc-panel="content" aria-labelledby="managedContentTitle" hidden>
+              <div class="panel-head"><div><h3 id="managedContentTitle">Novos conteúdos</h3><p>Cadastre artigos formatados ou galerias de até três fotos. Escolha em que página o conteúdo aparece (Home ou Ajing Game), o submenu e a posição na página.</p></div></div>
               <form id="managedContentForm" class="managed-content-form" novalidate>
                 <input id="managedContentId" type="hidden">
                 <div class="sf-grid">
@@ -3868,19 +3893,30 @@ await new Promise(resolve => {
     if (images.some(image => image.length > 280000) || images.reduce((sum, image) => sum + image.length, 0) > 820000) throw new Error('As imagens ficaram pesadas demais. Use arquivos menores ou reduza a quantidade.');
     return images;
   };
+  // Conteúdo do site: duas abas (marca e textos fixos / novos conteúdos), para o formulário não aparecer em todas as seções
+  const showScView = view => {
+    if (!['copy', 'content'].includes(view)) view = 'copy';
+    document.querySelectorAll('[data-sc-view]').forEach(b => b.setAttribute('aria-current', String(b.dataset.scView === view)));
+    document.querySelectorAll('[data-sc-panel]').forEach(p => { p.hidden = p.dataset.scPanel !== view; });
+    store.set('ajing-sc-view', view, true);
+  };
+  document.querySelectorAll('[data-sc-view]').forEach(b => b.addEventListener('click', () => showScView(b.dataset.scView)));
+  const updateManagedCount = () => { const el = $('cntManagedContent'); if (el) el.textContent = managedAll().length || ''; };
   const renderManagedContent = () => {
+    updateManagedCount();
     const all = managedAll().filter(item => item.visible !== false), homeItems = all.filter(item => item.placement === 'home'), ajingItems = all.filter(item => item.placement === 'ajing-game');
     const renderItem = item => {
       const title = esc(item.title || ''), subtitle = item.subtitle ? `<p class="managed-subtitle">${esc(item.subtitle)}</p>` : '';
       if (item.type === 'gallery') {
         const images = (Array.isArray(item.images) ? item.images : []).map((src, index) => safeImageSrc(src) ? `<img src="${esc(safeImageSrc(src))}" alt="${title ? `${title} · foto ${index + 1}` : `Foto ${index + 1}`}" loading="lazy">` : '').join('');
         const count = (Array.isArray(item.images) ? item.images : []).filter(safeImageSrc).length;
-        return `<article class="managed-article"><h2>${title}</h2>${subtitle}<div class="managed-gallery gallery-${count}" style="--gallery-count:${count}">${images}</div></article>`;
+        return `<article class="managed-article is-gallery"><h2>${title}</h2>${subtitle}<div class="managed-gallery gallery-${count}" style="--gallery-count:${count}">${images}</div></article>`;
       }
       const image = safeImageSrc(item.image), before = sanitizeRich(item.textBefore), after = sanitizeRich(item.textAfter);
       return `<article class="managed-article"><h2>${title}</h2>${subtitle}<div class="managed-article-body${image ? '' : ' no-image'}"><div class="managed-rich">${before}</div>${image ? `<img class="managed-article-image" src="${esc(image)}" alt="${title}" loading="lazy">` : ''}</div>${after ? `<div class="managed-article-after managed-rich">${after}</div>` : ''}</article>`;
     };
     $('homeContentEntries').innerHTML = homeItems.map(renderItem).join('');
+    updateManagedCount();
     const grouped = Object.keys(managedSections).map(section => [section, ajingItems.filter(item => (item.section || 'extras') === section)]).filter(([, items]) => items.length);
     $('ajingManagedContent').innerHTML = grouped.map(([section, items]) => `<section class="managed-content-section" id="managed-group-${section}"><div class="container"><h2>${esc(managedSections[section])}</h2><div class="managed-content-list">${items.map(renderItem).join('')}</div></div></section>`).join('');
     const visibility = savedSiteContent().visibility || {}, anchors = [['conceito','Conceito'],['origem','Origem'],['adaptacoes','Adaptações'],['trabalhos','Trabalhos da isca'],['fundamentos','Fundamentos'],['manifesto','Manifesto'],['referencias','Referências']].filter(([key]) => visibility[key] !== false).map(([id,label]) => `<a href="#${id}">${label}</a>`);
@@ -5907,6 +5943,7 @@ await new Promise(resolve => {
   $('year').textContent = new Date().getFullYear();
   showAdminSec(store.get('ajing-admin-sec', true) || 'carousel');
   showReqSec(store.get('ajing-req-sec', true) || 'posts');
+  showScView(store.get('ajing-sc-view', true) || 'copy');
   showProfSec(store.get('ajing-prof-sec', true) || 'card');
   Promise.all([loadPosts(), loadSpeciesPhotos(), loadReqPhotos(), loadChampBanners(), loadSlides()]).then(async () => {
     reloadLevels(); rankAwardConfig = readRankAwardConfig(); renderRankAwardForm();
