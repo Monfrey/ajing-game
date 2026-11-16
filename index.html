@@ -1222,6 +1222,31 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .user-private-info b{flex-basis:100%;font-size:.82rem}
 .user-private-info b small{font-weight:400;color:var(--muted)}
 .user-private-info[hidden]{display:none}
+/* Janela de cadastro: mais larga e em duas colunas, sem rolagem no computador */
+#loginModal .modal-card:has(#signupForm:not([hidden])){width:min(760px,100%)}
+.signup-form{display:grid;gap:14px}
+.signup-group{margin:0;padding:0;border:0;min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
+.signup-group legend{grid-column:1/-1;float:left;width:100%;padding:0 0 6px;margin-bottom:2px;border-bottom:1px solid var(--line);font-size:.74rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.signup-group .field{margin:0}
+.signup-note{grid-column:2;align-self:end;display:flex;align-items:flex-start;gap:8px;margin:0;padding:9px 11px;border-radius:var(--radius-sm);background:var(--bg);color:var(--muted);font-size:.8rem;line-height:1.4}
+.signup-note svg{width:16px;height:16px;flex:none;margin-top:1px;color:var(--accent)}
+.signup-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.signup-actions .btn{min-width:200px}
+#loginModal .modal-card:has(#signupForm:not([hidden])) .modal-body>p{margin-bottom:6px}
+/* No celular a tela de cadastro continua como antes: uma coluna, sem títulos de bloco,
+   CPF antes do telefone e o aviso de privacidade logo abaixo do telefone */
+@media (max-width:640px){
+  .signup-form{gap:14px}
+  .signup-group{display:flex;flex-direction:column;gap:14px}
+  .signup-group legend{display:none}
+  .signup-group .field:has(#signupCpf){order:1}
+  .signup-group .field:has(#signupPhone){order:2}
+  .signup-note{order:3;margin-top:-10px;padding:0;background:none;font-size:.78rem}
+  .signup-note svg{display:none}
+  .signup-actions{flex-direction:column-reverse;align-items:stretch}
+  .signup-actions .btn{width:100%;min-width:0}
+  .signup-form .pc-only{display:none}
+}
 </style>
 <script>
 (() => {
@@ -2004,17 +2029,21 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <button class="link-btn" id="showSignup" type="button">Ainda não tem cadastro? Solicite acesso</button>
         <p class="saved" id="loginInfo" aria-live="polite"></p>
       </form>
-      <form class="form" id="signupForm" autocomplete="on" novalidate hidden>
-        <div class="field"><label for="signupName">Nome de Pescador</label><input id="signupName" name="nickname" type="text" maxlength="30" autocomplete="nickname" required><span class="hint">De 3 a 30 caracteres.</span></div>
-        <div class="field"><label for="signupFullName">Nome completo</label><input id="signupFullName" name="full-name" type="text" maxlength="80" autocomplete="name" required></div>
-        <div class="field"><label for="signupCity">Cidade</label><input id="signupCity" name="address-level2" type="text" maxlength="100" autocomplete="address-level2" required></div>
-        <div class="field"><label for="signupCpf">CPF</label><input id="signupCpf" name="tax-id" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00" required></div>
-        <div class="field"><label for="signupPhone">Telefone (com DDD)</label><input id="signupPhone" name="tel" type="tel" inputmode="tel" maxlength="15" autocomplete="tel-national" placeholder="(27) 99999-9999" required><span class="hint">Visível apenas para você e para os administradores.</span></div>
-        <div class="field"><label for="signupEmail">E-mail</label><input id="signupEmail" name="email" type="email" maxlength="120" autocomplete="email" inputmode="email" required></div>
-        <div class="field"><label for="signupPass">Senha</label><input id="signupPass" name="new-password" type="password" minlength="6" autocomplete="new-password" required><span class="hint">Use pelo menos 6 caracteres.</span></div>
+      <form class="form signup-form" id="signupForm" autocomplete="on" novalidate hidden>
+        <fieldset class="signup-group"><legend>Identificação</legend>
+          <div class="field"><label for="signupName">Nome de Pescador</label><input id="signupName" name="nickname" type="text" maxlength="30" autocomplete="nickname" required><span class="hint">De 3 a 30 caracteres.<span class="pc-only"> É o nome exibido no site.</span></span></div>
+          <div class="field"><label for="signupFullName">Nome completo</label><input id="signupFullName" name="full-name" type="text" maxlength="80" autocomplete="name" required></div>
+          <div class="field"><label for="signupCity">Cidade</label><input id="signupCity" name="address-level2" type="text" maxlength="100" autocomplete="address-level2" required></div>
+          <div class="field"><label for="signupPhone">Telefone (com DDD)</label><input id="signupPhone" name="tel" type="tel" inputmode="tel" maxlength="15" autocomplete="tel-national" placeholder="(27) 99999-9999" required></div>
+          <div class="field"><label for="signupCpf">CPF</label><input id="signupCpf" name="tax-id" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00" required></div>
+          <p class="signup-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>CPF e telefone ficam privados: só você e os administradores veem.</p>
+        </fieldset>
+        <fieldset class="signup-group"><legend>Acesso</legend>
+          <div class="field"><label for="signupEmail">E-mail</label><input id="signupEmail" name="email" type="email" maxlength="120" autocomplete="email" inputmode="email" required><span class="hint pc-only">Usado para entrar no site.</span></div>
+          <div class="field"><label for="signupPass">Senha</label><input id="signupPass" name="new-password" type="password" minlength="6" autocomplete="new-password" required><span class="hint">Use pelo menos 6 caracteres.</span></div>
+        </fieldset>
         <div class="form-error" id="signupError" role="alert"></div>
-        <button class="btn btn-primary" id="signupSubmit" type="submit">Enviar solicitação</button>
-        <button class="link-btn" id="backToLogin" type="button">Voltar para entrar</button>
+        <div class="signup-actions"><button class="link-btn" id="backToLogin" type="button">Voltar para entrar</button><button class="btn btn-primary" id="signupSubmit" type="submit">Enviar solicitação</button></div>
       </form>
       <section id="signupSuccess" aria-labelledby="signupSuccessTitle" hidden>
         <h2 id="signupSuccessTitle">Solicitação enviada</h2>
