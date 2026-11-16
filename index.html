@@ -75,7 +75,8 @@ p{margin:0}
 .btn-members:hover{filter:saturate(1.16) brightness(1.03);color:#0e1e2a;box-shadow:0 5px 16px color-mix(in srgb,var(--blue) 28%,transparent);transform:translateY(-1px)}
 
 /* ===== Hero ===== */
-.hero{padding:44px 0 36px;border-bottom:1px solid var(--line);background:var(--surface)}
+.hero{width:80%;margin-inline:auto;padding:44px 0 36px;border-bottom:1px solid var(--line);background:var(--surface)}
+.hero>.container,section.block>.container,.manifesto>.container,.refs>.container{width:100%}
 .slides{display:grid;min-height:300px}
 .slides{position:relative}
 .slides>.slide:not(.on){position:absolute;inset:0;width:100%;pointer-events:none}
@@ -112,7 +113,7 @@ p{margin:0}
 .facts strong{display:block;color:var(--ink);font-size:.98rem;font-stretch:85%}
 
 /* ===== Sections ===== */
-section.block{padding:64px 0}
+section.block{width:80%;margin-inline:auto;padding:64px 0}
 section.alt{background:var(--surface);border-block:1px solid var(--line)}
 .sec-head{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:48px;align-items:end;margin-bottom:32px}
 .sec-label{display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:600;color:var(--accent);margin-bottom:10px}
@@ -179,14 +180,14 @@ section.alt{background:var(--surface);border-block:1px solid var(--line)}
 .steps li::before{content:counter(s);width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.8rem;background:var(--cyan);color:#06202a}
 
 /* Manifesto */
-.manifesto{padding:48px 0;background:var(--surface);border-top:1px solid var(--line)}
+.manifesto{width:80%;margin-inline:auto;padding:48px 0;background:var(--surface);border-top:1px solid var(--line)}
 .manifesto-inner{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:center}
 .manifesto h2{font-size:clamp(1.6rem,3vw,2.3rem);font-weight:800;font-stretch:80%}
 .manifesto p{color:var(--muted)}
 .manifesto .brush{margin:14px 0 0}
 
 /* Referências + footer */
-.refs{padding:28px 0;border-top:1px solid var(--line);font-size:.8rem;color:var(--muted)}
+.refs{width:80%;margin-inline:auto;padding:28px 0;border-top:1px solid var(--line);font-size:.8rem;color:var(--muted)}
 .refs h2{font-size:.9rem;color:var(--ink);margin-bottom:6px}
 .refs p{max-width:110ch}
 .footer{padding:22px 0;border-top:1px solid var(--line);font-size:.8rem;color:var(--muted)}
@@ -392,7 +393,7 @@ select{font:inherit;color:inherit}
 .feed-search input:focus{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 15%,transparent)}
 .feed-search button{position:absolute;right:7px;padding:4px 9px;border:0;border-radius:5px;background:var(--surface-2);color:var(--muted);font-size:.76rem;font-weight:600;cursor:pointer}
 .feed-empty{grid-column:1/-1}
-.feed{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.feed{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
 .feed-more{display:flex;justify-content:center;align-items:center;min-height:52px;padding:12px;color:var(--muted);font-size:.86rem}
 .post{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
 .post-head{display:flex;align-items:center;gap:10px;padding:10px 12px}
@@ -517,10 +518,10 @@ select{font:inherit;color:inherit}
 .admin-list .empty-row{color:var(--muted);font-size:.84rem}
 .species-edit-btn{min-height:30px;padding:4px 10px;font-size:.8rem;white-space:nowrap}
 @media (max-width:920px){.admin-grid{grid-template-columns:minmax(0,1fr)}}
-@media (max-width:900px){.feed{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:900px){.feed{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media (max-width:620px){.feed{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}
 /* Portfólios e diretório de membros */
-.members-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;align-items:start}
+.members-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;align-items:start}
 .member-card-button{width:100%;min-width:0;max-width:220px;justify-self:center;display:grid;place-items:start center;padding:0;border:0;background:transparent;cursor:pointer}
 .member-full-card{width:100%;min-width:0;max-width:220px}
 .member-full-card{padding:7px;border-radius:11px}
@@ -562,7 +563,7 @@ select{font:inherit;color:inherit}
 .portfolio-pick.selected{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface));color:var(--accent)}
 .portfolio-pick[disabled]{opacity:.55;cursor:not-allowed}
 @media(max-width:900px){.portfolio-species{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:900px){.members-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.members-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:620px){.members-grid,.portfolio-species{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.portfolio-profile{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}.portfolio-profile>div:last-child{width:100%}}
 @media (max-width:720px){.post-form{grid-template-columns:minmax(0,1fr);padding:16px}.post-media{width:min(220px,70%);justify-self:center}.panel .panel-head{margin-bottom:12px}.role-badge{display:none}.feed{gap:10px}}
 
@@ -675,10 +676,12 @@ select{font:inherit;color:inherit}
 .managed-content-form{padding:14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
 .managed-content-form input[type="checkbox"]{width:16px;height:16px;flex:none;margin:0;accent-color:var(--accent)}
 .managed-content-form .checkbox-field label{display:flex;align-items:center;gap:8px;margin:0;cursor:pointer}
-.rich-toolbar{display:flex;gap:6px;margin:0 0 6px}
+.rich-toolbar{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}
 .rich-toolbar button{min-width:34px;height:30px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);cursor:pointer}
+.rich-toolbar button[data-rich-wide],.rich-toolbar button[data-copy-wide]{padding-inline:8px;white-space:nowrap;font-size:.76rem}
 .rich-editor{min-height:120px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg);color:var(--ink);outline-color:var(--accent)}
 .rich-editor:empty::before{content:attr(data-placeholder);color:var(--muted)}
+.managed-rich a{color:var(--accent);text-decoration:underline}.managed-rich blockquote,.rich-editor blockquote{margin:.6em 0;padding:.5em .8em;border-left:3px solid var(--accent);color:var(--muted)}
 .managed-content-admin-list{display:grid;gap:8px;margin:14px 0 0;padding:0;list-style:none}
 .managed-content-admin-list li{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface)}
 .managed-content-admin-list .grow{flex:1;min-width:0}.managed-content-admin-list small{display:block;color:var(--muted)}
@@ -693,9 +696,9 @@ select{font:inherit;color:inherit}
 .managed-gallery{display:grid;grid-template-columns:repeat(var(--gallery-count,3),minmax(0,1fr));gap:14px}
 .managed-gallery.gallery-1{grid-template-columns:1fr}.managed-gallery.gallery-2{grid-template-columns:repeat(2,minmax(0,1fr))}.managed-gallery.gallery-3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .managed-gallery img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--radius);background:var(--surface-2)}
-.ajing-subnav{position:sticky;top:calc(60px + env(safe-area-inset-top,0px));z-index:19;padding:8px 0;border-bottom:1px solid var(--line);background:var(--surface)}
+.ajing-subnav{position:sticky;top:calc(60px + env(safe-area-inset-top,0px));z-index:19;width:80%;margin-inline:auto;padding:8px 0;border-bottom:1px solid var(--line);background:var(--surface)}
 #ajing-game>section[id],.managed-content-section{scroll-margin-top:160px}
-.ajing-subnav .container{display:flex;flex-wrap:wrap;gap:6px}
+.ajing-subnav .container{width:100%;display:flex;flex-wrap:wrap;gap:6px}
 .ajing-subnav a{padding:6px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:.82rem}
 .ajing-subnav a:hover{border-color:var(--accent);color:var(--ink)}
 #homeContentEntries:empty,#ajingManagedContent:empty{display:none}
@@ -1480,9 +1483,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                   <div class="field"><label for="managedContentType">Formato</label><select id="managedContentType"><option value="article">Texto com imagem opcional</option><option value="gallery">Galeria de 1 a 3 fotos</option></select></div>
                   <div class="field"><label for="managedContentTitleInput">Título</label><input id="managedContentTitleInput" maxlength="120" required></div>
                   <div class="field"><label for="managedContentSubtitle">Subtítulo</label><input id="managedContentSubtitle" maxlength="220"></div>
-                  <div class="field full" id="managedArticleFields"><label>Texto principal</label><div class="rich-toolbar"><button type="button" data-rich-command="bold" data-rich-target="managedTextBefore" aria-label="Negrito"><b>N</b></button><button type="button" data-rich-command="italic" data-rich-target="managedTextBefore" aria-label="Itálico"><i>I</i></button></div><div id="managedTextBefore" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Escreva o conteúdo principal"></div></div>
+                  <div class="field full" id="managedArticleFields"><label>Texto principal</label><div class="rich-toolbar" data-rich-toolbar="managedTextBefore"></div><div id="managedTextBefore" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Escreva o conteúdo principal"></div></div>
                   <div class="field full" id="managedArticleImageField"><label for="managedArticleImage">Imagem lateral (opcional)</label><input id="managedArticleImage" type="file" accept="image/*"><span class="hint">Recomendado: 1200 × 900 px (4:3), até 10 MB. A imagem é redimensionada para até 1100 px e exibida inteira.</span><label><input id="managedArticleImageClear" type="checkbox"> Remover imagem atual</label></div>
-                  <div class="field full" id="managedTextAfterField"><label>Texto complementar</label><div class="rich-toolbar"><button type="button" data-rich-command="bold" data-rich-target="managedTextAfter" aria-label="Negrito"><b>N</b></button><button type="button" data-rich-command="italic" data-rich-target="managedTextAfter" aria-label="Itálico"><i>I</i></button></div><div id="managedTextAfter" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Texto abaixo da imagem (opcional)"></div></div>
+                  <div class="field full" id="managedTextAfterField"><label>Texto complementar</label><div class="rich-toolbar" data-rich-toolbar="managedTextAfter"></div><div id="managedTextAfter" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Texto abaixo da imagem (opcional)"></div></div>
                   <div class="field full" id="managedGalleryField" hidden><label for="managedGalleryImages">Fotos da galeria (selecione de 1 a 3)</label><input id="managedGalleryImages" type="file" accept="image/*" multiple><span class="hint">Recomendado: 1200 × 900 px (4:3), até 10 MB por foto. As imagens são redimensionadas para até 1100 px.</span></div>
                   <div class="field checkbox-field"><label><input id="managedContentVisible" type="checkbox" checked> Exibir conteúdo</label></div>
                 </div>
@@ -3578,14 +3581,36 @@ await new Promise(resolve => {
     const field = part.match(/^(title|text|tag|action|use)$/); if (field) return ({ title:'título', text:'texto', tag:'categoria', action:'ação', use:'indicação' })[part];
     return part.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([a-z])([0-9]+)/gi, '$1 $2').replace(/^./, c => c.toUpperCase());
   }).join(' · ');
+  const richToolbarCommands = [
+    ['bold','Negrito','N'],['italic','Itálico','I'],['underline','Sublinhado','S'],['strikeThrough','Tachado','T̶'],
+    ['insertUnorderedList','Lista com marcadores','• Lista'],['insertOrderedList','Lista numerada','1. Lista'],
+    ['justifyLeft','Alinhar à esquerda','⇤'],['justifyCenter','Centralizar','↔'],['justifyRight','Alinhar à direita','⇥'],['justifyFull','Justificar','☷'],
+    ['formatBlock','Citação','❞','blockquote'],['createLink','Inserir link','↗'],['removeFormat','Limpar formatação','Tx']
+  ];
+  const richToolbar = (target, scope = 'content') => `<div class="rich-toolbar">${richToolbarCommands.map(([command,label,icon,value]) => {
+    const copy = scope === 'copy', commandAttr = copy ? `data-copy-rich="${command}" data-copy-target="${esc(target)}"` : `data-rich-command="${command}" data-rich-target="${esc(target)}"`;
+    const wideAttr = ['insertUnorderedList','insertOrderedList'].includes(command) ? (copy ? 'data-copy-wide' : 'data-rich-wide') : '';
+    return `<button type="button" ${commandAttr} ${wideAttr} ${value ? `data-rich-value="${value}"` : ''} title="${label}" aria-label="${label}">${icon}</button>`;
+  }).join('')}</div>`;
+  document.querySelectorAll('[data-rich-toolbar]').forEach(toolbar => { toolbar.innerHTML = richToolbar(toolbar.dataset.richToolbar); });
   const sanitizeSiteRichText = html => {
-    const doc = new DOMParser().parseFromString(String(html || ''), 'text/html'), allowed = new Set(['B','STRONG','I','EM','P','BR','UL','OL','LI']);
+    const doc = new DOMParser().parseFromString(String(html || ''), 'text/html'), allowed = new Set(['B','STRONG','I','EM','U','S','STRIKE','P','DIV','BR','UL','OL','LI','BLOCKQUOTE','A']);
     const cleanNode = node => {
       if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.nodeValue || '');
       if (node.nodeType !== Node.ELEMENT_NODE) return document.createDocumentFragment();
       const children = [...node.childNodes].map(cleanNode), tag = node.tagName.toUpperCase();
       if (!allowed.has(tag)) { const fragment = document.createDocumentFragment(); children.forEach(child => fragment.append(child)); return fragment; }
-      const element = document.createElement(tag.toLowerCase()); children.forEach(child => element.append(child)); return element;
+      const element = document.createElement(tag.toLowerCase()); children.forEach(child => element.append(child));
+      if (tag === 'A') {
+        const href = node.getAttribute('href') || '';
+        if (!/^(https?:\/\/|mailto:)/i.test(href)) { const fragment = document.createDocumentFragment(); [...element.childNodes].forEach(child => fragment.append(child)); return fragment; }
+        element.setAttribute('href', href);
+      }
+      if (tag === 'P' || tag === 'DIV') {
+        const align = String(node.style && node.style.textAlign || '').toLowerCase();
+        if (['left','center','right','justify'].includes(align)) element.style.textAlign = align;
+      }
+      return element;
     };
     return [...doc.body.childNodes].map(node => { const wrapper = document.createElement('div'); wrapper.append(cleanNode(node)); return wrapper.innerHTML; }).join('');
   };
@@ -3621,7 +3646,7 @@ await new Promise(resolve => {
     const fields = group => keys.filter(key => key.split('.')[0] === group).map(key => {
       const id = `copy-${key.replace(/[^a-z0-9_-]/gi, '-')}`, node = siteCopyNodes.find(item => item.dataset.siteCopy === key), value = typeof saved[key] === 'string' ? saved[key] : (node ? node.innerHTML : siteCopyDefaults[key]);
       const plain = new DOMParser().parseFromString(String(value), 'text/html').body.textContent, long = plain.length > 90, full = plain.length > 170;
-      const editor = `<div class="rich-toolbar"><button type="button" data-copy-rich="bold" data-copy-target="${esc(id)}" aria-label="Negrito"><b>N</b></button><button type="button" data-copy-rich="italic" data-copy-target="${esc(id)}" aria-label="Itálico"><i>I</i></button></div><div id="${esc(id)}" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-site-copy-edit="${esc(key)}">${sanitizeSiteRichText(value)}</div>`;
+      const editor = `${richToolbar(id, 'copy')}<div id="${esc(id)}" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-site-copy-edit="${esc(key)}">${sanitizeSiteRichText(value)}</div>`;
       return `<div class="field${full ? ' full' : ''}"><label for="${esc(id)}">${esc(siteCopyLabel(key))}</label>${long ? editor : `<input id="${esc(id)}" data-site-copy-edit="${esc(key)}" type="text" maxlength="300" value="${esc(plain)}">`}</div>`;
     }).join('');
     host.innerHTML = `<nav class="site-copy-nav" aria-label="Submenus do conteúdo do site">${groups.map(group => `<button type="button" data-site-copy-group-button="${esc(group)}" aria-current="${String(group === activeSiteCopyGroup)}">${esc(siteCopyGroups[group] || group)}</button>`).join('')}</nav>${groups.map(group => `<fieldset class="site-copy-group" data-site-copy-group="${esc(group)}"${group === activeSiteCopyGroup ? '' : ' hidden'}><legend>${esc(siteCopyGroups[group] || group)}</legend><div class="site-copy-visible"><label for="copy-visible-${esc(group)}"><input id="copy-visible-${esc(group)}" type="checkbox" data-site-copy-visible="${esc(group)}" ${visibility[group] === false ? '' : 'checked'}>Exibir este conteúdo</label><span class="muted">${esc(siteVisibilityDescriptions[group] || '')}</span></div>${fields(group)}</fieldset>`).join('')}`;
@@ -3650,10 +3675,19 @@ await new Promise(resolve => {
     }).finally(() => { siteBrandImagePending = null; });
   });
   $('siteBrandLogoClear').addEventListener('click', () => { siteBrandImage = ''; siteBrandImagePending = null; $('siteBrandLogo').value = ''; setSiteBrandPreview(); });
+  const applyRichCommand = (command, editor, value = '') => {
+    if (command === 'createLink') {
+      value = window.prompt('Informe o link (https:// ou mailto:):', 'https://') || '';
+      value = value.trim();
+      if (!value) return;
+      if (!/^(https?:\/\/|mailto:)/i.test(value)) { window.alert('Use um endereço iniciado por https:// ou mailto:.'); return; }
+    }
+    editor.focus(); document.execCommand(command, false, value || null); editor.focus();
+  };
   $('siteContentFields').addEventListener('mousedown', e => { if (e.target.closest('[data-copy-rich]')) e.preventDefault(); });
   $('siteContentFields').addEventListener('click', e => {
     const format = e.target.closest('[data-copy-rich]');
-    if (format) { const editor = $(format.dataset.copyTarget); editor.focus(); document.execCommand(format.dataset.copyRich, false); editor.focus(); return; }
+    if (format) { applyRichCommand(format.dataset.copyRich, $(format.dataset.copyTarget), format.dataset.richValue); return; }
     const button = e.target.closest('[data-site-copy-group-button]'); if (!button) return;
     activeSiteCopyGroup = button.dataset.siteCopyGroupButton;
     $('siteContentFields').querySelectorAll('[data-site-copy-group-button]').forEach(item => item.setAttribute('aria-current', String(item === button)));
@@ -3682,17 +3716,7 @@ await new Promise(resolve => {
   });
 
   const managedSections = { conceito:'Conceito', origem:'Origem', adaptacoes:'Adaptações', trabalhos:'Trabalhos da isca', fundamentos:'Fundamentos', manifesto:'Manifesto', referencias:'Referências', extras:'Outros conteúdos' };
-  const sanitizeRich = html => {
-    const doc = new DOMParser().parseFromString(String(html || ''), 'text/html'), allowed = new Set(['B','STRONG','I','EM','P','BR','UL','OL','LI']);
-    const cleanNode = node => {
-      if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.nodeValue || '');
-      if (node.nodeType !== Node.ELEMENT_NODE) return document.createDocumentFragment();
-      const children = [...node.childNodes].map(cleanNode), tag = node.tagName.toUpperCase();
-      if (!allowed.has(tag)) { const fragment = document.createDocumentFragment(); children.forEach(child => fragment.append(child)); return fragment; }
-      const element = document.createElement(tag.toLowerCase()); children.forEach(child => element.append(child)); return element;
-    };
-    return [...doc.body.childNodes].map(node => { const wrapper = document.createElement('div'); wrapper.append(cleanNode(node)); return wrapper.innerHTML; }).join('');
-  };
+  const sanitizeRich = html => sanitizeSiteRichText(html);
   const richPlainText = html => new DOMParser().parseFromString(sanitizeRich(html), 'text/html').body.textContent.trim();
   const managedAll = () => fb.siteContentItems();
   const managedImages = async files => {
@@ -3746,7 +3770,7 @@ await new Promise(resolve => {
   $('managedContentForm').addEventListener('mousedown', e => { if (e.target.closest('[data-rich-command]')) e.preventDefault(); });
   $('managedContentForm').addEventListener('click', e => {
     const button = e.target.closest('[data-rich-command]'); if (!button) return;
-    const editor = $(button.dataset.richTarget); editor.focus(); document.execCommand(button.dataset.richCommand, false); editor.focus();
+    applyRichCommand(button.dataset.richCommand, $(button.dataset.richTarget), button.dataset.richValue);
   });
   $('managedContentForm').addEventListener('submit', async e => {
     e.preventDefault(); if (!isAdmin()) return;
