@@ -673,6 +673,8 @@ select{font:inherit;color:inherit}
 .site-copy-fields .field textarea{min-height:52px;resize:vertical}
 .managed-content-admin{margin-top:24px;padding-top:18px;border-top:1px solid var(--line)}
 .managed-content-form{padding:14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.managed-content-form input[type="checkbox"]{width:16px;height:16px;flex:none;margin:0;accent-color:var(--accent)}
+.managed-content-form .checkbox-field label{display:flex;align-items:center;gap:8px;margin:0;cursor:pointer}
 .rich-toolbar{display:flex;gap:6px;margin:0 0 6px}
 .rich-toolbar button{min-width:34px;height:30px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);cursor:pointer}
 .rich-editor{min-height:120px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg);color:var(--ink);outline-color:var(--accent)}
@@ -685,8 +687,8 @@ select{font:inherit;color:inherit}
 .managed-article{padding:clamp(18px,3vw,32px);border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
 .managed-article h2{margin:0 0 6px;font-size:clamp(1.35rem,2.5vw,2rem)}
 .managed-article .managed-subtitle{margin:0 0 18px;color:var(--muted);font-size:1.04rem}
-.managed-article-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,.8fr);gap:22px;align-items:start}
-.managed-article-body.no-image{grid-template-columns:1fr}.managed-article-image{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--radius)}
+.managed-article-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,320px);gap:22px;align-items:start}
+.managed-article-body.no-image{grid-template-columns:1fr}.managed-article-image{width:100%;max-width:320px;height:240px;max-height:240px;justify-self:end;object-fit:contain;border-radius:var(--radius);background:var(--surface-2)}
 .managed-article-after{margin-top:16px}.managed-article p:last-child{margin-bottom:0}
 .managed-gallery{display:grid;grid-template-columns:repeat(var(--gallery-count,3),minmax(0,1fr));gap:14px}
 .managed-gallery.gallery-1{grid-template-columns:1fr}.managed-gallery.gallery-2{grid-template-columns:repeat(2,minmax(0,1fr))}.managed-gallery.gallery-3{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -704,7 +706,7 @@ select{font:inherit;color:inherit}
 .partner-card img{display:block;width:100%;height:100%;margin:0;object-fit:contain}
 .partner-card a{display:block;width:100%;height:100%;margin:0;padding:0;color:inherit;text-decoration:none}
 @media(max-width:720px){.partner-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}
-@media(max-width:720px){.managed-article-body{grid-template-columns:1fr}.managed-article-image{grid-row:2}}
+@media(max-width:720px){.managed-article-body{grid-template-columns:1fr}.managed-article-image{grid-row:2;justify-self:center}}
 @media(max-width:560px){.sf-grid,.site-copy-group{grid-template-columns:minmax(0,1fr)}.sf-grid .full,.site-copy-group .field.full{grid-column:auto}.site-copy-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.site-copy-nav button{min-height:38px;border-radius:var(--radius-sm)}.managed-content-admin-list li{flex-wrap:wrap}}
 .img-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .img-thumb{width:64px;height:48px;border-radius:4px;border:1px solid var(--line);background:var(--surface-2) center/contain no-repeat}
@@ -1474,14 +1476,15 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                 <div class="sf-grid">
                   <div class="field"><label for="managedContentPlacement">Publicar em</label><select id="managedContentPlacement"><option value="home">Home</option><option value="ajing-game">Ajing Game</option></select></div>
                   <div class="field" id="managedContentSectionField"><label for="managedContentSection">Submenu</label><select id="managedContentSection"><option value="fundamentos">Fundamentos</option><option value="conceito">Conceito</option><option value="origem">Origem</option><option value="adaptacoes">Adaptações</option><option value="trabalhos">Trabalhos da isca</option><option value="manifesto">Manifesto</option><option value="referencias">Referências</option><option value="extras">Outros conteúdos</option></select></div>
+                  <div class="field"><label for="managedContentPosition">Posição na página</label><select id="managedContentPosition"></select></div>
                   <div class="field"><label for="managedContentType">Formato</label><select id="managedContentType"><option value="article">Texto com imagem opcional</option><option value="gallery">Galeria de 1 a 3 fotos</option></select></div>
                   <div class="field"><label for="managedContentTitleInput">Título</label><input id="managedContentTitleInput" maxlength="120" required></div>
                   <div class="field"><label for="managedContentSubtitle">Subtítulo</label><input id="managedContentSubtitle" maxlength="220"></div>
                   <div class="field full" id="managedArticleFields"><label>Texto principal</label><div class="rich-toolbar"><button type="button" data-rich-command="bold" data-rich-target="managedTextBefore" aria-label="Negrito"><b>N</b></button><button type="button" data-rich-command="italic" data-rich-target="managedTextBefore" aria-label="Itálico"><i>I</i></button></div><div id="managedTextBefore" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Escreva o conteúdo principal"></div></div>
-                  <div class="field full" id="managedArticleImageField"><label for="managedArticleImage">Imagem lateral (opcional)</label><input id="managedArticleImage" type="file" accept="image/*"><label><input id="managedArticleImageClear" type="checkbox"> Remover imagem atual</label></div>
+                  <div class="field full" id="managedArticleImageField"><label for="managedArticleImage">Imagem lateral (opcional)</label><input id="managedArticleImage" type="file" accept="image/*"><span class="hint">Recomendado: 1200 × 900 px (4:3), até 10 MB. A imagem é redimensionada para até 1100 px e exibida inteira.</span><label><input id="managedArticleImageClear" type="checkbox"> Remover imagem atual</label></div>
                   <div class="field full" id="managedTextAfterField"><label>Texto complementar</label><div class="rich-toolbar"><button type="button" data-rich-command="bold" data-rich-target="managedTextAfter" aria-label="Negrito"><b>N</b></button><button type="button" data-rich-command="italic" data-rich-target="managedTextAfter" aria-label="Itálico"><i>I</i></button></div><div id="managedTextAfter" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Texto abaixo da imagem (opcional)"></div></div>
-                  <div class="field full" id="managedGalleryField" hidden><label for="managedGalleryImages">Fotos da galeria (selecione de 1 a 3)</label><input id="managedGalleryImages" type="file" accept="image/*" multiple></div>
-                  <div class="field"><label><input id="managedContentVisible" type="checkbox" checked> Exibir conteúdo</label></div>
+                  <div class="field full" id="managedGalleryField" hidden><label for="managedGalleryImages">Fotos da galeria (selecione de 1 a 3)</label><input id="managedGalleryImages" type="file" accept="image/*" multiple><span class="hint">Recomendado: 1200 × 900 px (4:3), até 10 MB por foto. As imagens são redimensionadas para até 1100 px.</span></div>
+                  <div class="field checkbox-field"><label><input id="managedContentVisible" type="checkbox" checked> Exibir conteúdo</label></div>
                 </div>
                 <div class="form-error" id="managedContentError" role="alert"></div>
                 <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar conteúdo</button><button class="btn btn-ghost" id="managedContentCancel" type="button" hidden>Cancelar edição</button><span class="muted" id="managedContentStatus" role="status"></span></div>
@@ -3694,6 +3697,7 @@ await new Promise(resolve => {
   const managedAll = () => fb.siteContentItems();
   const managedImages = async files => {
     const selected = [...files]; if (selected.some(file => !file.type.startsWith('image/'))) throw new Error('Selecione apenas arquivos de imagem.');
+    if (selected.some(file => file.size > 10 * 1024 * 1024)) throw new Error('Cada imagem pode ter no máximo 10 MB.');
     const images = await Promise.all(selected.map(file => resizeImage(file, 1100, .66)));
     if (images.some(image => image.length > 280000) || images.reduce((sum, image) => sum + image.length, 0) > 820000) throw new Error('As imagens ficaram pesadas demais. Use arquivos menores ou reduza a quantidade.');
     return images;
@@ -3720,7 +3724,12 @@ await new Promise(resolve => {
   };
   const renderManagedContentAdmin = () => {
     const list = $('managedContentAdminList'); if (!list) return;
-    const placement = $('managedContentPlacement'), type = $('managedContentType');
+    const placement = $('managedContentPlacement'), section = $('managedContentSection'), type = $('managedContentType'), position = $('managedContentPosition');
+    const editingId = $('managedContentId').value, sectionKey = placement.value === 'ajing-game' ? section.value : '';
+    const peers = managedAll().filter(item => item.id !== editingId && item.placement === placement.value && (item.section || '') === sectionKey).sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+    const selectedPosition = position.value || 'end';
+    position.innerHTML = `<option value="start">No início</option>${peers.map(item => `<option value="before:${esc(item.id)}">Antes de: ${esc(item.title || 'Sem título')}</option>`).join('')}<option value="end">No final</option>`;
+    position.value = [...position.options].some(option => option.value === selectedPosition) ? selectedPosition : 'end';
     $('managedContentSectionField').hidden = placement.value !== 'ajing-game';
     $('managedArticleFields').hidden = type.value !== 'article'; $('managedArticleImageField').hidden = type.value !== 'article';
     $('managedTextAfterField').hidden = type.value !== 'article'; $('managedGalleryField').hidden = type.value !== 'gallery';
@@ -3729,9 +3738,10 @@ await new Promise(resolve => {
   const resetManagedForm = () => {
     $('managedContentForm').reset(); $('managedContentId').value = ''; $('managedTextBefore').innerHTML = ''; $('managedTextAfter').innerHTML = '';
     $('managedContentVisible').checked = true; $('managedContentCancel').hidden = true; $('managedContentStatus').textContent = '';
-    $('managedArticleImage').value = ''; $('managedArticleImageClear').checked = false; $('managedGalleryImages').value = ''; renderManagedContentAdmin();
+    $('managedArticleImage').value = ''; $('managedArticleImageClear').checked = false; $('managedGalleryImages').value = ''; $('managedContentPosition').value = 'end'; renderManagedContentAdmin();
   };
-  $('managedContentPlacement').addEventListener('change', renderManagedContentAdmin);
+  $('managedContentPlacement').addEventListener('change', () => { $('managedContentPosition').value = 'end'; renderManagedContentAdmin(); });
+  $('managedContentSection').addEventListener('change', () => { $('managedContentPosition').value = 'end'; renderManagedContentAdmin(); });
   $('managedContentType').addEventListener('change', renderManagedContentAdmin);
   $('managedContentForm').addEventListener('mousedown', e => { if (e.target.closest('[data-rich-command]')) e.preventDefault(); });
   $('managedContentForm').addEventListener('click', e => {
@@ -3749,7 +3759,12 @@ await new Promise(resolve => {
       const image = type === 'article' ? ($('managedArticleImage').files[0] ? (await managedImages([$('managedArticleImage').files[0]]))[0] : ($('managedArticleImageClear').checked ? '' : (previous?.image || ''))) : '';
       const textBefore = type === 'article' ? sanitizeRich($('managedTextBefore').innerHTML) : '', textAfter = type === 'article' ? sanitizeRich($('managedTextAfter').innerHTML) : '';
       if (type === 'article' && !image && !richPlainText(textBefore) && !richPlainText(textAfter)) throw new Error('Escreva o texto ou inclua uma imagem.');
-      const item = { id: id || `content-${Date.now()}-${Math.random().toString(36).slice(2,8)}`, type, title, subtitle: $('managedContentSubtitle').value.trim(), placement: $('managedContentPlacement').value, section: $('managedContentPlacement').value === 'ajing-game' ? $('managedContentSection').value : '', textBefore, textAfter, image, images, visible: $('managedContentVisible').checked, order: previous?.order ?? Date.now(), createdAt: previous?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
+      const placement = $('managedContentPlacement').value, section = placement === 'ajing-game' ? $('managedContentSection').value : '';
+      const peers = managedAll().filter(item => item.id !== id && item.placement === placement && (item.section || '') === section).sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+      const selected = $('managedContentPosition').value, index = selected === 'start' ? 0 : selected.startsWith('before:') ? Math.max(0, peers.findIndex(item => item.id === selected.slice(7))) : peers.length;
+      const orderOf = (item, fallback) => Number.isFinite(Number(item?.order)) ? Number(item.order) : fallback;
+      const order = !peers.length ? Date.now() : index === 0 ? orderOf(peers[0], 0) - 1 : index >= peers.length ? orderOf(peers[peers.length - 1], peers.length - 1) + 1 : (orderOf(peers[index - 1], index - 1) + orderOf(peers[index], index)) / 2;
+      const item = { id: id || `content-${Date.now()}-${Math.random().toString(36).slice(2,8)}`, type, title, subtitle: $('managedContentSubtitle').value.trim(), placement, section, textBefore, textAfter, image, images, visible: $('managedContentVisible').checked, order, createdAt: previous?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
       await fb.saveSiteContentItem(item); renderManagedContent(); resetManagedForm(); $('managedContentStatus').textContent = 'Conteúdo salvo.';
     } catch (err) { status.textContent = ''; error.textContent = err.message || fb.errMsg(err); }
   });
@@ -3758,9 +3773,11 @@ await new Promise(resolve => {
     const edit = e.target.closest('[data-managed-edit]'), remove = e.target.closest('[data-managed-delete]');
     if (edit) {
       const item = managedAll().find(entry => entry.id === edit.dataset.managedEdit); if (!item) return;
+      const peers = managedAll().filter(entry => entry.placement === item.placement && (entry.section || '') === (item.section || '')).sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+      const currentIndex = peers.findIndex(entry => entry.id === item.id), desiredPosition = currentIndex <= 0 ? 'start' : currentIndex >= peers.length - 1 ? 'end' : `before:${peers[currentIndex + 1].id}`;
       $('managedContentId').value = item.id; $('managedContentPlacement').value = item.placement || 'home'; $('managedContentSection').value = item.section || 'fundamentos'; $('managedContentType').value = item.type || 'article';
       $('managedContentTitleInput').value = item.title || ''; $('managedContentSubtitle').value = item.subtitle || ''; $('managedTextBefore').innerHTML = sanitizeRich(item.textBefore); $('managedTextAfter').innerHTML = sanitizeRich(item.textAfter); $('managedContentVisible').checked = item.visible !== false;
-      $('managedArticleImage').value = ''; $('managedArticleImageClear').checked = false; $('managedGalleryImages').value = ''; $('managedContentCancel').hidden = false; renderManagedContentAdmin(); $('managedContentForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      $('managedArticleImage').value = ''; $('managedArticleImageClear').checked = false; $('managedGalleryImages').value = ''; $('managedContentCancel').hidden = false; renderManagedContentAdmin(); $('managedContentPosition').value = desiredPosition; $('managedContentForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     if (remove) {
       const item = managedAll().find(entry => entry.id === remove.dataset.managedDelete); if (!item || !(await askConfirm(`Excluir o conteúdo “${item.title}”?`))) return;
