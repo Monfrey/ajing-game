@@ -1123,7 +1123,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <script>
 (() => {
   const targets = {
-    carousel: '#home .hero', facts: '.facts', conceito: '#conceito', origem: '#origem',
+    conceito: '#conceito', origem: '#origem',
     adaptacoes: '#adaptacoes', trabalhos: '#trabalhos', fundamentos: '#fundamentos',
     manifesto: '.manifesto', referencias: '.refs', parceiros: '#parceiros', nav: '#navLinks'
   };
@@ -1199,11 +1199,6 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   <div id="homeContentEntries" class="managed-content-list" aria-live="polite"></div>
   <div id="ajing-game" hidden>
     <nav class="ajing-subnav" aria-label="Conteúdos Ajing Game"><div class="container" id="ajingSubnavLinks"></div></nav>
-    <div class="container"><div class="facts">
-      <div><strong data-site-copy="facts.1.title">Japão</strong><span data-site-copy="facts.1.text">Origem da técnica</span></div>
-      <div><strong data-site-copy="facts.2.title">Ultralight</strong><span data-site-copy="facts.2.text">Filosofia de pesca</span></div>
-      <div><strong data-site-copy="facts.3.title">Global</strong><span data-site-copy="facts.3.text">Novas possibilidades</span></div>
-    </div></div>
     <div id="ajingManagedContent" class="managed-content-list" aria-live="polite"></div>
   <section class="block" id="conceito">
     <div class="container">
@@ -1321,14 +1316,14 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     </div>
   </section>
 
-  <section class="manifesto">
+  <section class="manifesto" id="manifesto">
     <div class="container manifesto-inner">
       <div><h2 data-site-copy="manifesto.title">Menos excesso. Mais percepção. Mais conexão.</h2><i class="brush" aria-hidden="true"></i></div>
       <p data-site-copy="manifesto.text">Um espaço para estudar, compartilhar e desenvolver a cultura do finesse, respeitando as raízes japonesas e valorizando as possibilidades de cada região.</p>
     </div>
   </section>
 
-  <section class="refs">
+  <section class="refs" id="referencias">
     <div class="container">
       <h2 data-site-copy="referencias.title">Referências técnicas consultadas</h2>
       <p data-site-copy="referencias.text">Conteúdo editorial sintetizado a partir de materiais sobre Ajing e light game: SUNLINE, “Ajing Days‼” (fishing.sunline.co.jp); UOLINK, “アジング” (uolink.jp/methods/ajing); Ajing Store Academy, “Building Your First Rig”, “Jigheads” e “Lure Retrieve” (ajing.store); Tsuribito, “アジング初心者の道具選び” (web.tsuribito.co.jp). Consultadas em novembro de 2026. Recomendações de peso e montagem são pontos de partida, não regras universais.</p>
@@ -3543,13 +3538,13 @@ await new Promise(resolve => {
   const siteCopyNodes = [...document.querySelectorAll('[data-site-copy]')];
   const siteCopyDefaults = Object.fromEntries(siteCopyNodes.map(node => [node.dataset.siteCopy, node.textContent]));
   const siteCopyDefaultHTML = new Map(siteCopyNodes.map(node => [node, node.innerHTML]));
-  const siteCopyGroups = { carousel:'Carrossel', facts:'Destaques', conceito:'Conceito', origem:'Origem', adaptacoes:'Adaptações', trabalhos:'Trabalhos da isca', fundamentos:'Fundamentos', manifesto:'Manifesto', referencias:'Referências', parceiros:'Parceiros', nav:'Menu público' };
-  const siteCopyGroupOrder = ['carousel', 'facts', 'conceito', 'origem', 'adaptacoes', 'trabalhos', 'fundamentos', 'manifesto', 'referencias', 'parceiros', 'nav'];
-  const siteVisibilityTargets = { carousel:'#home .hero', facts:'.facts', conceito:'#conceito', origem:'#origem', adaptacoes:'#adaptacoes', trabalhos:'#trabalhos', fundamentos:'#fundamentos', manifesto:'.manifesto', referencias:'.refs', parceiros:'#parceiros', nav:'#navLinks' };
+  const siteCopyGroups = { conceito:'Conceito', origem:'Origem', adaptacoes:'Adaptações', trabalhos:'Trabalhos da isca', fundamentos:'Fundamentos', manifesto:'Manifesto', referencias:'Referências', parceiros:'Parceiros', nav:'Menu público' };
+  const siteCopyGroupOrder = ['conceito', 'origem', 'adaptacoes', 'trabalhos', 'fundamentos', 'manifesto', 'referencias', 'parceiros', 'nav'];
+  const siteVisibilityTargets = { conceito:'#conceito', origem:'#origem', adaptacoes:'#adaptacoes', trabalhos:'#trabalhos', fundamentos:'#fundamentos', manifesto:'#manifesto', referencias:'#referencias', parceiros:'#parceiros', nav:'#navLinks' };
   const siteVisibilityNavTargets = { conceito:'a[href="#conceito"]', origem:'a[href="#origem"]', adaptacoes:'a[href="#adaptacoes"]', trabalhos:'a[href="#trabalhos"]', fundamentos:'a[href="#fundamentos"]', parceiros:'a[href="#parceiros"]' };
-  const siteVisibilityDescriptions = { carousel:'Carrossel de destaque no topo da página.', facts:'Faixa de informações abaixo do carrossel.', conceito:'Seção Conceito e seu link no menu público.', origem:'Seção Origem e seu link no menu público.', adaptacoes:'Seção Adaptações e seu link no menu público.', trabalhos:'Seção Trabalhos da isca e seu link no menu público.', fundamentos:'Seção Fundamentos e seu link no menu público.', manifesto:'Faixa do manifesto.', referencias:'Seção de referências técnicas.', parceiros:'Seção Parceiros e seu link no menu público.', nav:'Links de navegação pública no cabeçalho.' };
+  const siteVisibilityDescriptions = { conceito:'Seção Conceito no menu Ajing Game.', origem:'Seção Origem no menu Ajing Game.', adaptacoes:'Seção Adaptações no menu Ajing Game.', trabalhos:'Seção Trabalhos da isca no menu Ajing Game.', fundamentos:'Seção Fundamentos no menu Ajing Game.', manifesto:'Faixa do manifesto no menu Ajing Game.', referencias:'Seção de referências técnicas no menu Ajing Game.', parceiros:'Seção Parceiros na Home.', nav:'Links de navegação pública no cabeçalho.' };
   const siteCopyParts = { title:'Título', text:'Texto', intro:'Apresentação', label:'Chamada', quote:'Citação', paragraph1:'Texto 1', paragraph2:'Texto 2', paragraph3:'Texto 3', important:'Aviso', componentsTitle:'Título dos componentes', tip:'Dica', stepsTitle:'Título da sequência', actionLabel:'Rótulo da ação', indicationLabel:'Rótulo da indicação' };
-  let activeSiteCopyGroup = 'facts';
+  let activeSiteCopyGroup = 'conceito';
   const savedSiteContent = () => window.__ajingSiteConfigLoaded ? (fb.config('siteContent') || {}) : (window.__ajingSiteContentCache || {});
   const SITE_BRAND_DEFAULTS = { title: 'AJING GAME', subtitle: 'Extreme Finesse' };
   let siteBrandImage = '', siteBrandImagePending = null;
@@ -3617,7 +3612,7 @@ await new Promise(resolve => {
     $('siteBrandTitle').value = typeof brand.title === 'string' ? brand.title : SITE_BRAND_DEFAULTS.title;
     $('siteBrandSubtitle').value = typeof brand.subtitle === 'string' ? brand.subtitle : SITE_BRAND_DEFAULTS.subtitle;
     siteBrandImage = typeof brand.image === 'string' ? brand.image : ''; $('siteBrandLogo').value = ''; setSiteBrandPreview();
-    const groups = siteCopyGroupOrder.filter(group => group === 'carousel' || keys.some(key => key.split('.')[0] === group));
+    const groups = siteCopyGroupOrder.filter(group => keys.some(key => key.split('.')[0] === group));
     if (!groups.includes(activeSiteCopyGroup)) activeSiteCopyGroup = groups[0] || '';
     const visibility = saved.visibility || {};
     const fields = group => keys.filter(key => key.split('.')[0] === group).map(key => {
