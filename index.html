@@ -1205,6 +1205,11 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .managed-content-list{padding-inline:0!important}
 .managed-content-section>.container,#ajingManagedContent .managed-content-section>.container{width:100%;padding-inline:0}
 .managed-content-section>.container>.managed-content-list{width:100%;padding-inline:0}
+/* Imagem do conteúdo (texto com imagem) maior e na proporção original, sem faixas cinza */
+.managed-article-body{grid-template-columns:minmax(0,1fr) minmax(220px,440px);gap:clamp(18px,2.4vw,32px)}
+.managed-article-body.no-image{grid-template-columns:1fr}
+.managed-article-image{width:100%;max-width:440px;height:auto;max-height:none;aspect-ratio:4/3;object-fit:cover;background:var(--surface-2);justify-self:end}
+@media (max-width:720px){.managed-article-body{grid-template-columns:1fr}.managed-article-image{max-width:100%;justify-self:center}}
 </style>
 <script>
 (() => {
@@ -1576,7 +1581,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                   <div class="field"><label for="managedContentTitleInput">Título</label><input id="managedContentTitleInput" maxlength="120" required></div>
                   <div class="field"><label for="managedContentSubtitle">Subtítulo</label><input id="managedContentSubtitle" maxlength="220"></div>
                   <div class="field full" id="managedArticleFields"><label>Texto principal</label><div class="rich-toolbar" data-rich-toolbar="managedTextBefore"></div><div id="managedTextBefore" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Escreva o conteúdo principal"></div></div>
-                  <div class="field full" id="managedArticleImageField"><label for="managedArticleImage">Imagem lateral (opcional)</label><input id="managedArticleImage" type="file" accept="image/*"><span class="hint">Recomendado: 1200 × 900 px (4:3), até 10 MB. A imagem é redimensionada para até 1100 px e exibida inteira.</span><label><input id="managedArticleImageClear" type="checkbox"> Remover imagem atual</label></div>
+                  <div class="field full" id="managedArticleImageField"><label for="managedArticleImage">Imagem lateral (opcional)</label><input id="managedArticleImage" type="file" accept="image/*"><span class="hint">Formato paisagem 4:3 (recomendado: 1200 × 900 px), até 10 MB. A imagem é exibida em paisagem; fotos quadradas ou verticais são recortadas pelo centro.</span><label><input id="managedArticleImageClear" type="checkbox"> Remover imagem atual</label></div>
                   <div class="field full" id="managedTextAfterField"><label>Texto complementar</label><div class="rich-toolbar" data-rich-toolbar="managedTextAfter"></div><div id="managedTextAfter" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Texto abaixo da imagem (opcional)"></div></div>
                   <div class="field full" id="managedGalleryField" hidden><label for="managedGalleryImages">Fotos da galeria (selecione de 1 a 3)</label><input id="managedGalleryImages" type="file" accept="image/*" multiple><span class="hint">Recomendado: 1200 × 900 px (4:3), até 10 MB por foto. As imagens são redimensionadas para até 1100 px.</span></div>
                   <div class="field checkbox-field"><label><input id="managedContentVisible" type="checkbox" checked> Exibir conteúdo</label></div>
