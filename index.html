@@ -1210,6 +1210,14 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .managed-article-body.no-image{grid-template-columns:1fr}
 .managed-article-image{width:100%;max-width:440px;height:auto;max-height:none;aspect-ratio:4/3;object-fit:cover;background:var(--surface-2);justify-self:end}
 @media (max-width:720px){.managed-article-body{grid-template-columns:1fr}.managed-article-image{max-width:100%;justify-self:center}}
+/* Descrição do perfil nas cartas: no celular fica numa linha só, para não encolher a foto */
+@media (max-width:720px){
+  .tcard .tc-flavor{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:0;overflow-wrap:normal}
+  .member-full-card .tc-flavor{min-height:0}
+}
+/* Cartas da aba Membros: tamanho fixo de 220 px reduzido por zoom (ver fitMemberCards) */
+.member-full-card{width:220px;max-width:none;zoom:var(--mz,1)}
+.member-full-card .tc-flavor{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:0;overflow-wrap:normal}
 </style>
 <script>
 (() => {
@@ -1798,7 +1806,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                     <div><small>Ranking capturas</small><b id="tcRankCnt" data-k="rankcnt">—</b></div>
                     <div><small>Carta</small><b id="tcNo" data-k="no">Nº 001</b></div>
                   </div>
-                  <p class="tc-flavor" id="tcBio" data-k="bio">Conte em até 100 caracteres um pouco sobre você e sua relação com a pesca.</p>
+                  <p class="tc-flavor" id="tcBio" data-k="bio">Conte em até 40 caracteres algo sobre você.</p>
                   <div class="tc-social" data-k="social" hidden></div>
                   <footer class="tc-foot"><span class="logo-img" aria-hidden="true"></span>Ajing Game · Extreme Finesse</footer>
                 </div>
@@ -1828,7 +1836,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                 <div class="field"><label for="profileFishingName">Nome de Pescador</label><input id="profileFishingName" maxlength="50" placeholder="Seu nome na comunidade" required></div>
                 <div class="field"><label for="profileLocation">Cidade</label><input id="profileLocation" maxlength="100" placeholder="Ex.: Vila Velha - ES" required></div>
                 <div class="field"><label for="profileCpf">CPF <span class="muted">(opcional)</span></label><input id="profileCpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"></div>
-                <div class="field full"><label for="profileBio">Breve descrição</label><textarea id="profileBio" rows="3" maxlength="100" placeholder="Conte um pouco sobre seu estilo de pesca"></textarea><span class="hint" id="bioCount">0 / 100 caracteres</span></div>
+                <div class="field full"><label for="profileBio">Breve descrição</label><textarea id="profileBio" rows="2" maxlength="40" placeholder="Conte um pouco sobre seu estilo de pesca"></textarea><span class="hint" id="bioCount">0 / 40 caracteres</span></div>
                 <div class="field full social-fields" role="group" aria-labelledby="socialLegend">
                   <span class="social-legend" id="socialLegend">Redes sociais <small>(opcional)</small></span>
                   <div class="social-grid">
@@ -2731,6 +2739,7 @@ await new Promise(resolve => {
     showPublicContentPage(a.getAttribute('href') === '#ajing-game' ? 'ajing-game' : 'home');
   }));
   const showPublicContentPage = page => {
+    const endSpacer = document.getElementById('ajingEndSpacer'); if (endSpacer) endSpacer.style.height = '0px';
     const ajing = $('ajing-game'), hero = $('inicio'), partners = $('parceiros'), homeEntries = $('homeContentEntries');
     if (!ajing || !hero || !partners) return;
     ajing.hidden = page !== 'ajing-game'; hero.hidden = page === 'ajing-game'; partners.hidden = page === 'ajing-game';
@@ -2745,13 +2754,42 @@ await new Promise(resolve => {
     const link = e.target.closest('a[href="#inicio"],a[href="#ajing-game"]'); if (!link) return;
     e.preventDefault(); showPublicContentPage(link.getAttribute('href') === '#ajing-game' ? 'ajing-game' : 'home');
   });
+  // Rola até o assunto clicado deixando o título logo abaixo do cabeçalho e do menu da página
+  // (a distância é medida na hora, porque as barras fixas mudam de altura entre computador e celular)
+  let ajingScrollFix = null;
+  const ajingTargetY = target => {
+    const header = document.querySelector('.site-header'), sub = document.querySelector('.ajing-subnav');
+    const offset = (header ? header.offsetHeight : 0) + (sub ? sub.offsetHeight : 0) + 14;
+    const pad = parseFloat(getComputedStyle(target).paddingTop) || 0;
+    return Math.max(0, Math.round(target.getBoundingClientRect().top + window.scrollY + pad - offset));
+  };
+  // Os últimos assuntos (Manifesto, Referências) ficam perto do fim da página: um espaço no final,
+  // criado só quando preciso, permite que também subam até o topo
+  const ajingEndSpacer = () => {
+    let s = document.getElementById('ajingEndSpacer');
+    if (!s) { s = document.createElement('div'); s.id = 'ajingEndSpacer'; s.setAttribute('aria-hidden', 'true'); $('ajing-game').appendChild(s); }
+    return s;
+  };
+  const scrollToAjingTarget = (target, smooth = true) => {
+    const spacer = ajingEndSpacer(); spacer.style.height = '0px';
+    const want = ajingTargetY(target), max = document.documentElement.scrollHeight - window.innerHeight;
+    if (want > max) spacer.style.height = `${want - max}px`;
+    window.scrollTo({ top: ajingTargetY(target), behavior: smooth ? 'smooth' : 'auto' });
+    // imagens carregadas durante a rolagem podem mudar a altura da página: confere e corrige no fim
+    clearTimeout(ajingScrollFix);
+    ajingScrollFix = setTimeout(() => { const y = ajingTargetY(target); if (Math.abs(window.scrollY - y) > 4) window.scrollTo({ top: y }); }, 800);
+  };
   $('ajingSubnavLinks').addEventListener('click', e => {
     const link = e.target.closest('a[href^="#"]'); if (!link) return;
     const target = document.querySelector(link.getAttribute('href')); if (!target) return;
     e.preventDefault(); if (home.hidden) showHome(); $('ajing-game').hidden = false; $('inicio').hidden = true; $('parceiros').hidden = true;
-    requestAnimationFrame(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    requestAnimationFrame(() => scrollToAjingTarget(target));
   });
-  if (location.hash && location.hash !== '#inicio' && location.hash !== '#home' && document.querySelector(`#ajing-game ${CSS.escape(location.hash.slice(1))}`)) showPublicContentPage('ajing-game');
+  if (location.hash && location.hash !== '#inicio' && location.hash !== '#home' && document.querySelector(`#ajing-game #${CSS.escape(location.hash.slice(1))}`)) {
+    showPublicContentPage('ajing-game');
+    const hashTarget = document.getElementById(location.hash.slice(1));
+    if (hashTarget) setTimeout(() => scrollToAjingTarget(hashTarget, false), 400);
+  }
 
   /* ===== Login ===== */
   const modal = $('loginModal'), loginForm = $('loginForm'), loginError = $('loginError'), signupForm = $('signupForm'), signupSuccess = $('signupSuccess');
@@ -2858,6 +2896,7 @@ await new Promise(resolve => {
   const tabs = document.querySelectorAll('[data-tab]'), panels = document.querySelectorAll('[data-panel]');
   const showTab = name => {
     if (name === 'admin' && !isAdmin()) name = 'social';
+    if (name === 'members') requestAnimationFrame(() => { try { fitMemberCards(); } catch (_) {} });
     if (name === 'admin' && isAdmin() && (store.get('ajing-admin-sec', true) || 'carousel') === 'requests') fb.ensure('postAudits');
     document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
     tabs.forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
@@ -4952,7 +4991,7 @@ await new Promise(resolve => {
     k('role').textContent = ''; k('role').hidden = true;
     k('type').textContent = (li.cur ? `Nível ${li.cur.n} · ${li.cur.name}` : 'Pescador finesse') + (p.location ? ' · ' + p.location : '');
     k('lvl').innerHTML = emblem(li.cur, 'md'); k('lvl').hidden = !li.cur;
-    const bio = k('bio'); bio.textContent = p.bio || (own ? 'Conte em até 100 caracteres um pouco sobre você e sua relação com a pesca.' : ''); bio.hidden = !bio.textContent;
+    const bio = k('bio'); bio.textContent = p.bio || (own ? 'Conte em até 40 caracteres algo sobre você.' : ''); bio.hidden = !bio.textContent;
     const soc = k('social'); if (soc) { soc.innerHTML = socialLinks(p); soc.hidden = !soc.innerHTML; }
     const img = k('photo');
     if (own && cropState) applyCrop();
@@ -5029,7 +5068,17 @@ await new Promise(resolve => {
       fillCard(card, u.username, readProfileOf(u.username), false);
       return `<button class="member-card-button" type="button" data-card-user="${esc(u.username)}" aria-label="Abrir portfólio de ${esc(displayName(u.username))}">${card.outerHTML}</button>`;
     }).join('') : '<div class="empty feed-empty"><h4>Nenhum membro encontrado</h4><p>Ajuste sua busca e tente novamente.</p></div>';
+    fitMemberCards();
   };
+  // As cartas da aba Membros são desenhadas com 220 px e reduzidas por inteiro (zoom) para caber na coluna,
+  // assim os textos não estouram em telas estreitas e a nitidez se mantém
+  const fitMemberCards = () => {
+    const grid = $('membersGrid'), btn = grid && grid.querySelector('.member-card-button');
+    if (!btn || !btn.clientWidth) return;
+    grid.style.setProperty('--mz', Math.min(1, btn.clientWidth / 220).toFixed(3));
+  };
+  let fitMembersTimer = null;
+  window.addEventListener('resize', () => { clearTimeout(fitMembersTimer); fitMembersTimer = setTimeout(fitMemberCards, 120); });
   const openPortfolio = u => {
     if (!getUsers().some(x => x.username === u && x.active !== false)) return;
     portfolioUser = u;
@@ -5115,7 +5164,7 @@ await new Promise(resolve => {
     });
     c.addEventListener('pointerleave', () => { ['--rx', '--ry'].forEach(v => c.style.setProperty(v, '0deg')); c.style.setProperty('--mx', '50%'); c.style.setProperty('--my', '50%'); });
   })();
-  const updateCount = () => bioCount.textContent = `${bioInput.value.length} / 100 caracteres`;
+  const updateCount = () => bioCount.textContent = `${bioInput.value.length} / 40 caracteres`;
   const closeEdit = () => { stopCrop(); form.hidden = true; card.hidden = false; renderProfile(); };
   bioInput.addEventListener('input', updateCount);
   $('editProfileBtn').addEventListener('click', async () => {
@@ -5130,7 +5179,7 @@ await new Promise(resolve => {
     $('profileName').value = p.name || ''; $('profileFishingName').value = p.fishingName || ''; $('profileLocation').value = p.location || '';
     $('profileCpf').value = formatCPF(privateProfile.cpf || '');
     Object.keys(SOCIALS).forEach(net => { const s = p.social && p.social[net]; $(SOCIALS[net].input).value = s ? (s.handle ? '@' + s.handle : s.url) : ''; });
-    bioInput.value = (p.bio || '').slice(0, 100); photoData = p.photo || ''; photoInput.value = '';
+    bioInput.value = (p.bio || '').slice(0, 40); photoData = p.photo || ''; photoInput.value = '';
     profileError.textContent = ''; saved.textContent = ''; updateCount();
     card.hidden = true; passForm.hidden = true; form.hidden = false; softFocus($('profileName'));
     const c = $('tcard'); ['--rx', '--ry'].forEach(v => c.style.setProperty(v, '0deg'));
@@ -5163,7 +5212,7 @@ await new Promise(resolve => {
       profileError.textContent = `Não reconheci o ${net.label} informado. Use o @ (ex.: @usuario) ou o link do perfil (${hint}).`; $(net.input).focus(); return;
     }
     if (photoPending) await photoPending;
-    const p = profileFields({ ...readProfile(), name, fishingName, location, bio: bioInput.value.slice(0, 100).trim(), photo: '', social });
+    const p = profileFields({ ...readProfile(), name, fishingName, location, bio: bioInput.value.slice(0, 40).trim(), photo: '', social });
     let source = null;
     if (cropState) {
       try { p.photo = await bakeCrop(); } catch(_) { profileError.textContent = 'Não foi possível processar a foto. Tente outra imagem.'; return; }
