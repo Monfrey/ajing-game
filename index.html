@@ -1218,6 +1218,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 /* Cartas da aba Membros: tamanho fixo de 220 px reduzido por zoom (ver fitMemberCards) */
 .member-full-card{width:220px;max-width:none;zoom:var(--mz,1)}
 .member-full-card .tc-flavor{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:0;overflow-wrap:normal}
+.user-private-info{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 16px;padding:10px 12px;border:1px dashed var(--line);border-radius:var(--radius-sm);background:var(--bg);font-size:.84rem}
+.user-private-info b{flex-basis:100%;font-size:.82rem}
+.user-private-info b small{font-weight:400;color:var(--muted)}
+.user-private-info[hidden]{display:none}
 </style>
 <script>
 (() => {
@@ -1756,6 +1760,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                   <div class="field" id="uPassField"><label for="uPass" id="uPassLabel">Senha</label><input id="uPass" type="password" maxlength="40" autocomplete="new-password"><span class="hint" id="uPassHint">Mínimo de 6 caracteres.</span></div>
                   <div class="field" id="uPass2Field"><label for="uPass2">Confirmar senha</label><input id="uPass2" type="password" maxlength="40" autocomplete="new-password"></div>
                   <label class="u-crown-toggle"><input id="uSeasonChampion" type="checkbox"><span><b>Exibir coroa de campeão da temporada</b><small>Ao marcar, a coroa será transferida para esta carta e removida da carta anterior.</small></span></label>
+                  <div class="user-private-info" id="uPrivateInfo" hidden></div>
                   <div class="field"><label for="uGoldenHooks">Insígnias de anzol dourado</label><input id="uGoldenHooks" type="number" min="0" max="999" step="1" value="0"><span class="hint">Quantidade acumulada, exibida centralizada na parte inferior da foto da carta.</span></div>
                 </div>
                 <div class="form-error" id="userError" role="alert"></div>
@@ -1836,6 +1841,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                 <div class="field"><label for="profileFishingName">Nome de Pescador</label><input id="profileFishingName" maxlength="50" placeholder="Seu nome na comunidade" required></div>
                 <div class="field"><label for="profileLocation">Cidade</label><input id="profileLocation" maxlength="100" placeholder="Ex.: Vila Velha - ES" required></div>
                 <div class="field"><label for="profileCpf">CPF <span class="muted">(opcional)</span></label><input id="profileCpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"></div>
+                <div class="field"><label for="profilePhone">Telefone <span class="muted">(opcional)</span></label><input id="profilePhone" type="tel" inputmode="tel" maxlength="15" autocomplete="tel-national" placeholder="(27) 99999-9999"><span class="hint">CPF e telefone ficam privados: só você e os administradores veem.</span></div>
                 <div class="field full"><label for="profileBio">Breve descrição</label><textarea id="profileBio" rows="2" maxlength="40" placeholder="Conte um pouco sobre seu estilo de pesca"></textarea><span class="hint" id="bioCount">0 / 40 caracteres</span></div>
                 <div class="field full social-fields" role="group" aria-labelledby="socialLegend">
                   <span class="social-legend" id="socialLegend">Redes sociais <small>(opcional)</small></span>
@@ -2003,6 +2009,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <div class="field"><label for="signupFullName">Nome completo</label><input id="signupFullName" name="full-name" type="text" maxlength="80" autocomplete="name" required></div>
         <div class="field"><label for="signupCity">Cidade</label><input id="signupCity" name="address-level2" type="text" maxlength="100" autocomplete="address-level2" required></div>
         <div class="field"><label for="signupCpf">CPF</label><input id="signupCpf" name="tax-id" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00" required></div>
+        <div class="field"><label for="signupPhone">Telefone (com DDD)</label><input id="signupPhone" name="tel" type="tel" inputmode="tel" maxlength="15" autocomplete="tel-national" placeholder="(27) 99999-9999" required><span class="hint">Visível apenas para você e para os administradores.</span></div>
         <div class="field"><label for="signupEmail">E-mail</label><input id="signupEmail" name="email" type="email" maxlength="120" autocomplete="email" inputmode="email" required></div>
         <div class="field"><label for="signupPass">Senha</label><input id="signupPass" name="new-password" type="password" minlength="6" autocomplete="new-password" required><span class="hint">Use pelo menos 6 caracteres.</span></div>
         <div class="form-error" id="signupError" role="alert"></div>
@@ -2339,13 +2346,13 @@ const fb = {
   },
   memberApplication: async uid => { const s = await getDoc(fsDoc(fdb, 'memberApplications', uid)); return s.exists() ? s.data() : null; },
   approveMemberApplication: async (uid, application) => {
-    const { username, email, fullName, city, cpf } = application;
+    const { username, email, fullName, city, cpf, phone } = application;
     const profile = { name: fullName || username, fishingName: username, location: city || '', bio: '', photo: '', social: {} };
     const batch = writeBatch(fdb), sent = Date.now();
     batch.set(fsDoc(fdb, 'users', uid), { username, role: 'member', active: true, seasonChampion: false, goldHooks: 0 });
     batch.set(fsDoc(fdb, 'private', uid), { email });
     batch.set(fsDoc(fdb, 'profiles', username), profile);
-    batch.set(fsDoc(fdb, 'privateProfiles', uid), { cpf: cpf || '' });
+    batch.set(fsDoc(fdb, 'privateProfiles', uid), { cpf: cpf || '', phone: phone || '' });
     batch.delete(fsDoc(fdb, 'memberApplications', uid));
     batch.set(fsDoc(fdb, 'mail', `${uid}_approved_${sent}`), { to: email, message: { subject: 'Cadastro aprovado — Ajing Game', text: `Olá, ${username}! Seu cadastro foi aprovado. Você já pode acessar a área de membros do Ajing Game com o e-mail e a senha informados no cadastro.` } });
     await batch.commit();
@@ -2814,6 +2821,16 @@ await new Promise(resolve => {
     return digitAt(9) === Number(d[9]) && digitAt(10) === Number(d[10]);
   };
   ['signupCpf', 'profileCpf'].forEach(id => $(id).addEventListener('input', e => { e.target.value = formatCPF(e.target.value); }));
+  // Telefone brasileiro com DDD: 10 dígitos (fixo) ou 11 (celular, começando com 9)
+  const phoneDigits = value => String(value || '').replace(/\D/g, '').replace(/^0+/, '').slice(0, 11);
+  const formatPhone = value => {
+    const d = phoneDigits(value); if (!d) return '';
+    if (d.length <= 2) return `(${d}`;
+    const rest = d.slice(2), split = d.length === 11 ? 5 : 4;
+    return `(${d.slice(0, 2)}) ${rest.slice(0, split)}${rest.length > split ? '-' + rest.slice(split) : ''}`;
+  };
+  const validPhone = value => { const d = phoneDigits(value); return /^[1-9][0-9](9[0-9]{8}|[2-8][0-9]{7})$/.test(d); };
+  ['signupPhone', 'profilePhone'].forEach(id => $(id).addEventListener('input', e => { e.target.value = formatPhone(e.target.value); }));
   const openLogin = () => {
     lastFocus = document.activeElement;
     setSignupSuccess(false); loginForm.hidden = false; loginError.textContent = ''; $('signupError').textContent = ''; $('loginInfo').textContent = '';
@@ -2855,12 +2872,13 @@ await new Promise(resolve => {
   });
   signupForm.addEventListener('submit', async e => {
     e.preventDefault();
-    const name = $('signupName').value.normalize('NFC').trim().replace(/\s+/g, ' '), fullName = $('signupFullName').value.normalize('NFC').trim().replace(/\s+/g, ' '), city = $('signupCity').value.normalize('NFC').trim().replace(/\s+/g, ' '), cpf = cpfDigits($('signupCpf').value), email = $('signupEmail').value.trim().toLowerCase(), pass = $('signupPass').value, err = $('signupError');
+    const name = $('signupName').value.normalize('NFC').trim().replace(/\s+/g, ' '), fullName = $('signupFullName').value.normalize('NFC').trim().replace(/\s+/g, ' '), city = $('signupCity').value.normalize('NFC').trim().replace(/\s+/g, ' '), cpf = cpfDigits($('signupCpf').value), phone = phoneDigits($('signupPhone').value), email = $('signupEmail').value.trim().toLowerCase(), pass = $('signupPass').value, err = $('signupError');
     err.textContent = '';
     if (name.length < 3 || name.length > 30 || !/^[\p{L}\p{N}](?:[\p{L}\p{N} ._'-]*[\p{L}\p{N}.])?$/u.test(name)) { err.textContent = 'Informe um nome de 3 a 30 caracteres, começando e terminando com letra ou número.'; $('signupName').focus(); return; }
     if (fullName.length < 2 || fullName.length > 80) { err.textContent = 'Informe seu nome completo (de 2 a 80 caracteres).'; $('signupFullName').focus(); return; }
     if (!city || city.length > 100) { err.textContent = 'Informe sua cidade (até 100 caracteres).'; $('signupCity').focus(); return; }
     if (!validCPF(cpf)) { err.textContent = 'Confira o CPF informado.'; $('signupCpf').focus(); return; }
+    if (!validPhone(phone)) { err.textContent = 'Informe um telefone válido com DDD, por exemplo (27) 99999-9999.'; $('signupPhone').focus(); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Informe um e-mail válido.'; $('signupEmail').focus(); return; }
     if (pass.length < 6) { err.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; $('signupPass').focus(); return; }
     const btn = $('signupSubmit'); btn.disabled = true;
@@ -2868,7 +2886,7 @@ await new Promise(resolve => {
     try {
       if (getUsers().some(u => norm(u.username) === norm(name))) { err.textContent = 'Esse nome já está em uso. Escolha outro.'; $('signupName').focus(); return; }
       uid = await fb.registerAccount(email, pass);
-      await fb.submitMemberApplication(uid, { username: name, fullName, city, cpf, email });
+      await fb.submitMemberApplication(uid, { username: name, fullName, city, cpf, phone, email });
       await fb.signOut(); signupForm.reset(); setSignupSuccess(true);
     } catch (signupErr) {
       if (uid) { try { await fb.signOut(); } catch (_) {} }
@@ -4419,6 +4437,14 @@ await new Promise(resolve => {
     $('uEmail').value = ''; $('uEmailField').hidden = !!u; $('uPassField').hidden = !!u; $('uPass2Field').hidden = !!u;
     $('uPass').value = ''; $('uPass2').value = ''; $('userError').textContent = ''; $('userSaved').textContent = '';
     $('userForm').hidden = false; $('userNew').hidden = true; softFocus($('uName'));
+    const info = $('uPrivateInfo'); info.hidden = !u; info.innerHTML = '';
+    if (u && u.uid) {
+      info.innerHTML = '<b>Dados privados</b><span>Carregando…</span>';
+      Promise.all([fb.getPrivateProfile(u.uid).catch(() => ({})), fb.getEmail(u.uid).catch(() => '')]).then(([priv, email]) => {
+        if (editingUser !== u.username) return;
+        info.innerHTML = `<b>Dados privados <small>(só o membro e os administradores veem)</small></b><span>Telefone: ${priv.phone ? esc(formatPhone(priv.phone)) : 'não informado'}</span><span>CPF: ${priv.cpf ? esc(formatCPF(priv.cpf)) : 'não informado'}</span><span>E-mail: ${email ? esc(email) : 'não informado'}</span>`;
+      });
+    }
   };
   const closeUserForm = () => { $('userForm').hidden = true; $('userNew').hidden = false; editingUser = null; };
   $('userNew').addEventListener('click', () => { if (isAdmin()) openUserForm(null); });
@@ -5178,6 +5204,7 @@ await new Promise(resolve => {
     const p = readProfile();
     $('profileName').value = p.name || ''; $('profileFishingName').value = p.fishingName || ''; $('profileLocation').value = p.location || '';
     $('profileCpf').value = formatCPF(privateProfile.cpf || '');
+    $('profilePhone').value = formatPhone(privateProfile.phone || '');
     Object.keys(SOCIALS).forEach(net => { const s = p.social && p.social[net]; $(SOCIALS[net].input).value = s ? (s.handle ? '@' + s.handle : s.url) : ''; });
     bioInput.value = (p.bio || '').slice(0, 40); photoData = p.photo || ''; photoInput.value = '';
     profileError.textContent = ''; saved.textContent = ''; updateCount();
@@ -5201,11 +5228,12 @@ await new Promise(resolve => {
   });
   form.addEventListener('submit', async e => {
     e.preventDefault();
-    const name = $('profileName').value.normalize('NFC').trim().replace(/\s+/g, ' '), fishingName = $('profileFishingName').value.normalize('NFC').trim().replace(/\s+/g, ' '), location = $('profileLocation').value.normalize('NFC').trim().replace(/\s+/g, ' '), cpf = cpfDigits($('profileCpf').value);
+    const name = $('profileName').value.normalize('NFC').trim().replace(/\s+/g, ' '), fishingName = $('profileFishingName').value.normalize('NFC').trim().replace(/\s+/g, ' '), location = $('profileLocation').value.normalize('NFC').trim().replace(/\s+/g, ' '), cpf = cpfDigits($('profileCpf').value), phone = phoneDigits($('profilePhone').value);
     if (name.length < 2 || name.length > 80) { profileError.textContent = 'Informe seu nome completo (de 2 a 80 caracteres).'; $('profileName').focus(); return; }
     if (!fishingName || fishingName.length > 50) { profileError.textContent = 'Informe seu Nome de Pescador (até 50 caracteres).'; $('profileFishingName').focus(); return; }
     if (!location || location.length > 100) { profileError.textContent = 'Informe sua cidade (até 100 caracteres).'; $('profileLocation').focus(); return; }
     if (cpf && !validCPF(cpf)) { profileError.textContent = 'Confira o CPF informado ou deixe o campo em branco.'; $('profileCpf').focus(); return; }
+    if (phone && !validPhone(phone)) { profileError.textContent = 'Confira o telefone (com DDD) ou deixe o campo em branco.'; $('profilePhone').focus(); return; }
     const { social, invalid } = readSocialInputs();
     if (invalid.length) {
       const net = SOCIALS[invalid[0]], hint = { instagram: 'instagram.com/usuario', youtube: 'youtube.com/@canal', tiktok: 'tiktok.com/@usuario' }[invalid[0]];
@@ -5219,7 +5247,7 @@ await new Promise(resolve => {
       source = { photoSrc: cropState.src, crop: { z: cropState.z, cx: cropState.cx, cy: cropState.cy } };
     }
     const saveBtn = form.querySelector('button[type=submit]'); saveBtn.disabled = true;
-    try { await Promise.all([fb.saveProfile(currentUser(), p), fb.setPhotoSource(currentUser(), source), fb.setPrivateProfile(fb.authUid(), { cpf })]); }
+    try { await Promise.all([fb.saveProfile(currentUser(), p), fb.setPhotoSource(currentUser(), source), fb.setPrivateProfile(fb.authUid(), { cpf, phone })]); }
     catch (e2) { profileError.textContent = 'Não foi possível salvar o perfil. ' + fb.errMsg(e2); return; }
     finally { saveBtn.disabled = false; }
     stopCrop();
@@ -5336,7 +5364,7 @@ await new Promise(resolve => {
     const badge = $('adminBadge'); badge.hidden = !isAdmin() || !pendingTotal; badge.textContent = pendingTotal;
     const cnt = $('cntReq'); cnt.textContent = pendingTotal || ''; cnt.classList.toggle('alert', pendingTotal > 0);
     if (!isAdmin()) return;
-    $('memberApplicationList').innerHTML = memberApplications.length ? memberApplications.map(app => `<li class="review-history-row" data-member-application="${esc(app.uid)}"><span class="grow"><b>${esc(app.username || 'Novo membro')}</b><small>${esc(app.fullName || 'Nome completo não informado')} · ${esc(app.city || 'Cidade não informada')} · CPF ${app.cpf ? esc(formatCPF(app.cpf)) : 'não informado'}</small><small>${esc(app.email || '')} · Solicitação em ${fmtShort(app.created)}</small></span><button class="btn btn-primary" type="button" data-member-application-act="approve">Aprovar acesso</button><button class="btn btn-danger" type="button" data-member-application-act="reject">Recusar acesso</button></li>`).join('') : '<li class="empty-row">Nenhum novo cadastro aguardando aprovação.</li>';
+    $('memberApplicationList').innerHTML = memberApplications.length ? memberApplications.map(app => `<li class="review-history-row" data-member-application="${esc(app.uid)}"><span class="grow"><b>${esc(app.username || 'Novo membro')}</b><small>${esc(app.fullName || 'Nome completo não informado')} · ${esc(app.city || 'Cidade não informada')} · CPF ${app.cpf ? esc(formatCPF(app.cpf)) : 'não informado'} · Tel. ${app.phone ? esc(formatPhone(app.phone)) : 'não informado'}</small><small>${esc(app.email || '')} · Solicitação em ${fmtShort(app.created)}</small></span><button class="btn btn-primary" type="button" data-member-application-act="approve">Aprovar acesso</button><button class="btn btn-danger" type="button" data-member-application-act="reject">Recusar acesso</button></li>`).join('') : '<li class="empty-row">Nenhum novo cadastro aguardando aprovação.</li>';
     $('memberApplicationHistory').innerHTML = rejectedMemberApplications.length ? rejectedMemberApplications.map(app => `<li class="review-history-row" data-member-application="${esc(app.uid)}"><span class="grow"><b>${esc(app.username || 'Novo membro')}</b><small>${esc(app.email || '')} · Recusado em ${fmtShort(app.reviewed)}</small></span><button class="btn btn-ghost" type="button" data-member-application-act="reopen">Reabrir solicitação</button></li>`).join('') : '<li class="empty-row">Nenhum acesso recusado.</li>';
     $('reqAdminList').innerHTML = pending.length ? pending.map(r => `<li class="req-card" data-req="${esc(r.id)}">
         <div class="rphoto" ${safeImageSrc(reqPhotos[r.id]) ? `style="background-image:url('${safeImageSrc(reqPhotos[r.id])}')"` : ''} role="img" aria-label="Foto enviada para ${esc(r.name)}"></div>
