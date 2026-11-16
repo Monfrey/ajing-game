@@ -930,14 +930,15 @@ select{font:inherit;color:inherit}
   .container,.hero,section.block,.manifesto,.refs,.managed-content-list,.ajing-subnav{width:95%}
   .btn-members .lbl{display:none}
   .hero{padding:32px 0}
-  .slide{grid-template-columns:minmax(0,1fr);gap:16px;align-content:start}
-  .slide-media{width:140px;grid-row:1}
+  .slide{grid-template-columns:minmax(0,1fr) minmax(96px,30vw);gap:12px;align-content:center}
+  .slide-title{font-size:clamp(1.45rem,6.5vw,2rem)}
+  .slide-media{width:100%;grid-row:auto}
   .slide-media.photo{width:100%;aspect-ratio:16/9}
   .slide.image-overlay{min-height:clamp(360px,108vw,500px)}
   .slide.image-overlay .slide-overlay-content{padding:24px 20px}
   .slide.image-overlay .slide-bg-image{object-fit:contain}
   .slides{min-height:0}
-  .slide.image-overlay.image-only{width:95%;height:100%;min-height:clamp(360px,108vw,500px);aspect-ratio:auto}
+  .slide.image-overlay.image-only{width:95%;height:100%;min-height:0;aspect-ratio:auto}
   .social-head>div{width:100%;min-width:0}
   .social-head>div p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .slide.image-overlay::before{background:linear-gradient(180deg,rgba(5,20,30,.82),rgba(5,20,30,.56) 70%,rgba(5,20,30,.34))}
@@ -4507,7 +4508,14 @@ await new Promise(resolve => {
     if (touchX === null) return; const dx = e.changedTouches[0].clientX - touchX; touchX = null;
     if (Math.abs(dx) > 50) { goSlide(car.idx + (dx < 0 ? 1 : -1)); restartAuto(); }
   });
-  $('heroSlides').addEventListener('click', e => { if (e.target.closest('[data-open-members]')) { currentUser() ? showMembers() : openLogin(); } });
+  $('heroSlides').addEventListener('click', e => {
+    if (e.target.closest('[data-open-members]')) { currentUser() ? showMembers() : openLogin(); return; }
+    const link = e.target.closest('a[href^="#"]'); if (!link) return;
+    const target = document.querySelector(link.getAttribute('href')); if (!target) return;
+    e.preventDefault();
+    showPublicContentPage(target.closest('#ajing-game') ? 'ajing-game' : 'home');
+    requestAnimationFrame(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  });
 
   /* Administração do carrossel */
   const slideForm = $('slideForm'), slideError = $('slideError');
