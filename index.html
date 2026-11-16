@@ -117,15 +117,15 @@ p{margin:0}
 /* ===== Sections ===== */
 section.block{width:80%;margin-inline:auto;padding:64px 0}
 section.alt{background:var(--surface);border-block:1px solid var(--line)}
-.sec-head{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:48px;align-items:end;margin-bottom:32px}
+.sec-head{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:clamp(24px,3vw,48px);align-items:start;margin-bottom:28px}
 .sec-label{display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:600;color:var(--accent);margin-bottom:10px}
 .sec-label::before{content:"";width:18px;height:3px;border-radius:2px;background:var(--spectrum)}
 .sec-title{font-size:clamp(1.6rem,2.8vw,2.2rem);font-weight:750}
 .sec-intro{color:var(--muted);max-width:68ch}
 
 /* Conceito */
-.concept-body{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:40px}
-.prose p{color:var(--muted);margin-bottom:14px;max-width:70ch}
+.concept-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px;align-items:start}
+.prose p{color:var(--muted);margin-bottom:14px;max-width:78ch}
 .prose strong,.prose em{color:var(--ink)}
 .quote{margin:0;padding:18px 20px;border-radius:var(--radius);background:var(--surface-2);border-left:3px solid var(--accent);font-size:1.05rem;font-weight:600;line-height:1.45}
 .pillars{margin-top:14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
@@ -134,7 +134,7 @@ section.alt{background:var(--surface);border-block:1px solid var(--line)}
 .pillars b{display:block;color:var(--ink);font-size:.95rem}
 
 /* Origem */
-.origin-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:40px;align-items:start}
+.origin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px;align-items:start}
 .callout{padding:18px 20px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg);font-size:.9rem;color:var(--muted)}
 .callout strong{display:block;color:var(--ink);margin-bottom:4px}
 .callout + .callout{margin-top:12px}
@@ -151,7 +151,7 @@ section.alt{background:var(--surface);border-block:1px solid var(--line)}
 .tag{display:inline-block;font-size:.75rem;font-weight:600;color:var(--muted);background:var(--surface-2);padding:3px 9px;border-radius:999px}
 .adapt-card h3{font-size:1.12rem;margin:12px 0 8px}
 .adapt-card p{font-size:.9rem;color:var(--muted)}
-.footnote{margin-top:18px;font-size:.84rem;color:var(--muted);max-width:90ch}
+.footnote{margin-top:18px;padding:14px 16px;border-left:3px solid var(--accent);border-radius:var(--radius-sm);background:var(--surface-2);font-size:.84rem;color:var(--muted);max-width:none}
 
 /* Trabalhos */
 .work-card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
@@ -1137,6 +1137,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .ajing-subnav .container{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
   .ajing-subnav .container::-webkit-scrollbar{display:none}
   .ajing-subnav a{flex:0 0 auto;white-space:nowrap;padding:6px 8px;font-size:.78rem}
+}
+@media (min-width:721px){
+  .container,.managed-content-list{padding-inline:clamp(12px,1.25vw,20px)}
 }
 </style>
 <script>
