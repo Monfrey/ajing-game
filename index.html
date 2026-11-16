@@ -1171,8 +1171,14 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
    e reduzida por inteiro, para textos, números e ícones manterem a proporção */
 .slide.champ-slide{--cs:.94;grid-template-columns:minmax(0,1fr) calc(320px * var(--cs) + 48px);gap:40px}
 .slide.champ-slide .champ-slide-media{width:calc(320px * var(--cs) + 28px);height:calc(447px * var(--cs) + 40px);justify-self:end;overflow:visible}
-.slide.champ-slide .champ-slide-card{position:relative;display:block;width:100%;height:100%;padding:0;perspective:none}
-.slide.champ-slide .champ-slide-card .tcard{position:absolute;left:50%;top:calc(50% - 10px);width:320px;max-width:none;margin:0;transform:translate(-50%,-50%) rotate(3deg) scale(var(--cs));transform-origin:center}
+.slide.champ-slide .champ-slide-card{position:relative;display:grid;place-items:center;width:100%;height:100%;padding:0 0 12px;perspective:none}
+/* zoom redesenha a carta já no tamanho menor (texto nítido); a escala por transform borrava */
+.slide.champ-slide .champ-slide-card .tcard{position:relative;left:auto;top:auto;width:320px;max-width:none;margin:0;zoom:var(--cs);transform:rotate(3deg);transform-style:flat}
+/* Carta centralizada na metade direita do slide (sem o espaço vazio entre o texto e a carta) */
+@media (min-width:721px){
+  .slide.champ-slide{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
+  .slide.champ-slide .champ-slide-media{justify-self:center}
+}
 @media (max-width:1100px){.slide.champ-slide{--cs:.82;gap:28px}}
 @media (max-width:920px){.slide.champ-slide{--cs:.72;gap:22px}}
 @media (max-width:720px){
@@ -1188,6 +1194,12 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .managed-article.is-gallery .managed-gallery{gap:clamp(6px,1vw,14px)}
 .managed-article.is-gallery .managed-gallery img{border-radius:0}
 @media (max-width:720px){.managed-article.is-gallery .managed-gallery{grid-template-columns:1fr}}
+/* Slide "imagem ao lado do texto": imagem maior no computador e no tablet */
+@media (min-width:721px){
+  .slide:not(.image-overlay):not(.champ-slide):has(>.slide-media>img){grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:clamp(24px,3vw,48px)}
+  .slide:not(.image-overlay):not(.champ-slide)>.slide-media:has(>img){aspect-ratio:auto;height:clamp(240px,30vw,420px)}
+  .slide:not(.image-overlay):not(.champ-slide)>.slide-media>img{width:100%;height:100%;object-fit:contain}
+}
 </style>
 <script>
 (() => {
