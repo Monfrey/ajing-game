@@ -1247,6 +1247,13 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .signup-actions .btn{width:100%;min-width:0}
   .signup-form .pc-only{display:none}
 }
+/* CPF e telefone bloqueados para o membro; edição pelo administrador */
+.locked-field{background:var(--surface-2)!important;color:var(--muted)!important;cursor:not-allowed}
+.user-private-fields{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px;margin:0;padding:12px;border:1px dashed var(--line);border-radius:var(--radius-sm);background:var(--bg);min-width:0}
+.user-private-fields legend{padding:0 6px;font-size:.82rem;font-weight:700}
+.user-private-fields legend small{font-weight:400;color:var(--muted)}
+.user-private-fields .user-private-info{grid-column:1/-1;margin:0;padding:0;border:0;background:none;font-size:.82rem;color:var(--muted)}
+@media (max-width:560px){.user-private-fields{grid-template-columns:minmax(0,1fr)}}
 </style>
 <script>
 (() => {
@@ -1785,7 +1792,11 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                   <div class="field" id="uPassField"><label for="uPass" id="uPassLabel">Senha</label><input id="uPass" type="password" maxlength="40" autocomplete="new-password"><span class="hint" id="uPassHint">Mínimo de 6 caracteres.</span></div>
                   <div class="field" id="uPass2Field"><label for="uPass2">Confirmar senha</label><input id="uPass2" type="password" maxlength="40" autocomplete="new-password"></div>
                   <label class="u-crown-toggle"><input id="uSeasonChampion" type="checkbox"><span><b>Exibir coroa de campeão da temporada</b><small>Ao marcar, a coroa será transferida para esta carta e removida da carta anterior.</small></span></label>
-                  <div class="user-private-info" id="uPrivateInfo" hidden></div>
+                  <fieldset class="user-private-fields" id="uPrivateFields"><legend>Dados privados <small>(só administradores alteram; o membro não consegue mudar)</small></legend>
+                    <div class="field"><label for="uCpf">CPF</label><input id="uCpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"></div>
+                    <div class="field"><label for="uPhone">Telefone (com DDD)</label><input id="uPhone" type="tel" inputmode="tel" maxlength="15" autocomplete="off" placeholder="(27) 99999-9999"></div>
+                    <p class="user-private-info" id="uPrivateInfo"></p>
+                  </fieldset>
                   <div class="field"><label for="uGoldenHooks">Insígnias de anzol dourado</label><input id="uGoldenHooks" type="number" min="0" max="999" step="1" value="0"><span class="hint">Quantidade acumulada, exibida centralizada na parte inferior da foto da carta.</span></div>
                 </div>
                 <div class="form-error" id="userError" role="alert"></div>
@@ -1865,8 +1876,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                 <div class="field"><label for="profileName">Nome completo</label><input id="profileName" maxlength="80" placeholder="Seu nome completo" required></div>
                 <div class="field"><label for="profileFishingName">Nome de Pescador</label><input id="profileFishingName" maxlength="50" placeholder="Seu nome na comunidade" required></div>
                 <div class="field"><label for="profileLocation">Cidade</label><input id="profileLocation" maxlength="100" placeholder="Ex.: Vila Velha - ES" required></div>
-                <div class="field"><label for="profileCpf">CPF <span class="muted">(opcional)</span></label><input id="profileCpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"></div>
-                <div class="field"><label for="profilePhone">Telefone <span class="muted">(opcional)</span></label><input id="profilePhone" type="tel" inputmode="tel" maxlength="15" autocomplete="tel-national" placeholder="(27) 99999-9999"><span class="hint">CPF e telefone são privados e não aparecem no seu perfil público.</span></div>
+                <div class="field"><label for="profileCpf">CPF</label><input id="profileCpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00" required></div>
+                <div class="field"><label for="profilePhone">Telefone (com DDD)</label><input id="profilePhone" type="tel" inputmode="tel" maxlength="15" autocomplete="tel-national" placeholder="(27) 99999-9999" required><span class="hint" id="privateFieldsHint">CPF e telefone são privados e não aparecem no seu perfil público.</span></div>
                 <div class="field full"><label for="profileBio">Breve descrição</label><textarea id="profileBio" rows="2" maxlength="40" placeholder="Conte um pouco sobre seu estilo de pesca"></textarea><span class="hint" id="bioCount">0 / 40 caracteres</span></div>
                 <div class="field full social-fields" role="group" aria-labelledby="socialLegend">
                   <span class="social-legend" id="socialLegend">Redes sociais <small>(opcional)</small></span>
@@ -2849,7 +2860,7 @@ await new Promise(resolve => {
     const digitAt = length => { let sum = 0; for (let i = 0; i < length; i++) sum += Number(d[i]) * (length + 1 - i); const remainder = (sum * 10) % 11; return remainder === 10 ? 0 : remainder; };
     return digitAt(9) === Number(d[9]) && digitAt(10) === Number(d[10]);
   };
-  ['signupCpf', 'profileCpf'].forEach(id => $(id).addEventListener('input', e => { e.target.value = formatCPF(e.target.value); }));
+  ['signupCpf', 'profileCpf', 'uCpf'].forEach(id => $(id).addEventListener('input', e => { e.target.value = formatCPF(e.target.value); }));
   // Telefone brasileiro com DDD: 10 dígitos (fixo) ou 11 (celular, começando com 9)
   const phoneDigits = value => String(value || '').replace(/\D/g, '').replace(/^0+/, '').slice(0, 11);
   const formatPhone = value => {
@@ -2859,7 +2870,7 @@ await new Promise(resolve => {
     return `(${d.slice(0, 2)}) ${rest.slice(0, split)}${rest.length > split ? '-' + rest.slice(split) : ''}`;
   };
   const validPhone = value => { const d = phoneDigits(value); return /^[1-9][0-9](9[0-9]{8}|[2-8][0-9]{7})$/.test(d); };
-  ['signupPhone', 'profilePhone'].forEach(id => $(id).addEventListener('input', e => { e.target.value = formatPhone(e.target.value); }));
+  ['signupPhone', 'profilePhone', 'uPhone'].forEach(id => $(id).addEventListener('input', e => { e.target.value = formatPhone(e.target.value); }));
   const openLogin = () => {
     lastFocus = document.activeElement;
     setSignupSuccess(false); loginForm.hidden = false; loginError.textContent = ''; $('signupError').textContent = ''; $('loginInfo').textContent = '';
@@ -4452,6 +4463,7 @@ await new Promise(resolve => {
   // Usuários: criar, editar (nome, perfil, senha), desativar/reativar e excluir
   let editingUser = null;
   const activeAdmins = users => users.filter(u => u.role === 'admin' && u.active !== false);
+  let userPrivateOrig = { cpf: '', phone: '' };
   const openUserForm = u => {
     editingUser = u ? u.username : null;
     const self = u && u.username === currentUser();
@@ -4466,14 +4478,18 @@ await new Promise(resolve => {
     $('uEmail').value = ''; $('uEmailField').hidden = !!u; $('uPassField').hidden = !!u; $('uPass2Field').hidden = !!u;
     $('uPass').value = ''; $('uPass2').value = ''; $('userError').textContent = ''; $('userSaved').textContent = '';
     $('userForm').hidden = false; $('userNew').hidden = true; softFocus($('uName'));
-    const info = $('uPrivateInfo'); info.hidden = !u; info.innerHTML = '';
+    const info = $('uPrivateInfo'); info.textContent = '';
+    $('uCpf').value = ''; $('uPhone').value = ''; userPrivateOrig = { cpf: '', phone: '' };
     if (u && u.uid) {
-      info.innerHTML = '<b>Dados privados</b><span>Carregando…</span>';
+      info.textContent = 'Carregando dados privados…'; $('uCpf').disabled = true; $('uPhone').disabled = true;
       Promise.all([fb.getPrivateProfile(u.uid).catch(() => ({})), fb.getEmail(u.uid).catch(() => '')]).then(([priv, email]) => {
         if (editingUser !== u.username) return;
-        info.innerHTML = `<b>Dados privados <small>(só o membro e os administradores veem)</small></b><span>Telefone: ${priv.phone ? esc(formatPhone(priv.phone)) : 'não informado'}</span><span>CPF: ${priv.cpf ? esc(formatCPF(priv.cpf)) : 'não informado'}</span><span>E-mail: ${email ? esc(email) : 'não informado'}</span>`;
+        userPrivateOrig = { cpf: cpfDigits(priv.cpf || ''), phone: phoneDigits(priv.phone || '') };
+        $('uCpf').value = formatCPF(userPrivateOrig.cpf); $('uPhone').value = formatPhone(userPrivateOrig.phone);
+        $('uCpf').disabled = false; $('uPhone').disabled = false;
+        info.textContent = `E-mail de acesso: ${email || 'não informado'}`;
       });
-    }
+    } else { $('uCpf').disabled = false; $('uPhone').disabled = false; }
   };
   const closeUserForm = () => { $('userForm').hidden = true; $('userNew').hidden = false; editingUser = null; };
   $('userNew').addEventListener('click', () => { if (isAdmin()) openUserForm(null); });
@@ -4505,6 +4521,9 @@ await new Promise(resolve => {
     // Nomes iguais sem considerar maiúsculas e acentos ("Hudson" e "hudson") contam como repetidos
     const userKey = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     if (users.some(u => userKey(u.username) === userKey(username) && u.username !== editingUser)) { err.textContent = 'Já existe um usuário com esse nome.'; $('uName').focus(); return; }
+    const uCpf = cpfDigits($('uCpf').value), uPhone = phoneDigits($('uPhone').value);
+    if ((uCpf || userPrivateOrig.cpf) && !validCPF(uCpf)) { err.textContent = 'Confira o CPF (11 dígitos).'; $('uCpf').focus(); return; }
+    if ((uPhone || userPrivateOrig.phone) && !validPhone(uPhone)) { err.textContent = 'Confira o telefone com DDD.'; $('uPhone').focus(); return; }
     if (!editingUser) {
       const email = $('uEmail').value.trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Informe um e-mail válido. Ele será usado para entrar no site.'; $('uEmail').focus(); return; }
@@ -4517,6 +4536,7 @@ await new Promise(resolve => {
         if (seasonChampion) fresh.forEach(x => { x.seasonChampion = false; });
         fresh.push({ uid: newUid, username, role, active: true, seasonChampion, goldHooks });
         await fb.writeQuiet('ajing-users', fresh); await fb.setPrivate(newUid, { email });
+        if (uCpf || uPhone) await fb.setPrivateProfile(newUid, { cpf: uCpf, phone: uPhone });
       } catch (e2) { err.textContent = fb.errMsg(e2); return; }
       finally { save.disabled = false; }
       closeUserForm(); $('userSaved').textContent = `Usuário ${username} criado. Ele entra com ${email} e a senha definida.`; renderAll(); renderChampion(); return;
@@ -4532,6 +4552,10 @@ await new Promise(resolve => {
     u.username = username;
     writeJSON('ajing-users', users);
     if (from !== username) await renameUser(from, username);
+    if (u.uid && (uCpf !== userPrivateOrig.cpf || uPhone !== userPrivateOrig.phone)) {
+      try { await fb.setPrivateProfile(u.uid, { cpf: uCpf, phone: uPhone }); }
+      catch (e3) { err.textContent = 'Os dados do usuário foram salvos, mas não foi possível salvar CPF e telefone. ' + fb.errMsg(e3); return; }
+    }
     const msg = `Usuário ${username} atualizado.`;
     closeUserForm(); renderAll(); renderChampion(); $('userSaved').textContent = msg;
   });
@@ -5222,6 +5246,7 @@ await new Promise(resolve => {
   const updateCount = () => bioCount.textContent = `${bioInput.value.length} / 40 caracteres`;
   const closeEdit = () => { stopCrop(); form.hidden = true; card.hidden = false; renderProfile(); };
   bioInput.addEventListener('input', updateCount);
+  let savedPrivate = { cpf: '', phone: '' };
   $('editProfileBtn').addEventListener('click', async () => {
     const member = currentUser(), uid = fb.authUid(); if (!member || !uid) return;
     $('editProfileBtn').disabled = true;
@@ -5232,8 +5257,14 @@ await new Promise(resolve => {
     if (currentUser() !== member) return;
     const p = readProfile();
     $('profileName').value = p.name || ''; $('profileFishingName').value = p.fishingName || ''; $('profileLocation').value = p.location || '';
-    $('profileCpf').value = formatCPF(privateProfile.cpf || '');
-    $('profilePhone').value = formatPhone(privateProfile.phone || '');
+    // CPF e telefone: obrigatórios; depois de informados, só um administrador pode alterar
+    savedPrivate = { cpf: cpfDigits(privateProfile.cpf || ''), phone: phoneDigits(privateProfile.phone || '') };
+    $('profileCpf').value = formatCPF(savedPrivate.cpf); $('profilePhone').value = formatPhone(savedPrivate.phone);
+    $('profileCpf').readOnly = !!savedPrivate.cpf; $('profilePhone').readOnly = !!savedPrivate.phone;
+    $('profileCpf').classList.toggle('locked-field', !!savedPrivate.cpf); $('profilePhone').classList.toggle('locked-field', !!savedPrivate.phone);
+    $('privateFieldsHint').textContent = savedPrivate.cpf && savedPrivate.phone
+      ? 'CPF e telefone são privados e não aparecem no seu perfil público. Para alterá-los, fale com um administrador.'
+      : 'CPF e telefone são obrigatórios e privados (não aparecem no seu perfil público). Depois de salvos, só um administrador pode alterá-los.';
     Object.keys(SOCIALS).forEach(net => { const s = p.social && p.social[net]; $(SOCIALS[net].input).value = s ? (s.handle ? '@' + s.handle : s.url) : ''; });
     bioInput.value = (p.bio || '').slice(0, 40); photoData = p.photo || ''; photoInput.value = '';
     profileError.textContent = ''; saved.textContent = ''; updateCount();
@@ -5257,12 +5288,13 @@ await new Promise(resolve => {
   });
   form.addEventListener('submit', async e => {
     e.preventDefault();
-    const name = $('profileName').value.normalize('NFC').trim().replace(/\s+/g, ' '), fishingName = $('profileFishingName').value.normalize('NFC').trim().replace(/\s+/g, ' '), location = $('profileLocation').value.normalize('NFC').trim().replace(/\s+/g, ' '), cpf = cpfDigits($('profileCpf').value), phone = phoneDigits($('profilePhone').value);
+    const name = $('profileName').value.normalize('NFC').trim().replace(/\s+/g, ' '), fishingName = $('profileFishingName').value.normalize('NFC').trim().replace(/\s+/g, ' '), location = $('profileLocation').value.normalize('NFC').trim().replace(/\s+/g, ' ');
+    let cpf = cpfDigits($('profileCpf').value), phone = phoneDigits($('profilePhone').value);
     if (name.length < 2 || name.length > 80) { profileError.textContent = 'Informe seu nome completo (de 2 a 80 caracteres).'; $('profileName').focus(); return; }
     if (!fishingName || fishingName.length > 50) { profileError.textContent = 'Informe seu Nome de Pescador (até 50 caracteres).'; $('profileFishingName').focus(); return; }
     if (!location || location.length > 100) { profileError.textContent = 'Informe sua cidade (até 100 caracteres).'; $('profileLocation').focus(); return; }
-    if (cpf && !validCPF(cpf)) { profileError.textContent = 'Confira o CPF informado ou deixe o campo em branco.'; $('profileCpf').focus(); return; }
-    if (phone && !validPhone(phone)) { profileError.textContent = 'Confira o telefone (com DDD) ou deixe o campo em branco.'; $('profilePhone').focus(); return; }
+    if (savedPrivate.cpf) cpf = savedPrivate.cpf; else if (!validCPF(cpf)) { profileError.textContent = 'Informe um CPF válido. Ele é obrigatório.'; $('profileCpf').focus(); return; }
+    if (savedPrivate.phone) phone = savedPrivate.phone; else if (!validPhone(phone)) { profileError.textContent = 'Informe um telefone válido com DDD. Ele é obrigatório.'; $('profilePhone').focus(); return; }
     const { social, invalid } = readSocialInputs();
     if (invalid.length) {
       const net = SOCIALS[invalid[0]], hint = { instagram: 'instagram.com/usuario', youtube: 'youtube.com/@canal', tiktok: 'tiktok.com/@usuario' }[invalid[0]];
