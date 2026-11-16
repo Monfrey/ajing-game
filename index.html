@@ -1200,6 +1200,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .slide:not(.image-overlay):not(.champ-slide)>.slide-media:has(>img){aspect-ratio:auto;height:clamp(240px,30vw,420px)}
   .slide:not(.image-overlay):not(.champ-slide)>.slide-media>img{width:100%;height:100%;object-fit:contain}
 }
+.hero-cta:empty{display:none}
 </style>
 <script>
 (() => {
@@ -4578,7 +4579,7 @@ await new Promise(resolve => {
         const img = '', winnerName = champion ? displayName(champion.user) : s.type === 'ranking-champion' ? 'O campeão pode ser você' : 'O próximo campeão pode ser você';
         const eventLine = champion ? [champion.name, champion.range].filter(Boolean).join(' · ') : s.type === 'ranking-champion' ? 'Publique no Social Fish e participe da premiação' : 'Aguardando a escolha do administrador';
         const stats = champion ? `<div class="champ-stats"><div><b>${fmtNum(champion.points)}</b><small>pontos no período</small></div><div><b>${champion.count}</b><small>${champion.count === 1 ? 'captura' : 'capturas'}</small></div></div>` : '';
-        const actions = `${champion ? `<button class="btn btn-primary" type="button" data-card-user="${esc(champion.user)}">Ver carta</button>` : ''}${buttonHTML(s.b1, 'btn-primary')}${buttonHTML(s.b2, 'btn-ghost')}`;
+        const actions = `${buttonHTML(s.b1, 'btn-primary')}${buttonHTML(s.b2, 'btn-ghost')}`;
         return `<div class="slide champ-slide" role="group" aria-roledescription="slide" aria-label="${i + 1} de ${list.length}">
           <div class="champ-info"><span class="champ-tag">${trophyIcon} ${esc(s.title || 'Campeão da edição')}</span>
             <${H} class="slide-title">${esc(winnerName)}${champion ? `<span>${esc(champion.name)}</span>` : ''}</${H}>
