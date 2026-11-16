@@ -152,7 +152,7 @@ section.alt{background:var(--surface);border-block:1px solid var(--line)}
 
 /* Trabalhos */
 .work-card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
-.work-card .ph{aspect-ratio:16/9;background:var(--surface-2);overflow:hidden}
+.work-card .ph{aspect-ratio:4/3;background:var(--surface-2);overflow:hidden}
 .work-card .ph img{width:100%;height:100%;object-fit:cover}
 .work-card .body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:10px;flex:1}
 .work-card h3{font-size:1.05rem}
@@ -671,6 +671,30 @@ select{font:inherit;color:inherit}
 .site-copy-group legend{grid-column:1/-1;padding:0 6px;font-size:.9rem;font-weight:650}
 .site-copy-group .field.full{grid-column:1/-1}
 .site-copy-fields .field textarea{min-height:52px;resize:vertical}
+.managed-content-admin{margin-top:24px;padding-top:18px;border-top:1px solid var(--line)}
+.managed-content-form{padding:14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.rich-toolbar{display:flex;gap:6px;margin:0 0 6px}
+.rich-toolbar button{min-width:34px;height:30px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);cursor:pointer}
+.rich-editor{min-height:120px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg);color:var(--ink);outline-color:var(--accent)}
+.rich-editor:empty::before{content:attr(data-placeholder);color:var(--muted)}
+.managed-content-admin-list{display:grid;gap:8px;margin:14px 0 0;padding:0;list-style:none}
+.managed-content-admin-list li{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface)}
+.managed-content-admin-list .grow{flex:1;min-width:0}.managed-content-admin-list small{display:block;color:var(--muted)}
+.managed-content-list{display:grid;gap:20px;padding:24px 0}
+.managed-article{padding:clamp(18px,3vw,32px);border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.managed-article h2{margin:0 0 6px;font-size:clamp(1.35rem,2.5vw,2rem)}
+.managed-article .managed-subtitle{margin:0 0 18px;color:var(--muted);font-size:1.04rem}
+.managed-article-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,.8fr);gap:22px;align-items:start}
+.managed-article-body.no-image{grid-template-columns:1fr}.managed-article-image{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--radius)}
+.managed-article-after{margin-top:16px}.managed-article p:last-child{margin-bottom:0}
+.managed-gallery{display:grid;grid-template-columns:repeat(var(--gallery-count,3),minmax(0,1fr));gap:14px}
+.managed-gallery.gallery-1{grid-template-columns:1fr}.managed-gallery.gallery-2{grid-template-columns:repeat(2,minmax(0,1fr))}.managed-gallery.gallery-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.managed-gallery img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--radius);background:var(--surface-2)}
+.ajing-subnav{position:sticky;top:var(--header-height,0);z-index:5;padding:8px 0;border-bottom:1px solid var(--line);background:var(--surface)}
+.ajing-subnav .container{display:flex;flex-wrap:wrap;gap:6px}
+.ajing-subnav a{padding:6px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:.82rem}
+.ajing-subnav a:hover{border-color:var(--accent);color:var(--ink)}
+#homeContentEntries:empty,#ajingManagedContent:empty{display:none}
 .partner-admin-list{max-height:480px}
 .partner-admin-thumb{width:68px;height:48px;flex:none;object-fit:contain;padding:4px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface)}
 .partner-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:24px}
@@ -678,7 +702,8 @@ select{font:inherit;color:inherit}
 .partner-card img{display:block;width:100%;height:100%;margin:0;object-fit:contain}
 .partner-card a{display:block;width:100%;height:100%;margin:0;padding:0;color:inherit;text-decoration:none}
 @media(max-width:720px){.partner-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}
-@media(max-width:560px){.sf-grid,.site-copy-group{grid-template-columns:minmax(0,1fr)}.sf-grid .full,.site-copy-group .field.full{grid-column:auto}.site-copy-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.site-copy-nav button{min-height:38px;border-radius:var(--radius-sm)}}
+@media(max-width:720px){.managed-article-body{grid-template-columns:1fr}.managed-article-image{grid-row:2}}
+@media(max-width:560px){.sf-grid,.site-copy-group{grid-template-columns:minmax(0,1fr)}.sf-grid .full,.site-copy-group .field.full{grid-column:auto}.site-copy-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.site-copy-nav button{min-height:38px;border-radius:var(--radius-sm)}.managed-content-admin-list li{flex-wrap:wrap}}
 .img-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .img-thumb{width:64px;height:48px;border-radius:4px;border:1px solid var(--line);background:var(--surface-2) center/contain no-repeat}
 @media (max-width:720px){.sf-grid{grid-template-columns:minmax(0,1fr)}}
@@ -1136,12 +1161,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       <span class="brand-name"><span data-brand-title>AJING GAME</span><small data-brand-subtitle>Extreme Finesse</small></span>
     </a>
     <nav class="nav-links" id="navLinks" aria-label="Navegação principal">
-      <a href="#conceito" data-home data-site-copy="nav.conceito">Conceito</a>
-      <a href="#origem" data-home data-site-copy="nav.origem">Origem</a>
-      <a href="#adaptacoes" data-home data-site-copy="nav.adaptacoes">Adaptações</a>
-      <a href="#trabalhos" data-home data-site-copy="nav.trabalhos">Trabalhos da isca</a>
-      <a href="#fundamentos" data-home data-site-copy="nav.fundamentos">Fundamentos</a>
-      <a href="#parceiros" data-home data-site-copy="nav.parceiros">Parceiros</a>
+      <a href="#inicio" data-home>Home</a>
+      <a href="#ajing-game" data-home>Ajing Game</a>
     </nav>
     <div class="nav-actions">
       <button class="btn btn-members" id="membersBtn" type="button" aria-label="Área de membros">
@@ -1170,14 +1191,18 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
           </div>
         </div>
       </div>
-      <div class="facts">
-        <div><strong data-site-copy="facts.1.title">Japão</strong><span data-site-copy="facts.1.text">Origem da técnica</span></div>
-        <div><strong data-site-copy="facts.2.title">Ultralight</strong><span data-site-copy="facts.2.text">Filosofia de pesca</span></div>
-        <div><strong data-site-copy="facts.3.title">Global</strong><span data-site-copy="facts.3.text">Novas possibilidades</span></div>
-      </div>
     </div>
   </section>
 
+  <div id="homeContentEntries" class="managed-content-list" aria-live="polite"></div>
+  <div id="ajing-game" hidden>
+    <nav class="ajing-subnav" aria-label="Conteúdos Ajing Game"><div class="container" id="ajingSubnavLinks"></div></nav>
+    <div class="container"><div class="facts">
+      <div><strong data-site-copy="facts.1.title">Japão</strong><span data-site-copy="facts.1.text">Origem da técnica</span></div>
+      <div><strong data-site-copy="facts.2.title">Ultralight</strong><span data-site-copy="facts.2.text">Filosofia de pesca</span></div>
+      <div><strong data-site-copy="facts.3.title">Global</strong><span data-site-copy="facts.3.text">Novas possibilidades</span></div>
+    </div></div>
+    <div id="ajingManagedContent" class="managed-content-list" aria-live="polite"></div>
   <section class="block" id="conceito">
     <div class="container">
       <div class="sec-head">
@@ -1308,6 +1333,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     </div>
   </section>
 
+  </div>
   <section class="block alt" id="parceiros">
     <div class="container">
       <div class="sec-head">
@@ -1430,7 +1456,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
             </form>
           </div>
           <div class="admin-box" data-admin-panel="site-content" hidden>
-            <div class="panel-head"><div><h3>Conteúdo da página inicial</h3><p>Edite títulos, textos, chamadas e descrições das seções públicas. As alterações aparecem para todos os visitantes.</p></div></div>
+            <div class="panel-head"><div><h3>Conteúdo do site</h3><p>Edite os textos existentes e crie novas publicações formatadas para Home ou Ajing Game.</p></div></div>
             <form id="siteContentForm" novalidate>
               <fieldset class="site-copy-group brand-admin-fields">
                 <legend>Marca do site</legend>
@@ -1444,6 +1470,27 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               <div class="form-error" id="siteContentError" role="alert"></div>
               <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar conteúdo</button><button class="btn btn-ghost" id="siteContentReset" type="button">Restaurar padrão</button><span class="muted" id="siteContentStatus" role="status"></span></div>
             </form>
+            <section class="managed-content-admin" aria-labelledby="managedContentTitle">
+              <div class="panel-head"><div><h3 id="managedContentTitle">Novos conteúdos</h3><p>Crie artigos formatados ou galerias de até três imagens para Home ou Ajing Game.</p></div></div>
+              <form id="managedContentForm" class="managed-content-form" novalidate>
+                <input id="managedContentId" type="hidden">
+                <div class="sf-grid">
+                  <div class="field"><label for="managedContentPlacement">Publicar em</label><select id="managedContentPlacement"><option value="home">Home</option><option value="ajing-game">Ajing Game</option></select></div>
+                  <div class="field" id="managedContentSectionField"><label for="managedContentSection">Submenu</label><select id="managedContentSection"><option value="fundamentos">Fundamentos</option><option value="conceito">Conceito</option><option value="origem">Origem</option><option value="adaptacoes">Adaptações</option><option value="trabalhos">Trabalhos da isca</option><option value="manifesto">Manifesto</option><option value="referencias">Referências</option><option value="extras">Outros conteúdos</option></select></div>
+                  <div class="field"><label for="managedContentType">Formato</label><select id="managedContentType"><option value="article">Texto com imagem opcional</option><option value="gallery">Galeria de 1 a 3 fotos</option></select></div>
+                  <div class="field"><label for="managedContentTitleInput">Título</label><input id="managedContentTitleInput" maxlength="120" required></div>
+                  <div class="field"><label for="managedContentSubtitle">Subtítulo</label><input id="managedContentSubtitle" maxlength="220"></div>
+                  <div class="field full" id="managedArticleFields"><label>Texto principal</label><div class="rich-toolbar"><button type="button" data-rich-command="bold" data-rich-target="managedTextBefore" aria-label="Negrito"><b>N</b></button><button type="button" data-rich-command="italic" data-rich-target="managedTextBefore" aria-label="Itálico"><i>I</i></button></div><div id="managedTextBefore" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Escreva o conteúdo principal"></div></div>
+                  <div class="field full" id="managedArticleImageField"><label for="managedArticleImage">Imagem lateral (opcional)</label><input id="managedArticleImage" type="file" accept="image/*"><label><input id="managedArticleImageClear" type="checkbox"> Remover imagem atual</label></div>
+                  <div class="field full" id="managedTextAfterField"><label>Texto complementar</label><div class="rich-toolbar"><button type="button" data-rich-command="bold" data-rich-target="managedTextAfter" aria-label="Negrito"><b>N</b></button><button type="button" data-rich-command="italic" data-rich-target="managedTextAfter" aria-label="Itálico"><i>I</i></button></div><div id="managedTextAfter" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Texto abaixo da imagem (opcional)"></div></div>
+                  <div class="field full" id="managedGalleryField" hidden><label for="managedGalleryImages">Fotos da galeria (selecione de 1 a 3)</label><input id="managedGalleryImages" type="file" accept="image/*" multiple></div>
+                  <div class="field"><label><input id="managedContentVisible" type="checkbox" checked> Exibir conteúdo</label></div>
+                </div>
+                <div class="form-error" id="managedContentError" role="alert"></div>
+                <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar conteúdo</button><button class="btn btn-ghost" id="managedContentCancel" type="button" hidden>Cancelar edição</button><span class="muted" id="managedContentStatus" role="status"></span></div>
+              </form>
+              <ul id="managedContentAdminList" class="managed-content-admin-list"></ul>
+            </section>
           </div>
           <div class="admin-box" data-admin-panel="partners" hidden>
             <div class="panel-head"><div><h3>Marcas parceiras</h3><p>Cadastre cada parceiro com uma foto. As fotos aparecem na página pública em quatro colunas no computador e duas no celular.</p></div></div>
@@ -1910,7 +1957,7 @@ const fbApp = initializeApp(FIREBASE_CONFIG), fbAuth = getAuth(fbApp);
 let fdb;
 try { fdb = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
 catch (_) { fdb = getFirestore(fbApp); }
-const PUBLIC_COLS = ['users', 'species', 'championships', 'rankHistory', 'config', 'profiles', 'posts', 'slides', 'levelIcons', 'partners'];
+const PUBLIC_COLS = ['users', 'species', 'championships', 'rankHistory', 'config', 'profiles', 'posts', 'slides', 'levelIcons', 'partners', 'siteContentItems'];
 // Imagens usadas apenas na área autenticada não são baixadas para visitantes da página pública.
 const MEMBER_COLS = ['speciesPhotos', 'banners', 'eventRequests', 'speciesRequests', 'requestPhotos'];
 const C = {}; [...PUBLIC_COLS, ...MEMBER_COLS].forEach(n => { C[n] = {}; }); C.memberApplications = {};
@@ -2105,6 +2152,9 @@ const fb = {
   user: fbUser, authUid: () => authUid,
   memberApplications: () => clean(C.memberApplications || {}),
   config: id => C.config[id] ? clean(C.config[id]) : null,
+  siteContentItems: () => Object.values(C.siteContentItems || {}).map(clean).sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.createdAt || '').localeCompare(String(b.createdAt || ''))),
+  saveSiteContentItem: async item => { if (!fbIsAdmin()) throw { code: 'permission-denied' }; const value = clean(item); await setDoc(fsDoc(fdb, 'siteContentItems', value.id), value); C.siteContentItems = { ...C.siteContentItems, [value.id]: value }; },
+  deleteSiteContentItem: async id => { if (!fbIsAdmin()) throw { code: 'permission-denied' }; await deleteDoc(fsDoc(fdb, 'siteContentItems', id)); const next = { ...C.siteContentItems }; delete next[id]; C.siteContentItems = next; },
   partners: () => Object.values(C.partners || {}).map(clean),
   setConfig: (id, data) => { C.config = { ...C.config, [id]: clean(data) }; if (id === 'siteContent') window.__ajingSiteConfigLoaded = true; return setDoc(fsDoc(fdb, 'config', id), clean(data)); },
   saveLevelSystem: async levels => {
@@ -2537,6 +2587,28 @@ await new Promise(resolve => {
     const target = document.querySelector(a.getAttribute('href'));
     requestAnimationFrame(() => target && target.scrollIntoView({ behavior: 'smooth' }));
   }));
+  const showPublicContentPage = page => {
+    const ajing = $('ajing-game'), hero = $('inicio'), partners = $('parceiros'), homeEntries = $('homeContentEntries');
+    if (!ajing || !hero || !partners) return;
+    ajing.hidden = page !== 'ajing-game'; hero.hidden = page === 'ajing-game'; partners.hidden = page === 'ajing-game';
+    homeEntries.hidden = page === 'ajing-game'; closeMenu();
+    if (home.hidden) showHome();
+    requestAnimationFrame(() => {
+      const target = page === 'ajing-game' ? ajing : $('home');
+      window.scrollTo({ top: target === ajing ? ajing.offsetTop : 0, behavior: 'smooth' });
+    });
+  };
+  $('navLinks').addEventListener('click', e => {
+    const link = e.target.closest('a[href="#inicio"],a[href="#ajing-game"]'); if (!link) return;
+    e.preventDefault(); showPublicContentPage(link.getAttribute('href') === '#ajing-game' ? 'ajing-game' : 'home');
+  });
+  $('ajingSubnavLinks').addEventListener('click', e => {
+    const link = e.target.closest('a[href^="#"]'); if (!link) return;
+    const target = document.querySelector(link.getAttribute('href')); if (!target) return;
+    e.preventDefault(); if (home.hidden) showHome(); $('ajing-game').hidden = false; $('inicio').hidden = true; $('parceiros').hidden = true;
+    requestAnimationFrame(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  });
+  if (location.hash && location.hash !== '#inicio' && location.hash !== '#home' && document.querySelector(`#ajing-game ${CSS.escape(location.hash.slice(1))}`)) showPublicContentPage('ajing-game');
 
   /* ===== Login ===== */
   const modal = $('loginModal'), loginForm = $('loginForm'), loginError = $('loginError'), signupForm = $('signupForm'), signupSuccess = $('signupSuccess');
@@ -3506,12 +3578,23 @@ await new Promise(resolve => {
     const field = part.match(/^(title|text|tag|action|use)$/); if (field) return ({ title:'título', text:'texto', tag:'categoria', action:'ação', use:'indicação' })[part];
     return part.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([a-z])([0-9]+)/gi, '$1 $2').replace(/^./, c => c.toUpperCase());
   }).join(' · ');
+  const sanitizeSiteRichText = html => {
+    const doc = new DOMParser().parseFromString(String(html || ''), 'text/html'), allowed = new Set(['B','STRONG','I','EM','P','BR','UL','OL','LI']);
+    const cleanNode = node => {
+      if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.nodeValue || '');
+      if (node.nodeType !== Node.ELEMENT_NODE) return document.createDocumentFragment();
+      const children = [...node.childNodes].map(cleanNode), tag = node.tagName.toUpperCase();
+      if (!allowed.has(tag)) { const fragment = document.createDocumentFragment(); children.forEach(child => fragment.append(child)); return fragment; }
+      const element = document.createElement(tag.toLowerCase()); children.forEach(child => element.append(child)); return element;
+    };
+    return [...doc.body.childNodes].map(node => { const wrapper = document.createElement('div'); wrapper.append(cleanNode(node)); return wrapper.innerHTML; }).join('');
+  };
   const renderSiteCopy = () => {
     const saved = savedSiteContent();
     applySiteBrand(saved.brand || {});
     siteCopyNodes.forEach(node => {
       const value = saved[node.dataset.siteCopy];
-      if (typeof value === 'string') node.textContent = value;
+      if (typeof value === 'string') node.innerHTML = sanitizeSiteRichText(value);
       else node.innerHTML = siteCopyDefaultHTML.get(node);
     });
     const visibility = saved.visibility || {};
@@ -3536,11 +3619,12 @@ await new Promise(resolve => {
     if (!groups.includes(activeSiteCopyGroup)) activeSiteCopyGroup = groups[0] || '';
     const visibility = saved.visibility || {};
     const fields = group => keys.filter(key => key.split('.')[0] === group).map(key => {
-      const id = `copy-${key.replace(/[^a-z0-9_-]/gi, '-')}`, value = typeof saved[key] === 'string' ? saved[key] : siteCopyDefaults[key];
-      const long = value.length > 90, full = value.length > 170;
-      return `<div class="field${full ? ' full' : ''}"><label for="${esc(id)}">${esc(siteCopyLabel(key))}</label>${long ? `<textarea id="${esc(id)}" data-site-copy-edit="${esc(key)}" rows="2" maxlength="1600">${esc(value)}</textarea>` : `<input id="${esc(id)}" data-site-copy-edit="${esc(key)}" type="text" maxlength="300" value="${esc(value)}">`}</div>`;
+      const id = `copy-${key.replace(/[^a-z0-9_-]/gi, '-')}`, node = siteCopyNodes.find(item => item.dataset.siteCopy === key), value = typeof saved[key] === 'string' ? saved[key] : (node ? node.innerHTML : siteCopyDefaults[key]);
+      const plain = new DOMParser().parseFromString(String(value), 'text/html').body.textContent, long = plain.length > 90, full = plain.length > 170;
+      const editor = `<div class="rich-toolbar"><button type="button" data-copy-rich="bold" data-copy-target="${esc(id)}" aria-label="Negrito"><b>N</b></button><button type="button" data-copy-rich="italic" data-copy-target="${esc(id)}" aria-label="Itálico"><i>I</i></button></div><div id="${esc(id)}" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-site-copy-edit="${esc(key)}">${sanitizeSiteRichText(value)}</div>`;
+      return `<div class="field${full ? ' full' : ''}"><label for="${esc(id)}">${esc(siteCopyLabel(key))}</label>${long ? editor : `<input id="${esc(id)}" data-site-copy-edit="${esc(key)}" type="text" maxlength="300" value="${esc(plain)}">`}</div>`;
     }).join('');
-    host.innerHTML = `<nav class="site-copy-nav" aria-label="Submenus do conteúdo do site">${groups.map(group => `<button type="button" data-site-copy-group-button="${esc(group)}" aria-current="${String(group === activeSiteCopyGroup)}">${esc(siteCopyGroups[group] || group)}</button>`).join('')}</nav>${groups.map(group => `<fieldset class="site-copy-group" data-site-copy-group="${esc(group)}"${group === activeSiteCopyGroup ? '' : ' hidden'}><legend>${esc(siteCopyGroups[group] || group)}</legend><div class="site-copy-visible"><label for="copy-visible-${esc(group)}"><input id="copy-visible-${esc(group)}" type="checkbox" data-site-copy-visible="${esc(group)}" ${visibility[group] === false ? '' : 'checked'}>Exibir na página inicial</label><span class="muted">${esc(siteVisibilityDescriptions[group] || '')}</span></div>${fields(group)}</fieldset>`).join('')}`;
+    host.innerHTML = `<nav class="site-copy-nav" aria-label="Submenus do conteúdo do site">${groups.map(group => `<button type="button" data-site-copy-group-button="${esc(group)}" aria-current="${String(group === activeSiteCopyGroup)}">${esc(siteCopyGroups[group] || group)}</button>`).join('')}</nav>${groups.map(group => `<fieldset class="site-copy-group" data-site-copy-group="${esc(group)}"${group === activeSiteCopyGroup ? '' : ' hidden'}><legend>${esc(siteCopyGroups[group] || group)}</legend><div class="site-copy-visible"><label for="copy-visible-${esc(group)}"><input id="copy-visible-${esc(group)}" type="checkbox" data-site-copy-visible="${esc(group)}" ${visibility[group] === false ? '' : 'checked'}>Exibir este conteúdo</label><span class="muted">${esc(siteVisibilityDescriptions[group] || '')}</span></div>${fields(group)}</fieldset>`).join('')}`;
   };
   renderSiteCopy(); renderSiteContentAdmin();
   $('siteBrandLogo').addEventListener('change', () => {
@@ -3566,7 +3650,10 @@ await new Promise(resolve => {
     }).finally(() => { siteBrandImagePending = null; });
   });
   $('siteBrandLogoClear').addEventListener('click', () => { siteBrandImage = ''; siteBrandImagePending = null; $('siteBrandLogo').value = ''; setSiteBrandPreview(); });
+  $('siteContentFields').addEventListener('mousedown', e => { if (e.target.closest('[data-copy-rich]')) e.preventDefault(); });
   $('siteContentFields').addEventListener('click', e => {
+    const format = e.target.closest('[data-copy-rich]');
+    if (format) { const editor = $(format.dataset.copyTarget); editor.focus(); document.execCommand(format.dataset.copyRich, false); editor.focus(); return; }
     const button = e.target.closest('[data-site-copy-group-button]'); if (!button) return;
     activeSiteCopyGroup = button.dataset.siteCopyGroupButton;
     $('siteContentFields').querySelectorAll('[data-site-copy-group-button]').forEach(item => item.setAttribute('aria-current', String(item === button)));
@@ -3580,7 +3667,7 @@ await new Promise(resolve => {
     if (!brandTitle || brandTitle.length > 50) { status.textContent = ''; error.textContent = 'Informe um título para a marca (até 50 caracteres).'; $('siteBrandTitle').focus(); return; }
     const value = { ...savedSiteContent() };
     value.brand = { title: brandTitle, subtitle: $('siteBrandSubtitle').value.trim(), image: siteBrandImage };
-    $('siteContentFields').querySelectorAll('[data-site-copy-edit]').forEach(field => { value[field.dataset.siteCopyEdit] = field.value.trim(); });
+    $('siteContentFields').querySelectorAll('[data-site-copy-edit]').forEach(field => { value[field.dataset.siteCopyEdit] = field.isContentEditable ? sanitizeSiteRichText(field.innerHTML) : field.value.trim(); });
     value.visibility = { ...(value.visibility || {}) };
     $('siteContentFields').querySelectorAll('[data-site-copy-visible]').forEach(toggle => { value.visibility[toggle.dataset.siteCopyVisible] = toggle.checked; });
     try { await fb.setConfig('siteContent', value); renderSiteCopy(); status.textContent = 'Conteúdo salvo.'; }
@@ -3593,6 +3680,97 @@ await new Promise(resolve => {
     try { await fb.setConfig('siteContent', {}); renderSiteCopy(); renderSiteContentAdmin(); $('siteContentStatus').textContent = 'Textos e marca originais restaurados.'; }
     catch (err) { $('siteContentStatus').textContent = ''; $('siteContentError').textContent = fb.errMsg(err); }
   });
+
+  const managedSections = { conceito:'Conceito', origem:'Origem', adaptacoes:'Adaptações', trabalhos:'Trabalhos da isca', fundamentos:'Fundamentos', manifesto:'Manifesto', referencias:'Referências', extras:'Outros conteúdos' };
+  const sanitizeRich = html => {
+    const doc = new DOMParser().parseFromString(String(html || ''), 'text/html'), allowed = new Set(['B','STRONG','I','EM','P','BR','UL','OL','LI']);
+    const cleanNode = node => {
+      if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.nodeValue || '');
+      if (node.nodeType !== Node.ELEMENT_NODE) return document.createDocumentFragment();
+      const children = [...node.childNodes].map(cleanNode), tag = node.tagName.toUpperCase();
+      if (!allowed.has(tag)) { const fragment = document.createDocumentFragment(); children.forEach(child => fragment.append(child)); return fragment; }
+      const element = document.createElement(tag.toLowerCase()); children.forEach(child => element.append(child)); return element;
+    };
+    return [...doc.body.childNodes].map(node => { const wrapper = document.createElement('div'); wrapper.append(cleanNode(node)); return wrapper.innerHTML; }).join('');
+  };
+  const richPlainText = html => new DOMParser().parseFromString(sanitizeRich(html), 'text/html').body.textContent.trim();
+  const managedAll = () => fb.siteContentItems();
+  const managedImages = async files => {
+    const selected = [...files]; if (selected.some(file => !file.type.startsWith('image/'))) throw new Error('Selecione apenas arquivos de imagem.');
+    const images = await Promise.all(selected.map(file => resizeImage(file, 1100, .66)));
+    if (images.some(image => image.length > 280000) || images.reduce((sum, image) => sum + image.length, 0) > 820000) throw new Error('As imagens ficaram pesadas demais. Use arquivos menores ou reduza a quantidade.');
+    return images;
+  };
+  const renderManagedContent = () => {
+    const all = managedAll().filter(item => item.visible !== false), homeItems = all.filter(item => item.placement === 'home'), ajingItems = all.filter(item => item.placement === 'ajing-game');
+    const renderItem = item => {
+      const title = esc(item.title || ''), subtitle = item.subtitle ? `<p class="managed-subtitle">${esc(item.subtitle)}</p>` : '';
+      if (item.type === 'gallery') {
+        const images = (Array.isArray(item.images) ? item.images : []).map((src, index) => safeImageSrc(src) ? `<img src="${esc(safeImageSrc(src))}" alt="${title ? `${title} · foto ${index + 1}` : `Foto ${index + 1}`}" loading="lazy">` : '').join('');
+        const count = (Array.isArray(item.images) ? item.images : []).filter(safeImageSrc).length;
+        return `<article class="managed-article"><h2>${title}</h2>${subtitle}<div class="managed-gallery gallery-${count}" style="--gallery-count:${count}">${images}</div></article>`;
+      }
+      const image = safeImageSrc(item.image), before = sanitizeRich(item.textBefore), after = sanitizeRich(item.textAfter);
+      return `<article class="managed-article"><h2>${title}</h2>${subtitle}<div class="managed-article-body${image ? '' : ' no-image'}"><div class="managed-rich">${before}</div>${image ? `<img class="managed-article-image" src="${esc(image)}" alt="${title}" loading="lazy">` : ''}</div>${after ? `<div class="managed-article-after managed-rich">${after}</div>` : ''}</article>`;
+    };
+    $('homeContentEntries').innerHTML = homeItems.map(renderItem).join('');
+    const grouped = Object.keys(managedSections).map(section => [section, ajingItems.filter(item => (item.section || 'extras') === section)]).filter(([, items]) => items.length);
+    $('ajingManagedContent').innerHTML = grouped.map(([section, items]) => `<section class="managed-content-section" id="managed-group-${section}"><div class="container"><h2>${esc(managedSections[section])}</h2><div class="managed-content-list">${items.map(renderItem).join('')}</div></div></section>`).join('');
+    const visibility = savedSiteContent().visibility || {}, anchors = [['conceito','Conceito'],['origem','Origem'],['adaptacoes','Adaptações'],['trabalhos','Trabalhos da isca'],['fundamentos','Fundamentos'],['manifesto','Manifesto'],['referencias','Referências']].filter(([key]) => visibility[key] !== false).map(([id,label]) => `<a href="#${id}">${label}</a>`);
+    grouped.forEach(([section]) => { if (section === 'extras') return; anchors.push(`<a href="#managed-group-${section}">${esc(managedSections[section])} · novos</a>`); });
+    if (grouped.some(([section]) => section === 'extras')) anchors.push('<a href="#managed-group-extras">Outros conteúdos</a>');
+    $('ajingSubnavLinks').innerHTML = anchors.join('');
+  };
+  const renderManagedContentAdmin = () => {
+    const list = $('managedContentAdminList'); if (!list) return;
+    const placement = $('managedContentPlacement'), type = $('managedContentType');
+    $('managedContentSectionField').hidden = placement.value !== 'ajing-game';
+    $('managedArticleFields').hidden = type.value !== 'article'; $('managedArticleImageField').hidden = type.value !== 'article';
+    $('managedTextAfterField').hidden = type.value !== 'article'; $('managedGalleryField').hidden = type.value !== 'gallery';
+    list.innerHTML = managedAll().map(item => `<li><span class="grow"><b>${esc(item.title || 'Sem título')}</b><small>${item.placement === 'home' ? 'Home' : `Ajing Game · ${esc(managedSections[item.section] || 'Outros conteúdos')}`} · ${item.type === 'gallery' ? 'Galeria' : 'Texto'} · ${item.visible === false ? 'Oculto' : 'Visível'}</small></span><button class="btn btn-ghost" type="button" data-managed-edit="${esc(item.id)}">Editar</button><button class="btn btn-ghost" type="button" data-managed-delete="${esc(item.id)}">Excluir</button></li>`).join('') || '<li>Nenhum conteúdo novo cadastrado.</li>';
+  };
+  const resetManagedForm = () => {
+    $('managedContentForm').reset(); $('managedContentId').value = ''; $('managedTextBefore').innerHTML = ''; $('managedTextAfter').innerHTML = '';
+    $('managedContentVisible').checked = true; $('managedContentCancel').hidden = true; $('managedContentStatus').textContent = '';
+    $('managedArticleImage').value = ''; $('managedArticleImageClear').checked = false; $('managedGalleryImages').value = ''; renderManagedContentAdmin();
+  };
+  $('managedContentPlacement').addEventListener('change', renderManagedContentAdmin);
+  $('managedContentType').addEventListener('change', renderManagedContentAdmin);
+  $('managedContentForm').addEventListener('mousedown', e => { if (e.target.closest('[data-rich-command]')) e.preventDefault(); });
+  $('managedContentForm').addEventListener('click', e => {
+    const button = e.target.closest('[data-rich-command]'); if (!button) return;
+    const editor = $(button.dataset.richTarget); editor.focus(); document.execCommand(button.dataset.richCommand, false); editor.focus();
+  });
+  $('managedContentForm').addEventListener('submit', async e => {
+    e.preventDefault(); if (!isAdmin()) return;
+    const error = $('managedContentError'), status = $('managedContentStatus'); error.textContent = ''; status.textContent = 'Salvando…';
+    const id = $('managedContentId').value, previous = managedAll().find(item => item.id === id), type = $('managedContentType').value, title = $('managedContentTitleInput').value.trim();
+    if (!title) { status.textContent = ''; error.textContent = 'Informe um título.'; $('managedContentTitleInput').focus(); return; }
+    try {
+      const images = type === 'gallery' ? ($('managedGalleryImages').files.length ? await managedImages($('managedGalleryImages').files) : (previous?.images || [])) : [];
+      if (type === 'gallery' && (!images.length || images.length > 3)) throw new Error('A galeria precisa ter de uma a três fotos.');
+      const image = type === 'article' ? ($('managedArticleImage').files[0] ? (await managedImages([$('managedArticleImage').files[0]]))[0] : ($('managedArticleImageClear').checked ? '' : (previous?.image || ''))) : '';
+      const textBefore = type === 'article' ? sanitizeRich($('managedTextBefore').innerHTML) : '', textAfter = type === 'article' ? sanitizeRich($('managedTextAfter').innerHTML) : '';
+      if (type === 'article' && !image && !richPlainText(textBefore) && !richPlainText(textAfter)) throw new Error('Escreva o texto ou inclua uma imagem.');
+      const item = { id: id || `content-${Date.now()}-${Math.random().toString(36).slice(2,8)}`, type, title, subtitle: $('managedContentSubtitle').value.trim(), placement: $('managedContentPlacement').value, section: $('managedContentPlacement').value === 'ajing-game' ? $('managedContentSection').value : '', textBefore, textAfter, image, images, visible: $('managedContentVisible').checked, order: previous?.order ?? Date.now(), createdAt: previous?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
+      await fb.saveSiteContentItem(item); renderManagedContent(); resetManagedForm(); $('managedContentStatus').textContent = 'Conteúdo salvo.';
+    } catch (err) { status.textContent = ''; error.textContent = err.message || fb.errMsg(err); }
+  });
+  $('managedContentCancel').addEventListener('click', resetManagedForm);
+  $('managedContentAdminList').addEventListener('click', async e => {
+    const edit = e.target.closest('[data-managed-edit]'), remove = e.target.closest('[data-managed-delete]');
+    if (edit) {
+      const item = managedAll().find(entry => entry.id === edit.dataset.managedEdit); if (!item) return;
+      $('managedContentId').value = item.id; $('managedContentPlacement').value = item.placement || 'home'; $('managedContentSection').value = item.section || 'fundamentos'; $('managedContentType').value = item.type || 'article';
+      $('managedContentTitleInput').value = item.title || ''; $('managedContentSubtitle').value = item.subtitle || ''; $('managedTextBefore').innerHTML = sanitizeRich(item.textBefore); $('managedTextAfter').innerHTML = sanitizeRich(item.textAfter); $('managedContentVisible').checked = item.visible !== false;
+      $('managedArticleImage').value = ''; $('managedArticleImageClear').checked = false; $('managedGalleryImages').value = ''; $('managedContentCancel').hidden = false; renderManagedContentAdmin(); $('managedContentForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    if (remove) {
+      const item = managedAll().find(entry => entry.id === remove.dataset.managedDelete); if (!item || !(await askConfirm(`Excluir o conteúdo “${item.title}”?`))) return;
+      try { await fb.deleteSiteContentItem(item.id); renderManagedContent(); renderManagedContentAdmin(); } catch (err) { $('managedContentError').textContent = fb.errMsg(err); }
+    }
+  });
+  renderManagedContent(); renderManagedContentAdmin();
 
   const readSitePartners = () => {
     const stored = fb.partners().map(p => ({ ...p, photo: p.photo || p.logo || '' })).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -5533,6 +5711,7 @@ await new Promise(resolve => {
       rankAwardConfig = readRankAwardConfig(); renderRankAwardForm(); renderSiteCopy();
       if (isAdmin()) renderSiteContentAdmin();
     }
+    if (touches('siteContentItems')) { renderManagedContent(); if (isAdmin()) renderManagedContentAdmin(); }
     if (touches('partners')) { sitePartners = readSitePartners(); renderPartners(); if (isAdmin()) renderPartnerAdmin(); }
     if (touches('posts', 'rankHistory', 'championships', 'slides', 'config', 'users', 'profiles')) renderChampion();
     if (!membersPage.hidden) {
