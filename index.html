@@ -92,7 +92,7 @@ p{margin:0}
 .slide-media img{width:100%;height:100%;object-fit:contain;border-radius:var(--radius)}
 .slide-media.photo img{object-fit:cover;border-radius:var(--radius)}
 .slide.image-overlay{position:relative;display:block;min-height:clamp(320px,34vw,460px);overflow:hidden;border-radius:var(--radius);isolation:isolate}
-.slide.image-overlay .slide-bg-image{position:absolute;z-index:-2;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.slide.image-overlay .slide-bg-image{position:absolute;z-index:-2;inset:0;width:100%;height:100%;object-fit:contain;object-position:center;background:var(--surface);border-radius:inherit}
 .slide.image-overlay::before{content:"";position:absolute;z-index:-1;inset:0;background:linear-gradient(90deg,rgba(5,20,30,.86),rgba(5,20,30,.64) 46%,rgba(5,20,30,.08));pointer-events:none}
 .slide.image-overlay[data-slide-tone="on-light"]::before{background:linear-gradient(90deg,rgba(255,255,255,.9),rgba(255,255,255,.7) 46%,rgba(255,255,255,.08))}
 .slide.image-overlay.image-only::before{display:none}
@@ -2821,14 +2821,14 @@ await new Promise(resolve => {
   };
   const takeFile = file => {
     if (!file) return;
-    if (!file.type.startsWith('image/')) { postError.textContent = 'Escolha um arquivo de imagem (JPG, PNG ou WebP).'; return; }
+    if (!file.type.startsWith('image/')) { postError.textContent = 'Escolha um arquivo de imagem (JPG, PNG ou WebP).'; if (!editingPostId) showPostModal(); return; }
     postError.textContent = '';
     postImageAudit = null;
     postImagePending = Promise.all([preparePostImage(file), inspectPostImage(file)]).then(([src, audit]) => {
       setPostImage(src); postImageAudit = audit;
-      if (!editingPostId) { postFields.hidden = false; postForm.classList.remove('photo-first'); setTimeout(() => postCaption.focus(), 30); }
+      if (!editingPostId) { postFields.hidden = false; postForm.classList.remove('photo-first'); showPostModal(); setTimeout(() => postCaption.focus(), 30); }
     })
-      .catch(() => { postError.textContent = 'Não foi possível ler essa imagem. Tente outro arquivo.'; })
+      .catch(() => { postError.textContent = 'Não foi possível ler essa imagem. Tente outro arquivo.'; if (!editingPostId) showPostModal(); })
       .finally(() => { postImagePending = null; });
   };
   postPhoto.addEventListener('change', () => { takeFile(postPhoto.files && postPhoto.files[0]); postPhoto.value = ''; });
@@ -2840,6 +2840,10 @@ await new Promise(resolve => {
   const updateCaptionCount = () => $('captionCount').textContent = `${postCaption.value.length} / 300`;
   postCaption.addEventListener('input', updateCaptionCount);
 
+  const showPostModal = () => {
+    postModal.classList.add('open'); postModal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  };
   const openPostModal = (choosePhotoFirst = true) => {
     if (!currentUser()) { openLogin(); return; }
     editingPostId = null;
@@ -2850,9 +2854,9 @@ await new Promise(resolve => {
     postForm.reset(); setPostImage(''); postError.textContent = '';
     postFields.hidden = choosePhotoFirst; postForm.classList.toggle('photo-first', choosePhotoFirst);
     postPlace.value = readProfile().location || ''; updateCaptionCount(); renderSpeciesSelect();
-    postModal.classList.add('open'); postModal.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    if (choosePhotoFirst) postPhoto.click(); else setTimeout(() => dropZone.focus(), 30);
+    postModal.classList.remove('open'); postModal.setAttribute('aria-hidden', 'true'); document.body.style.overflow = '';
+    if (choosePhotoFirst) postPhoto.click();
+    else { showPostModal(); setTimeout(() => dropZone.focus(), 30); }
   };
   const closePostModal = (restorePost = true) => {
     const reopenId = editingPostId;
@@ -3044,8 +3048,8 @@ await new Promise(resolve => {
   const updateFeedMore = total => {
     const hasMore = total > feedShownCount, more = $('feedMore');
     more.hidden = !hasMore;
-    $('feedMoreLabel').textContent = hasMore && 'IntersectionObserver' in window ? 'Role para carregar mais publicações' : '';
-    $('feedLoadMore').hidden = !hasMore || 'IntersectionObserver' in window;
+    $('feedMoreLabel').textContent = '';
+    $('feedLoadMore').hidden = !hasMore;
   };
   const loadMoreFeed = () => {
     const query = normalizeFeedSearch(feedQuery), visiblePosts = query ? posts.filter(p => [p.user, displayName(p.user), p.speciesName].some(value => normalizeFeedSearch(value).includes(query))) : posts;
@@ -3053,8 +3057,6 @@ await new Promise(resolve => {
     feedShownCount = Math.min(visiblePosts.length, feedShownCount + FEED_BATCH_SIZE);
     renderFeed();
   };
-  const feedObserver = 'IntersectionObserver' in window ? new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) loadMoreFeed(); }, { rootMargin: '300px 0px' }) : null;
-  if (feedObserver) feedObserver.observe($('feedMore'));
   $('feedLoadMore').addEventListener('click', loadMoreFeed);
   $('feedSearch').addEventListener('input', () => { feedQuery = $('feedSearch').value; feedShownCount = 12; $('feedSearchClear').hidden = !feedQuery; renderFeed(); });
   $('feedSearchClear').addEventListener('click', () => { $('feedSearch').value = ''; feedQuery = ''; feedShownCount = 12; $('feedSearchClear').hidden = true; renderFeed(); $('feedSearch').focus(); });
