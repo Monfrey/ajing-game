@@ -1155,6 +1155,11 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .slide:not(.image-overlay):not(.champ-slide)>.slide-media:has(>img){grid-row:1;width:100%;height:auto;aspect-ratio:auto}
   .slide:not(.image-overlay):not(.champ-slide)>.slide-media>img{display:block;width:100%;height:auto;max-height:none;object-fit:contain;border-radius:var(--radius)}
 }
+/* Prévia do favicon (Administração › Conteúdo do site) */
+.favicon-preview{display:inline-flex;align-items:flex-end;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:var(--radius-sm);background:repeating-conic-gradient(var(--surface-2) 0 25%,var(--surface) 0 50%) 0 0/12px 12px}
+.favicon-preview img{display:block;object-fit:contain}
+.favicon-preview img[width="32"]{width:32px;height:32px}
+.favicon-preview img[width="64"]{width:64px;height:64px}
 </style>
 <script>
 (() => {
@@ -1174,6 +1179,12 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   window.__ajingApplySiteContentCache = saved => {
     window.__ajingSiteContentCache = saved || {};
     try { localStorage.setItem('ajing-site-content-cache', JSON.stringify(saved || {})); } catch (_) {}
+    // Favicon personalizado já no carregamento (o original fica guardado para "Usar favicon original")
+    const icon = document.querySelector('link[rel="icon"]'), apple = document.querySelector('link[rel="apple-touch-icon"]');
+    if (!window.__ajingFaviconDefaults) window.__ajingFaviconDefaults = { icon: icon ? icon.getAttribute('href') : '', apple: apple ? apple.getAttribute('href') : '' };
+    const fav = saved && saved.brand && saved.brand.favicon, okFav = fav && /^data:image\//.test(fav.icon || '') && /^data:image\//.test(fav.apple || '');
+    if (icon) icon.setAttribute('href', okFav ? fav.icon : window.__ajingFaviconDefaults.icon);
+    if (apple) apple.setAttribute('href', okFav ? fav.apple : window.__ajingFaviconDefaults.apple);
     const previous = document.getElementById('siteVisibilityBootstrap'); if (previous) previous.remove();
     const visibility = saved && saved.visibility || {};
     const selectors = Object.entries(targets).filter(([group]) => visibility[group] === false).map(([, selector]) => selector);
@@ -1497,6 +1508,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                   <div class="field"><label for="siteBrandTitle">Título da marca</label><input id="siteBrandTitle" type="text" maxlength="50" value="AJING GAME"></div>
                   <div class="field"><label for="siteBrandSubtitle">Subtítulo <span class="muted">(opcional)</span></label><input id="siteBrandSubtitle" type="text" maxlength="60" value="Extreme Finesse"></div>
                   <div class="field full"><label for="siteBrandLogo">Logo</label><div class="img-row"><span class="img-thumb brand-logo-preview" id="siteBrandLogoPreview" aria-label="Prévia da logo"></span><input id="siteBrandLogo" type="file" accept="image/*"><button class="btn btn-ghost" id="siteBrandLogoClear" type="button">Usar logo original</button></div><span class="hint">A logo atualiza o cabeçalho e o rodapé do site. Formatos JPG, PNG ou WebP.</span></div>
+                  <div class="field full"><label for="siteBrandFavicon">Favicon <span class="muted">(ícone da aba do navegador)</span></label><div class="img-row"><span class="favicon-preview" aria-label="Prévia do favicon"><img id="siteBrandFaviconPreview" alt="" width="32" height="32"><img id="siteBrandFaviconPreviewLg" alt="" width="64" height="64"></span><input id="siteBrandFavicon" type="file" accept="image/*"><button class="btn btn-ghost" id="siteBrandFaviconClear" type="button">Usar favicon original</button></div><span class="hint">Aparece na aba do navegador e no atalho da tela inicial do celular. Use uma imagem quadrada e simples (PNG com fundo transparente fica melhor); imagens retangulares são centralizadas.</span></div>
                 </div>
               </fieldset>
               <div id="siteContentFields" class="site-copy-fields"></div>
@@ -3586,7 +3598,16 @@ await new Promise(resolve => {
   let activeSiteCopyGroup = 'conceito';
   const savedSiteContent = () => window.__ajingSiteConfigLoaded ? (fb.config('siteContent') || {}) : (window.__ajingSiteContentCache || {});
   const SITE_BRAND_DEFAULTS = { title: 'AJING GAME', subtitle: 'Extreme Finesse' };
-  let siteBrandImage = '', siteBrandImagePending = null;
+  let siteBrandImage = '', siteBrandImagePending = null, siteBrandFavicon = null, siteBrandFaviconPending = null;
+  // Favicon: o original embutido no site é guardado para poder voltar a ele
+  const faviconLinks = () => ({ icon: document.querySelector('link[rel="icon"]'), apple: document.querySelector('link[rel="apple-touch-icon"]') });
+  const FAVICON_DEFAULTS = window.__ajingFaviconDefaults || (() => { const l = faviconLinks(); return { icon: l.icon ? l.icon.getAttribute('href') : '', apple: l.apple ? l.apple.getAttribute('href') : '' }; })();
+  const validFavicon = f => f && typeof f.icon === 'string' && f.icon.startsWith('data:image/') && typeof f.apple === 'string' && f.apple.startsWith('data:image/');
+  const applyFavicon = fav => {
+    const l = faviconLinks(), use = validFavicon(fav) ? fav : FAVICON_DEFAULTS;
+    if (l.icon && l.icon.getAttribute('href') !== use.icon) l.icon.setAttribute('href', use.icon);
+    if (l.apple && l.apple.getAttribute('href') !== use.apple) l.apple.setAttribute('href', use.apple);
+  };
   const applySiteBrand = brand => {
     const title = typeof brand?.title === 'string' && brand.title.trim() ? brand.title.trim() : SITE_BRAND_DEFAULTS.title;
     const subtitle = typeof brand?.subtitle === 'string' ? brand.subtitle.trim() : SITE_BRAND_DEFAULTS.subtitle;
@@ -3599,10 +3620,25 @@ await new Promise(resolve => {
     const headerBrand = document.querySelector('.site-header .brand');
     if (headerBrand) headerBrand.setAttribute('aria-label', `${title}${subtitle ? `, ${subtitle}` : ''}, início`);
     document.title = `${title}${subtitle ? ` | ${subtitle}` : ''}`;
+    applyFavicon(brand?.favicon);
   };
   const setSiteBrandPreview = () => {
     const preview = $('siteBrandLogoPreview'); if (!preview) return;
     preview.style.backgroundImage = siteBrandImage ? `url("${siteBrandImage}")` : getComputedStyle(document.querySelector('.brand-logo-img')).backgroundImage;
+  };
+  const setSiteFaviconPreview = () => {
+    const src = validFavicon(siteBrandFavicon) ? siteBrandFavicon.icon : FAVICON_DEFAULTS.icon;
+    ['siteBrandFaviconPreview', 'siteBrandFaviconPreviewLg'].forEach(id => { const img = $(id); if (img) img.src = src; });
+  };
+  // Gera um ícone quadrado: a imagem é centralizada sem distorcer
+  const squareIcon = (image, size, background, padding) => {
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+    if (background) { g.fillStyle = background; g.fillRect(0, 0, size, size); }
+    const inner = size * (1 - padding * 2), k = Math.min(inner / image.naturalWidth, inner / image.naturalHeight);
+    const w = image.naturalWidth * k, h = image.naturalHeight * k;
+    g.drawImage(image, (size - w) / 2, (size - h) / 2, w, h);
+    return c.toDataURL('image/png');
   };
   const siteCopyLabel = key => key.split('.').slice(1).map(part => {
     if (siteCopyParts[part]) return siteCopyParts[part];
@@ -3673,6 +3709,7 @@ await new Promise(resolve => {
     $('siteBrandTitle').value = typeof brand.title === 'string' ? brand.title : SITE_BRAND_DEFAULTS.title;
     $('siteBrandSubtitle').value = typeof brand.subtitle === 'string' ? brand.subtitle : SITE_BRAND_DEFAULTS.subtitle;
     siteBrandImage = typeof brand.image === 'string' ? brand.image : ''; $('siteBrandLogo').value = ''; setSiteBrandPreview();
+    siteBrandFavicon = validFavicon(brand.favicon) ? brand.favicon : null; $('siteBrandFavicon').value = ''; setSiteFaviconPreview();
     const groups = siteCopyGroupOrder.filter(group => keys.some(key => key.split('.')[0] === group));
     if (!groups.includes(activeSiteCopyGroup)) activeSiteCopyGroup = groups[0] || '';
     const visibility = saved.visibility || {};
@@ -3708,6 +3745,26 @@ await new Promise(resolve => {
     }).finally(() => { siteBrandImagePending = null; });
   });
   $('siteBrandLogoClear').addEventListener('click', () => { siteBrandImage = ''; siteBrandImagePending = null; $('siteBrandLogo').value = ''; setSiteBrandPreview(); });
+  $('siteBrandFavicon').addEventListener('change', () => {
+    const file = $('siteBrandFavicon').files && $('siteBrandFavicon').files[0]; if (!file) return;
+    const error = $('siteContentError'); error.textContent = '';
+    if (!file.type.startsWith('image/')) { error.textContent = 'Escolha um arquivo de imagem PNG, JPG, WebP ou ICO para o favicon.'; $('siteBrandFavicon').value = ''; return; }
+    if (file.size > 5 * 1024 * 1024) { error.textContent = 'O favicon deve ter até 5 MB.'; $('siteBrandFavicon').value = ''; return; }
+    siteBrandFaviconPending = new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image(); image.onload = () => {
+          siteBrandFavicon = { icon: squareIcon(image, 64, '', 0), apple: squareIcon(image, 180, '#ffffff', .08) };
+          setSiteFaviconPreview(); resolve();
+        };
+        image.onerror = () => { error.textContent = 'Não foi possível ler essa imagem. Tente um PNG ou JPG.'; $('siteBrandFavicon').value = ''; resolve(); };
+        image.src = String(reader.result || '');
+      };
+      reader.onerror = () => { error.textContent = 'Não foi possível carregar o favicon.'; resolve(); };
+      reader.readAsDataURL(file);
+    }).finally(() => { siteBrandFaviconPending = null; });
+  });
+  $('siteBrandFaviconClear').addEventListener('click', () => { siteBrandFavicon = null; siteBrandFaviconPending = null; $('siteBrandFavicon').value = ''; setSiteFaviconPreview(); });
   const applyRichCommand = (command, editor, value = '') => {
     if (command === 'createLink') {
       value = window.prompt('Informe o link (https:// ou mailto:):', 'https://') || '';
@@ -3729,11 +3786,12 @@ await new Promise(resolve => {
   $('siteContentForm').addEventListener('submit', async e => {
     e.preventDefault(); if (!isAdmin()) return;
     if (siteBrandImagePending) await siteBrandImagePending;
+    if (siteBrandFaviconPending) await siteBrandFaviconPending;
     const error = $('siteContentError'), status = $('siteContentStatus'); error.textContent = ''; status.textContent = 'Salvando…';
     const brandTitle = $('siteBrandTitle').value.trim();
     if (!brandTitle || brandTitle.length > 50) { status.textContent = ''; error.textContent = 'Informe um título para a marca (até 50 caracteres).'; $('siteBrandTitle').focus(); return; }
     const value = { ...savedSiteContent() };
-    value.brand = { title: brandTitle, subtitle: $('siteBrandSubtitle').value.trim(), image: siteBrandImage };
+    value.brand = { title: brandTitle, subtitle: $('siteBrandSubtitle').value.trim(), image: siteBrandImage, ...(siteBrandFavicon ? { favicon: siteBrandFavicon } : {}) };
     $('siteContentFields').querySelectorAll('[data-site-copy-edit]').forEach(field => { value[field.dataset.siteCopyEdit] = field.isContentEditable ? sanitizeSiteRichText(field.innerHTML) : field.value.trim(); });
     value.visibility = { ...(value.visibility || {}) };
     $('siteContentFields').querySelectorAll('[data-site-copy-visible]').forEach(toggle => { value.visibility[toggle.dataset.siteCopyVisible] = toggle.checked; });
