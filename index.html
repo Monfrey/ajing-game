@@ -1002,7 +1002,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .sp-head .btn svg,.file-btn svg{flex:none}
 .sp-form-card{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-2);padding:12px 14px;margin-bottom:12px}
 .sp-form-card h4{margin:0 0 10px;font-size:.92rem}
-#speciesForm.species-form{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1.35fr) minmax(150px,1fr) 84px minmax(140px,.9fr) auto;gap:10px;align-items:end}
+#speciesForm.species-form{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1.4fr) minmax(160px,1fr) 90px auto;gap:10px;align-items:end}
 #speciesForm .field{min-width:0}
 #speciesForm input:not([type=file]),#speciesForm select,#speciesForm .file-btn,.sp-actions .btn{height:42px;box-sizing:border-box}
 .sp-form-card .form-error:empty{display:none}
@@ -1160,6 +1160,13 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .favicon-preview img{display:block;object-fit:contain}
 .favicon-preview img[width="32"]{width:32px;height:32px}
 .favicon-preview img[width="64"]{width:64px;height:64px}
+.feed-loading{display:grid;justify-items:center;gap:10px}
+.feed-spinner{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:feedspin .8s linear infinite}
+@keyframes feedspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.feed-spinner{animation-duration:2.4s}}
+/* Espécies sem foto: cartões compactos */
+.species-card.sp-nophoto .sp-info{padding:12px 14px}
+#speciesGrid:has(.sp-nophoto){grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
 </style>
 <script>
 (() => {
@@ -1571,19 +1578,17 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                   <div class="field"><label for="spSci">Nome científico <span class="muted">(opcional)</span></label><input id="spSci" maxlength="80" placeholder="Ex.: Caranx crysos"></div>
                   <div class="field"><label for="spHabitat">Habitat</label><select id="spHabitat" required><option value="">Selecione</option><option value="salt">Água salgada</option><option value="fresh">Água doce</option><option value="both">Ambos (doce e salgada)</option></select></div>
                   <div class="field"><label for="spPoints">Pontos</label><input id="spPoints" type="number" min="1" max="1000" step="1" inputmode="numeric" placeholder="10" required></div>
-                  <div class="field"><label for="spPhoto">Foto <span class="muted" id="spPhotoHint"></span></label><span class="btn btn-ghost file-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5h3.2L9 6h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13.3" r="3.4"/></svg><span id="spPhotoName">Escolher foto</span><input id="spPhoto" type="file" accept="image/*" required></span></div>
-                  <div class="sp-actions"><button class="btn btn-primary" id="speciesSubmit" type="submit">Adicionar</button><button class="btn btn-ghost" id="speciesCancel" type="button" hidden>Cancelar</button></div>
+                                    <div class="sp-actions"><button class="btn btn-primary" id="speciesSubmit" type="submit">Adicionar</button><button class="btn btn-ghost" id="speciesCancel" type="button" hidden>Cancelar</button></div>
                 </form>
                 <div class="form-error" id="speciesError" role="alert"></div>
               </div>
               <p class="saved" id="speciesSaved" aria-live="polite"></p>
               <div class="sp-toolbar">
                 <label class="feed-search sp-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="spSearch" type="search" placeholder="Buscar por nome popular ou científico" aria-label="Buscar espécie"></label>
-                <select id="spFilter" aria-label="Filtrar lista de espécies"><option value="all">Todas</option><option value="salt">Água salgada</option><option value="fresh">Água doce</option><option value="both">Ambos</option><option value="nophoto">Sem foto</option></select>
+                <select id="spFilter" aria-label="Filtrar lista de espécies"><option value="all">Todas</option><option value="salt">Água salgada</option><option value="fresh">Água doce</option><option value="both">Ambos</option></select>
                 <span class="sp-count" id="spCount" aria-live="polite"></span>
               </div>
               <ul class="admin-list sp-admin-list" id="speciesAdminList"></ul>
-              <input id="spRowPhoto" type="file" accept="image/*" hidden>
             </div>
             <div class="admin-box" data-admin-panel="requests" hidden>
               <p class="box-desc">Revise o que os membros enviaram. Cada análise fica registrada no histórico e pode ser editada depois, se precisar.</p>
@@ -2003,9 +2008,16 @@ let fdb;
 try { fdb = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
 catch (_) { fdb = getFirestore(fbApp); }
 const PUBLIC_COLS = ['users', 'species', 'championships', 'rankHistory', 'config', 'profiles', 'posts', 'slides', 'levelIcons', 'partners', 'siteContentItems'];
+// Publicações e perfis (com fotos) são os dados mais pesados: carregam em segundo plano, sem atrasar a página inicial.
+const DEFERRED_COLS = ['posts', 'profiles'];
+// A lista de espécies fica no documento config/speciesList (1 leitura); a coleção antiga só é lida até a migração.
+const FIRST_COLS = PUBLIC_COLS.filter(name => !DEFERRED_COLS.includes(name) && name !== 'species');
+let deferredLoaded = false;
 // Imagens usadas apenas na área autenticada não são baixadas para visitantes da página pública.
-const MEMBER_COLS = ['speciesPhotos', 'banners', 'eventRequests', 'speciesRequests', 'requestPhotos'];
-const C = {}; [...PUBLIC_COLS, ...MEMBER_COLS].forEach(n => { C[n] = {}; }); C.memberApplications = {};
+const MEMBER_COLS = ['banners', 'eventRequests', 'speciesRequests', 'requestPhotos'];
+// Carregadas só quando uma tela precisa delas (economiza leituras do plano gratuito)
+const LAZY_COLS = ['postAudits'];
+const C = {}; [...PUBLIC_COLS, ...MEMBER_COLS, ...LAZY_COLS].forEach(n => { C[n] = {}; }); C.memberApplications = {};
 C.postAudits = {}; C.memberMessages = {};
 const fbHooks = { refresh: null };
 const clean = x => JSON.parse(JSON.stringify(x ?? null));
@@ -2027,22 +2039,45 @@ const listen = (name, ref = fsCol(fdb, name)) => new Promise(resolve => {
         changes.forEach(change => { if (change.type === 'removed') delete current[change.doc.id]; else current[change.doc.id] = change.doc.data(); });
         C[name] = current;
       }
-      if ((!snap.metadata.fromCache && (changes.length || name === 'config') || (timedOut && changes.length)) && fbHooks.refresh) fbHooks.refresh(name);
+      if ((!snap.metadata.fromCache && (changes.length || name === 'config') || (timedOut && changes.length)) && fbHooks.refresh) {
+        fbHooks.refresh(name);
+        if (name === 'config' && changes.some(c => c.doc.id === 'speciesList')) fbHooks.refresh('species');
+      }
     }
   }, err => { console.warn('Firestore:', name, err && err.code); done(); });
   setTimeout(() => done(true), 1500);
 });
 
+// Coleções sob demanda: o primeiro pedido abre o listener; os seguintes reaproveitam
+const lazy = {};
+const ensureCol = name => {
+  if (lazy[name]) return lazy[name].ready;
+  const entry = lazy[name] = { loaded: false, unsub: null };
+  entry.ready = listen(name).then(unsub => { entry.unsub = unsub; entry.loaded = true; if (fbHooks.refresh) fbHooks.refresh(name); });
+  return entry.ready;
+};
+const dropCol = name => { const e = lazy[name]; if (!e) return; delete lazy[name]; e.ready.then(() => e.unsub && e.unsub()); C[name] = {}; };
+const speciesFromList = () => C.config.speciesList && Array.isArray(C.config.speciesList.list);
+const speciesReady = () => speciesFromList() || !!(lazy.species && lazy.species.loaded);
+// Migração única: o primeiro administrador a abrir o site copia a coleção antiga para config/speciesList
+const maybeMigrateSpecies = () => {
+  if (speciesFromList() || !fbIsAdmin() || !(lazy.species && lazy.species.loaded)) return;
+  const list = Object.values(C.species).map(clean);
+  if (!list.length) return;
+  C.config = { ...C.config, speciesList: { list, migrated: Date.now() } };
+  setDoc(fsDoc(fdb, 'config', 'speciesList'), C.config.speciesList).catch(err => console.warn('Migração das espécies:', err && err.code));
+};
 let authUid = null, memberUnsubs = [], authSeq = Promise.resolve();
 const fbUser = () => authUid ? C.users[authUid] || null : null;
 const fbIsAdmin = () => { const u = fbUser(); return !!u && u.role === 'admin' && u.active !== false; };
 const attachMember = async on => {
   memberUnsubs.forEach(u => u()); memberUnsubs = [];
-  if (!on) { MEMBER_COLS.forEach(n => { C[n] = {}; }); C.postAudits = {}; C.memberMessages = {}; C.memberApplications = {}; return; }
+  if (!on) { MEMBER_COLS.forEach(n => { C[n] = {}; }); dropCol('postAudits'); C.memberMessages = {}; C.memberApplications = {}; return; }
   const username = fbUser().username;
   const refs = MEMBER_COLS.map(name => [name, fsCol(fdb, name)]);
   refs.push(['memberMessages', fsCol(fdb, 'memberMessages', username, 'messages')]);
-  if (fbIsAdmin()) { refs.push(['postAudits', fsCol(fdb, 'postAudits')]); refs.push(['memberApplications', fsCol(fdb, 'memberApplications')]); }
+  if (fbIsAdmin()) refs.push(['memberApplications', fsCol(fdb, 'memberApplications')]);
+  else dropCol('postAudits');
   memberUnsubs = await Promise.all(refs.map(([name, ref]) => listen(name, ref)));
 };
 
@@ -2064,7 +2099,7 @@ const PROFILE = 'ajing-profile:';
 const fbRead = k => {
   switch (k) {
     case 'ajing-users': return Object.entries(C.users).map(([uid, u]) => ({ ...clean(u), uid }));
-    case 'ajing-species': return Object.values(C.species).map(clean);
+    case 'ajing-species': return speciesFromList() ? C.config.speciesList.list.map(clean) : Object.values(C.species).map(clean);
     case 'ajing-championships': {
       const reqs = Object.values(C.eventRequests);
       return Object.values(C.championships).map(c => ({ ...clean(c), registrationRequests: reqs.filter(r => r.champId === c.id).map(r => { const { champId, ...rest } = clean(r); return rest; }) }));
@@ -2085,7 +2120,12 @@ const fbWriteQuiet = (k, v) => {
     case 'ajing-users': return syncCol('users', (v || []).filter(u => u.uid).map(u => [u.uid, {
       username: u.username, role: u.role === 'admin' ? 'admin' : 'member', active: u.active !== false,
       seasonChampion: !!u.seasonChampion, goldHooks: Math.max(0, Number(u.goldHooks) || 0) }]), fbIsAdmin());
-    case 'ajing-species': return syncCol('species', (v || []).map(s => [s.id, s]), fbIsAdmin());
+    case 'ajing-species': {
+      // A lista inteira vai num único documento; a coleção antiga fica intocada como cópia de segurança
+      const list = (v || []).map(s => clean(s));
+      C.config = { ...C.config, speciesList: { list, updated: Date.now() } };
+      return fbIsAdmin() ? setDoc(fsDoc(fdb, 'config', 'speciesList'), C.config.speciesList) : Promise.resolve();
+    }
     case 'ajing-championships': return Promise.all([
       syncCol('championships', (v || []).map(c => { const { registrationRequests, ...rest } = c; return [c.id, rest]; }), fbIsAdmin()),
       syncCol('eventRequests', (v || []).flatMap(c => (c.registrationRequests || []).map(r => [r.id, { ...r, champId: c.id }])), !!fbUser())
@@ -2292,6 +2332,11 @@ const fb = {
   getPrivateProfile: async uid => { const s = await getDoc(fsDoc(fdb, 'privateProfiles', uid)); return s.exists() ? s.data() : {}; },
   setPrivateProfile: (uid, data) => setDoc(fsDoc(fdb, 'privateProfiles', uid), clean(data)),
   deletePrivate: uid => deleteDoc(fsDoc(fdb, 'private', uid)),
+  postsLoaded: () => deferredLoaded,
+  ensure: name => ensureCol(name),
+  loaded: name => !!(lazy[name] && lazy[name].loaded),
+  speciesReady: () => speciesReady(),
+  whenPostsLoaded: () => deferredReady,
   errMsg: e => {
     if (e && e.code === 'invalid-argument') return `O Firestore rejeitou os dados enviados (${String(e.message || 'invalid-argument').slice(0, 260)}).`;
     return AUTH_MSG[e && e.code] || (e && e.code ? `Erro do servidor (${e.code}).` : 'Não foi possível concluir. Tente de novo.');
@@ -2300,7 +2345,12 @@ const fb = {
 
 // Inicialização: dados públicos, depois o login guardado e os dados de membro
 // Array.map passa (item, índice, array); chame explicitamente para não confundir o índice com a referência Firestore.
-await Promise.all(PUBLIC_COLS.map(name => listen(name)));
+await Promise.all(FIRST_COLS.map(name => listen(name)));
+if (!speciesFromList()) ensureCol('species').then(maybeMigrateSpecies);
+const deferredReady = Promise.all(DEFERRED_COLS.map(name => listen(name))).then(() => {
+  deferredLoaded = true;
+  if (fbHooks.refresh) DEFERRED_COLS.forEach(name => fbHooks.refresh(name));
+});
 await new Promise(resolve => {
   let first = true;
   onAuthStateChanged(fbAuth, user => {
@@ -2312,6 +2362,7 @@ await new Promise(resolve => {
       }
       const u = fbUser();
       await attachMember(!!(u && u.active !== false));
+      maybeMigrateSpecies();
       if (first) { first = false; resolve(); } else if (fbHooks.refresh) fbHooks.refresh();
     });
   });
@@ -2408,7 +2459,7 @@ await new Promise(resolve => {
   const SEED_POINTS = { 'Carapau': 10, 'Xixarro': 10, 'Robalo-peva': 30, 'Peixe-espada': 20 };
   // Espécies iniciais: gravadas uma única vez, no primeiro acesso de um administrador
   const seedSpecies = () => {
-    if (!isAdmin() || getSpecies().length || (fb.config('meta') || {}).speciesSeeded) return;
+    if (!isAdmin() || !fb.speciesReady() || getSpecies().length || (fb.config('meta') || {}).speciesSeeded) return;
     writeJSON('ajing-species', [
       { id: uid(), name: 'Carapau', sci: 'Caranx crysos', points: 10, habitat: 'salt' },
       { id: uid(), name: 'Xixarro', sci: 'Trachurus lathami', points: 10, habitat: 'salt' },
@@ -2545,13 +2596,10 @@ await new Promise(resolve => {
   const userEmblem = (u, size) => emblem(levelInfo(userPoints(u)).cur, size);
   const trophyIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>';
   const fishIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12c4-6 10-6 14 0-4 6-10 6-14 0zM17 12l4-4v8z"/><circle cx="8" cy="11" r=".6" fill="currentColor"/></svg>';
-  // Fotos das espécies ficam no IndexedDB (chave 'species-photos': { idDaEspecie: imagem })
-  let speciesPhotos = {};
-  const loadSpeciesPhotos = async () => { try { speciesPhotos = (await kvDB.get('species-photos')) || {}; } catch(_) { speciesPhotos = {}; } };
-  const setSpeciesPhoto = async (id, data) => {
-    await fb.setBlob('speciesPhotos', id, data);
-    const next = { ...speciesPhotos }; if (data) next[id] = data; else delete next[id]; speciesPhotos = next;
-  };
+  // As espécies não têm mais foto (economia de leituras e espaço). Fotos antigas são apagadas quando a espécie é removida.
+  const speciesPhotos = {};
+  const loadSpeciesPhotos = async () => {};
+  const removeSpeciesPhoto = id => fb.setBlob('speciesPhotos', id, '').catch(() => {});
   let champBanners = {};
   const loadChampBanners = async () => { try { champBanners = (await kvDB.get('championship-banners')) || {}; } catch(_) { champBanners = {}; } };
   const setChampBanner = async (id, data) => {
@@ -2627,6 +2675,7 @@ await new Promise(resolve => {
     updateUserChip(); renderAll();
     // Reaplica a aba atual: além dos painéis, ela decide se o botão de postar aparece
     showTab(store.get('ajing-member-tab', true) || 'social');
+    if (isAdmin()) seedSpecies();
     $('membersBtnLabel').textContent = 'Minha área'; $('membersBtn').setAttribute('aria-label', 'Minha área');
     window.scrollTo({ top: 0 });
   };
@@ -2715,7 +2764,7 @@ await new Promise(resolve => {
       }
       if (u.active === false) { await fb.signOut(); loginError.textContent = 'Esta conta está desativada. Fale com um administrador.'; return; }
       await Promise.all([loadPosts(), loadReqPhotos()]);
-      loginForm.reset(); closeLogin(); showMembers(); showTab('social'); seedSpecies();
+      loginForm.reset(); closeLogin(); showMembers(); showTab('social');
     } catch (err) { loginError.textContent = fb.errMsg(err); }
     finally { btn.disabled = false; }
   });
@@ -2761,6 +2810,7 @@ await new Promise(resolve => {
   const tabs = document.querySelectorAll('[data-tab]'), panels = document.querySelectorAll('[data-panel]');
   const showTab = name => {
     if (name === 'admin' && !isAdmin()) name = 'social';
+    if (name === 'admin' && isAdmin() && (store.get('ajing-admin-sec', true) || 'carousel') === 'requests') fb.ensure('postAudits');
     document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
     tabs.forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
     panels.forEach(p => p.hidden = p.dataset.panel !== name);
@@ -3054,7 +3104,8 @@ await new Promise(resolve => {
     if (!shown.length) {
       for (const cached of feedRenderCache.values()) cached.node.remove();
       feedRenderCache.clear();
-      feed.innerHTML = query ? '<div class="empty feed-empty"><h4>Nenhuma captura encontrada</h4><p>Tente buscar por outro membro ou nome de peixe.</p></div>' : '';
+      feed.innerHTML = !fb.postsLoaded() ? '<div class="empty feed-empty feed-loading" role="status"><span class="feed-spinner" aria-hidden="true"></span><h4>Carregando as capturas…</h4></div>'
+        : query ? '<div class="empty feed-empty"><h4>Nenhuma captura encontrada</h4><p>Tente buscar por outro membro ou nome de peixe.</p></div>' : '';
     } else {
       if (feed.firstElementChild?.classList.contains('feed-empty')) feed.replaceChildren();
       const ids = new Set(), orderedNodes = [];
@@ -3580,8 +3631,7 @@ await new Promise(resolve => {
     $('speciesFilterEmpty').hidden = !all.length || list.length > 0;
     const count = id => posts.filter(p => p.speciesId === id && isPostScored(p)).length;
     $('speciesGrid').innerHTML = list.map(s => { const n = count(s.id);
-      const ph = speciesPhotos[s.id];
-      return `<article class="species-card"><div class="sp-photo">${ph ? `<img src="${ph}" alt="${esc(s.name)}" loading="lazy">` : fishIcon}</div><div class="sp-info"><div><b>${esc(s.name)}</b>${s.sci ? `<i>${esc(s.sci)}</i>` : ''}${habitatChip(s.habitat)}</div><div class="sc-right"><strong>${ptsLabel(s.points)}</strong><span>${n} ${n === 1 ? 'captura' : 'capturas'}</span></div></div></article>`; }).join('');
+      return `<article class="species-card sp-nophoto"><div class="sp-info"><div><b>${esc(s.name)}</b>${s.sci ? `<i>${esc(s.sci)}</i>` : ''}${habitatChip(s.habitat)}</div><div class="sc-right"><strong>${ptsLabel(s.points)}</strong><span>${n} ${n === 1 ? 'captura' : 'capturas'}</span></div></div></article>`; }).join('');
     $('speciesEmpty').hidden = all.length > 0;
   };
 
@@ -3990,6 +4040,7 @@ await new Promise(resolve => {
     document.querySelectorAll('[data-admin-sec]').forEach(b => b.setAttribute('aria-current', String(b.dataset.adminSec === sec)));
     document.querySelectorAll('[data-admin-panel]').forEach(p => p.hidden = p.dataset.adminPanel !== sec);
     store.set('ajing-admin-sec', sec, true);
+    if (sec === 'requests' && isAdmin() && !membersPage.hidden) fb.ensure('postAudits');
   };
   document.querySelectorAll('[data-admin-sec]').forEach(b => b.addEventListener('click', () => showAdminSec(b.dataset.adminSec)));
   const delIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
@@ -3999,7 +4050,7 @@ await new Promise(resolve => {
     $('cntSpecies').textContent = sp.length; $('cntUsers').textContent = getUsers().length; $('cntSlides').textContent = heroSlides.length;
     const spShown = filterAdminSpecies(sp);
     $('spCount').textContent = spShown.length === sp.length ? `${sp.length} ${sp.length === 1 ? 'espécie' : 'espécies'}` : `${spShown.length} de ${sp.length} espécies`;
-    $('speciesAdminList').innerHTML = spShown.length ? spShown.map(s => `<li><button type="button" class="sp-thumb ${speciesPhotos[s.id] ? 'has' : ''}" data-photo-species="${esc(s.id)}" ${speciesPhotos[s.id] ? `style="background-image:url('${speciesPhotos[s.id]}')"` : ''} aria-label="${speciesPhotos[s.id] ? 'Trocar' : 'Adicionar'} foto de ${esc(s.name)}" title="${speciesPhotos[s.id] ? 'Trocar foto' : 'Adicionar foto'}">${speciesPhotos[s.id] ? '' : fishIcon}</button><span class="grow">${esc(s.name)} ${s.sci ? `<i>${esc(s.sci)}</i>` : ''} ${habitatOk(s.habitat) ? habitatChip(s.habitat) : '<span class="hab-chip hab-missing" title="Edite a espécie para informar o habitat">Sem habitat</span>'}</span><label class="pts-inline"><input type="number" min="1" max="1000" step="1" value="${s.points}" data-points="${esc(s.id)}" aria-label="Pontuação de ${esc(s.name)}"><span>pts</span></label><button class="btn btn-ghost species-edit-btn" type="button" data-edit-species="${esc(s.id)}">Editar</button><button class="post-del" type="button" data-del-species="${esc(s.id)}" aria-label="Remover ${esc(s.name)}" title="Remover">${delIcon}</button></li>`).join('') : `<li class="empty-row">${sp.length ? 'Nenhuma espécie encontrada com esse filtro.' : 'Nenhuma espécie cadastrada. Adicione uma acima ou importe uma planilha.'}</li>`;
+    $('speciesAdminList').innerHTML = spShown.length ? spShown.map(s => `<li><span class="grow">${esc(s.name)} ${s.sci ? `<i>${esc(s.sci)}</i>` : ''} ${habitatOk(s.habitat) ? habitatChip(s.habitat) : '<span class="hab-chip hab-missing" title="Edite a espécie para informar o habitat">Sem habitat</span>'}</span><label class="pts-inline"><input type="number" min="1" max="1000" step="1" value="${s.points}" data-points="${esc(s.id)}" aria-label="Pontuação de ${esc(s.name)}"><span>pts</span></label><button class="btn btn-ghost species-edit-btn" type="button" data-edit-species="${esc(s.id)}">Editar</button><button class="post-del" type="button" data-del-species="${esc(s.id)}" aria-label="Remover ${esc(s.name)}" title="Remover">${delIcon}</button></li>`).join('') : `<li class="empty-row">${sp.length ? 'Nenhuma espécie encontrada com esse filtro.' : 'Nenhuma espécie cadastrada. Adicione uma acima ou importe uma planilha.'}</li>`;
     const me = currentUser();
     const ui = {
       edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
@@ -4018,8 +4069,8 @@ await new Promise(resolve => {
   let editingSpeciesId = null;
   const closeSpeciesEdit = () => {
     editingSpeciesId = null; $('speciesForm').reset(); $('speciesFormTitle').textContent = 'Adicionar espécie';
-    $('speciesSubmit').textContent = 'Adicionar'; $('speciesCancel').hidden = true; $('spPhoto').required = true;
-    $('spPhotoHint').textContent = ''; $('speciesError').textContent = '';
+    $('speciesSubmit').textContent = 'Adicionar'; $('speciesCancel').hidden = true;
+    $('speciesError').textContent = '';
   };
   $('speciesCancel').addEventListener('click', closeSpeciesEdit);
   $('speciesForm').addEventListener('submit', async e => { if (!isAdmin()) return;
@@ -4029,15 +4080,10 @@ await new Promise(resolve => {
     if (!name) { err.textContent = 'Informe o nome popular da espécie.'; $('spName').focus(); return; }
     if (!habitatOk(habitat)) { err.textContent = 'Escolha o habitat da espécie: água salgada, água doce ou ambos.'; $('spHabitat').focus(); return; }
     if (!Number.isInteger(points) || points < 1 || points > 1000) { err.textContent = 'Informe a pontuação: um número inteiro de 1 a 1000.'; $('spPoints').focus(); return; }
-    const file = $('spPhoto').files && $('spPhoto').files[0];
     const list = readJSON('ajing-species', []);
     if (list.some(s => s.id !== editingSpeciesId && s.name.toLowerCase() === name.toLowerCase())) { err.textContent = 'Essa espécie já está cadastrada.'; return; }
-    if (!editingSpeciesId && !file) { err.textContent = 'Adicione a foto da espécie.'; $('spPhoto').focus(); return; }
-    if (file && !file.type.startsWith('image/')) { err.textContent = 'A foto precisa ser um arquivo de imagem (JPG, PNG ou WebP).'; return; }
     if (editingSpeciesId) {
       const species = list.find(s => s.id === editingSpeciesId); if (!species) { closeSpeciesEdit(); return; }
-      if (file) { try { await setSpeciesPhoto(species.id, await resizeImage(file, 640, .76)); }
-        catch(_) { err.textContent = 'Não foi possível salvar a foto. Tente outra imagem.'; return; } }
       Object.assign(species, { name, sci, points, habitat }); writeJSON('ajing-species', list);
       const changedPosts = posts.filter(p => p.speciesId === species.id).map(p => ({ ...p, speciesName: name, points }));
       try { await Promise.all(changedPosts.map(p => postsDB.put(p))); await loadPosts(); }
@@ -4045,8 +4091,6 @@ await new Promise(resolve => {
       closeSpeciesEdit(); softFocus($('spName')); renderAll(); return;
     }
     const id = uid();
-    try { await setSpeciesPhoto(id, await resizeImage(file, 640, .76)); }
-    catch(_) { err.textContent = 'Não foi possível salvar a foto. Tente outra imagem.'; return; }
     list.push({ id, name, sci, points, habitat }); writeJSON('ajing-species', list);
     err.textContent = ''; e.target.reset(); softFocus($('spName')); renderAll();
   });
@@ -4057,23 +4101,11 @@ await new Promise(resolve => {
     if (!Number.isInteger(v) || v < 1 || v > 1000) { err.textContent = 'A pontuação precisa ser um número inteiro de 1 a 1000.'; inp.value = s.points; return; }
     s.points = v; writeJSON('ajing-species', list); err.textContent = ''; renderAll();
   });
-  let photoTarget = null;
-  $('spRowPhoto').addEventListener('change', async () => { if (!isAdmin()) return;
-    const f = $('spRowPhoto').files && $('spRowPhoto').files[0], id = photoTarget; $('spRowPhoto').value = '';
-    if (!f || !id) return;
-    if (!f.type.startsWith('image/')) { $('speciesError').textContent = 'A foto precisa ser um arquivo de imagem (JPG, PNG ou WebP).'; return; }
-    try { await setSpeciesPhoto(id, await resizeImage(f, 640, .76)); $('speciesError').textContent = ''; }
-    catch(_) { $('speciesError').textContent = 'Não foi possível salvar a foto. Tente outra imagem.'; }
-    renderAll();
-  });
   $('speciesAdminList').addEventListener('click', async e => { if (!isAdmin()) return;
-    const ph = e.target.closest('[data-photo-species]');
-    if (ph) { photoTarget = ph.dataset.photoSpecies; $('spRowPhoto').click(); return; }
     const edit = e.target.closest('[data-edit-species]');
     if (edit) {
       const s = getSpecies().find(x => x.id === edit.dataset.editSpecies); if (!s) return;
       editingSpeciesId = s.id; $('spName').value = s.name; $('spSci').value = s.sci || ''; $('spHabitat').value = habitatOk(s.habitat) ? s.habitat : ''; $('spPoints').value = s.points;
-      $('spPhoto').value = ''; $('spPhotoName').textContent = 'Trocar foto'; $('spPhoto').required = false; $('spPhotoHint').textContent = '(opcional)';
       $('speciesFormTitle').textContent = `Editar espécie: ${s.name}`; $('speciesSubmit').textContent = 'Salvar alterações'; $('speciesCancel').hidden = false;
       $('speciesError').textContent = ''; softFocus($('spName')); $('speciesForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return;
     }
@@ -4083,21 +4115,20 @@ await new Promise(resolve => {
     if (!(await askConfirm(`Remover "${s.name}" da lista?` + (used ? `\nAs ${used} publicações existentes continuam mostrando o nome.` : ''), { danger: true, confirmText: 'Remover' }))) return;
     writeJSON('ajing-species', readJSON('ajing-species', []).filter(x => x.id !== s.id));
     if (editingSpeciesId === s.id) closeSpeciesEdit();
-    setSpeciesPhoto(s.id, '').catch(() => {}).finally(renderAll);
+    removeSpeciesPhoto(s.id).finally(renderAll);
   });
   /* ===== Lista de espécies: busca e filtro ===== */
   const normKey = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
   let spAdminQuery = '', spAdminFilter = 'all';
   const filterAdminSpecies = list => list.filter(s =>
     (!spAdminQuery || normKey(`${s.name} ${s.sci || ''}`).includes(spAdminQuery)) &&
-    (spAdminFilter === 'all' || (spAdminFilter === 'nophoto' ? !speciesPhotos[s.id] : s.habitat === spAdminFilter)));
+    (spAdminFilter === 'all' || s.habitat === spAdminFilter));
   $('spSearch').addEventListener('input', () => { spAdminQuery = normKey($('spSearch').value); renderAdmin(); });
   $('spFilter').addEventListener('change', () => { spAdminFilter = $('spFilter').value; renderAdmin(); });
-  $('spPhoto').addEventListener('change', () => { const f = $('spPhoto').files && $('spPhoto').files[0]; $('spPhotoName').textContent = f ? f.name : (editingSpeciesId ? 'Trocar foto' : 'Escolher foto'); });
-  $('speciesForm').addEventListener('reset', () => { setTimeout(() => { $('spPhotoName').textContent = editingSpeciesId ? 'Trocar foto' : 'Escolher foto'; }, 0); });
+
 
   /* ===== Importação de espécies em lote (planilha .xlsx, .xls ou .csv) ===== */
-  const SPECIES_TEMPLATE_B64 = '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s/xx9f5y/4uoeKH5he82N7v71cPRs1f7f87PXqXTj/Zv09N7NX96S+aPn3X++Fkf/u84fbmtqBVXMhy8eDp40R7cilpxJcPBy6eDl+3BragVVzIcfPJ08El7cCtqxZUMB58+HXzaHtyKWnElw8FnTweftQe3olZcyXDw+dPB5+3BragVVzIcfPF08EV7cCtqxZUMB8+Op247bo/uST25pPH00Kyz/vSW1JNLGk+fSmzWt1hP6skljadPTTbrq6wn9eSSxtOnOpv1fdaTenJJ4+lTp836UutJPbmk8fSp2GZ9s/WknlzSePrUbrO+3npSTy5pPH2quFnfcT2pJ5c0nj713Kwvup7Uk0saf88ydd2877qe1JNLGk+fum7ed11P6skljaeH37DB79jgt2zwe7Znu24+dd2877qe1JNLGk+fum7ed11P6skljadPXTfvu64n9eSSxtOnrpv3XdeTenJJ4+lT1837rutJPbmk8fSp6+Z91/WknlzSePrUdfO+63pSTy5p/GPS1HWLvut6Uk8uaTx96rpF33U9qSeXNJ4+dd2i77qe1JNLGk8Pf0KFP6LCn1HhD6nPdt1i6rpF33U9qSeXNJ4+dd2i77qe1JNLGk+fum7Rd11P6skljadPXbfou64n9eSSxtOnrlv0XdeTenJJ4+lT1y36rutJPbmk8W9mpq5b9l3Xk3pySePpU9ct+67rST25pPH0qeuWfdf1pJ5c0nj61HXLvut6Uk8uaTw9/JUc/J0c/KUc/K3cs123nLpu2XddT+rJJY2nT1237LuuJ/XkksbTp65b9l3Xk3pySePpU9ct+67rST25pPH0qeuWfdf1pJ5c0viXwVPXnfRd15N6cknj6VPXnfRd15N6cknj6VPXnfRd15N6cknj6VPXnfRd15N6cknj6VPXnfRd15N6cknj6eF7EPBNCPguBHwb4tmuO5m67qTvup7Uk0saT5+67qTvup7Uk0saT5+67qTvup7Uk0saT5+67qTvup7Uk0sav/80dd1p33U9qSeXNJ4+dd1p33U9qSeXNJ4+dd1p33U9qSeXNJ4+dd1p33U9qSeXNJ4+dd1p33U9qSeXNJ4+dd1p33U9qSeXNJ4evukK33WFb7vC912f7brTqetO+67rST25pPH0qetO+67rST25pPH0qetO+67rST25pPFb3lPXnfVd15N6cknj6VPXnfVd15N6cknj6VPXnfVd15N6cknj6VPXnfVd15N6cknj6VPXnfVd15N6cknj6VPXnfVd15N6cknj6VPXnfVd15N6cknj6eEqE7jMBK4zgQtNnu26s6nrzvqu60k9uaTx9Knrzvqu60k9uaTxKpup6877rutJPbmk8fSp6877rutJPbmk8fSp6877rutJPbmk8fSp6877rutJPbmk8fSp6877rutJPbmk8fSp6877rutJPbmk8fSp6877rutJPbmk8fSp6877rutJPbmk8fRwWR1cVwcX1sGVdc923fnUded91/WknlzSeGHf1HUXfdf1pJ5c0nj61HUXfdf1pJ5c0nj61HUXfdf1pJ5c0nj61HUXfdf1pJ5c0nj61HUXfdf1pJ5c0nj61HUXfdf1pJ5c0nj61HUXfdf1pJ5c0nj61HUXfdf1pJ5c0nj61HUXfdf1pJ5c0nh6uI4YLiSGK4nhUuIXXEscLyamq4npcmK6nvj5C4qPwxXFx3BJcW8Cc20pQris+LjvPTCBubYUIVxbfAwXF/cmMNeWIoQLjI/hCuPeBObaUoRwlfExXGbcm8BcW4oQLjU+hmuNexOYa0sRwvXGx3DBcW8Cc20pQrjo+BiuOu5NYK4tRQhXHh/Dpce9Ccy1pa1DaEfaWtDYgtYWL5lbxL0FDS5ocUGTi+fbMY4uaHVBswvaXbxgeBGXFzS9oO0FjS9esL6I8wvaX9AAgxYYL5hgxA0GjTBohUEzjBfsMOIQg5YYNMWgLcYLxhhxjUFzDNpj0CDjBYuMOMmgTQaNMmiV8YJZRtxl0DCDlhk0zXh+mzEL44wZrDPABObaUoTQjjDRABOYa0sR4iQN2hGGGmCuLUUI7QhjDTCBubYUIbQjLDbABObaUoTQjjDbABOYa0sRQjvCdgNMYK4tRQjtCAMOMIG5thQhtCOsOMAE5tpShNCOMOUAE5hrS1vR0I6w5wATmGtLEUI7wqgDTGCuLUUI7QjLDjCBubYUIa52abZLu10a7j7fjmHiMYONB5jAXFuKENoRhh5gAnNtKUJoR1h7gAnMtaUIoR1h8gEmMNeWIoR2hN0HmMBcW4oQ2hHGH2ACc21pyx7aERYgYAJzbSlCaEeYgYAJzLWlCKEdYQsCJjDXliKEdoRBCJjAXFuKEG9sQHc2oFsb0L0Nnm/HsAyZwTQETGCuLUUI7Qj7EDCBubYUIbQjjETABObaUoTQjrAUAROYa0sRQjvCXARMYK5tjBAmIzPYjIAJzLWlCKEdYTgCJjDXliKEdoT1CJjAXFuKENoRJiRgAnNtKUJoR9iRgAnMtaUI8d4vdPMXuvsL3f7l+XYMg5IZLErABObaUoTQjjArAROYa0sRQjvCtgRMYK4tRQjtCAMTMIG5tjFCGJnMYGUCJjDXliKEdoSpCZjAXFuKENoR9iZgAnNtKUJoRxidgAnMtaUIoR1heQImMNeWIoR2hPkJmMBcW4oQb49F98eiG2TRHbKeb8ewQ5nBEAVMYK4tRQjtCGsUMIG5thQhtCNMUsAE5trGCGGWMoNdCpjAXFuKENoRxilgAnNtKUJoR1iogAnMtaUIoR1hpgImMNeWIoR2hK0KmMBcW4oQ2hEGK2ACc20pQmhHWK2ACcy1pQjxDoJ0C0G6hyDdRPD5dgzzlRnsV8AE5tpShNCOMGIBE5hrGyOEIcsMlixgAnNtKUJoR5izgAnMtaUIoR1h0wImMNeWIoR2hGELmMBcW4oQ2hHWLWACc20pQmhHmLiACcy1pQihHWHnAiYw15YihHaEsQuYwFxbihBvskp3WaXbrNJ9Vp9vx7B6mcHsBUxgrm2MEKYvM9i+gAnMtaUIoR1hAAMmMNeWIoR2hBUMmMBcW4oQ2hGmMGACc20pQmhH2MOACcy1pQihHWEUAyYw15YihHaEZQyYwFxbihDaEeYxYAJzbSlCaEfYyIAJzLWlCPE+1HQjaroTNd2K+gX3oo43o6a7UdPtqOl+1M/fkDpsZeawlQETmGtLEcJtqWErAyYw15YihHtTw1YGTGCuLUUIN6iGrQyYwFxbihDuUg1bGTCBubYUIdyqGrYyYAJzbSlCuF81bGXABObaUoRw02rYyoAJzLWlCOHO1bCVAROYaxsjhK3MHLYyYAJzbSlCvF8/3bCf7thPt+x/vh3DVmYOWxkwgbm2FCG0I2xlwATm2lKE0I6wlQETmGtLEUI7wlYGTGCuLUUI7QhbGTCBubYUIbQjbGXABObaUoTQjrCVAROYa0sRQjvCVgZMYK5tjBAfZEJPMqFHmdCzTF7wMJP4NBN6nAk9z4QeaPKSJ5rER5pAO+JDTaAdX/BYk/hcE3qwCT3ZhB5t8oJnm8SHm9DTTejxJvR8kxc84CQ+4YQecULPOKGHnLzgKSfxMSf0nBN60Ak96eQFjzqJzzqhh53Q007ocScveN5JfOAJPfGEHnlCzzx5wUNP4lNP6LEn9NwTevDJ81uZedjKzGErAyYw15YihHaErQyYwFxbihDaEbYyYAJzbSlCfOoTPfaJnvtED356vh3DVmYOWxkwgbm2FCG0I2xlwATm2lKE0I6wlQETmGtLEUI7wlYGTGCuLUUI7QhbGTCBubYUIbQjbGXABObaxghhKzOHrQyYwFxbihDaEbYyYAJzbSlCaEfYyoAJzLWlCKEdYSsDJjDXliLEB+PRk/Ho0Xj0bLzn2zFsZeawlQETmGtLEUI7wlYGTGCuLUUI7QhbGTCBubYUIbQjbGXABObaUoTQjrCVAROYaxsjhK3MHLYyYAJzbSlCaEfYyoAJzLWlCKEdYSsDJjDXliKEdoStDJjAXFuKENoRtjJgAnNtKUJ8dig9PJSeHkqPD32+HcNWZg5bGTCBubYUIbQjbGXABObaUoTQjrCVAROYa0sRQjvCVgZMYK5tjBC2MnPYyoAJzLWlCKEdYSsDJjDXliKEdoStDJjAXFuKENoRtjJgAnNtKUJoR9jKgAnMtaUIoR1hKwMmMNeWIsTHK9PzlekBy/SE5efbMWxl5rCVAROYa0sRQjvCVgZMYK4tRQjtCFsZMIG5tjFC2MrMYSsDJjDXliKEdoStDJjAXFuKENoRtjJgAnNtKUJoR9jKgAnMtaUIoR1hKwMmMNeWIoR2hK0MmMBcW4oQ2hG2MmACc20pQnwCPT2Cnp5BTw+hf74dw1ZmDlsZMIG5thQhtCNsZcAE5trGCGErM4etDJjAXFuKENoRtjJgAnNtKUJoR9jKgAnMtaUIoR1hKwMmMNeWIoR2hK0MmMBcW4oQ2hG2MmACc20pQmhH2MqACcy1pQihHWErAyYw15YihHaErQyYwFxbihDaEbYyYAJzbWOEsJWZw1YGTGCuLUUI7QhbGTCBubYUIbQjbGXABObaUoTQjrCVAROYa0sRQjvCVgZMYK4tRQjtCFsZMIG5thQhtCNsZcAE5tpShNCOsJUBE5hrSxFCO8JWBkxgri1FCO0IWxkwgbm2IcIibGUWsJUBE5hrSxFmIULfjmACc20pwjxE6NsRTGCuLUVYhAh9O4IJzLWlCMsQoW9HMIG5thThJETo2xFMYK4tRTgNEfp2BBOYa0sRzkKEvh3BBObaUoTzEKFvRzCBubYU4SJE6NsRTGCubYwQtjIL2MqACcy1pQihHWErAyYw15YihHaErQyYwFxbihDaEbYyYAJzbSlCaEfYyoAJzLWlCKEdYSsDJjDXliKEdoStDJjAXFuKENoRtjJgAnNtKUJoR9jKgAnMtaUIoR1hKwMmMNc2RghbmQVsZcAE5tpShNCOsJUBE5hrSxFCO8JWBkxgri1FCO0IWxkwgbm2FCG0I2xlwATm2lKE0I6wlQETmGtLEUI7wlYGTGCuLUUI7QhbGTCBubYUIbQjbGXABObaUoTQjrCVAROYaxsjhK3MArYyYAJzbSlCaEfYyoAJzLWlCKEdYSsDJjDXliKEdoStDJjAXFuKENoRtjJgAnNtKUJoR9jKgAnMtaUIoR1hKwMmMNeWIoR2hK0MmMBcW4oQ2hG2MmACc20pQmhH2MqACcy1jRHCVmYBWxkwgbm2FCG0I2xlwATm2lKE0I6wlQETmGtLEUI7wlYGTGCuLUUI7QhbGTCBubYUIbQjbGXABObaUoTQjrCVAROYa0sRQjvCVgZMYK4tRQjtCFsZMIG5thQhtCNsZcAE5trGCGErs4CtDJjAXFuKENoRtjJgAnNtKUJoR9jKgAnMtaUIoR1hKwMmMNeWIoR2hK0MmMBcW4oQ2hG2MmACc20pQmhH2MqACcy1pQihHWErAyYw15YihHaErQyYwFxbihDaEbYyYAJzbWOEsJVZwFYGTGCuLUUI7QhbGTCBubYUIbQjbGXABObaUoTQjrCVAROYa0sRQjvCVgZMYK4tRQjtCFsZMIG5thQhtCNsZcAE5tpShNCOsJUBE5hrSxFCO8JWBkxgri1FCO0IWxkwgbm2MULYyixgKwMmMNeWIoR2hK0MmMBcW4oQ2hG2MmACc20pQmhH2MqACcy1pQihHWErAyYw15YihHaErQyYwFxbihDaEbYyYAJzbSlCaEfYyoAJzLWlCKEdYSsDJjDXliKEdoStDJjAXNsYIWxlFrCVAROYa0sRQjvCVgZMYK4tRQjtCFsZMIG5thQhtCNsZcAE5tpShNCOsJUBE5hrSxFCO8JWBkxgri1FCO0IWxkwgbm2FCG0I2xlwATm2lKE0I6wlQETmGtLEUI7wlYGTGCubYwQtjIL2MqACcy1pQihHWErAyYw15YihHaErQyYwFxbihDaEbYyYAJzbSlCaEfYyoAJzLWlCKEdYSsDJjDXliKEdoStDJjAXFuKENoRtjJgAnNtKUJoR9jKgAnMtaUIoR1hKwMmMNc2RFiGrcwStjJgAnNtKcIsROjbEUxgri1FmIcIfTuCCcy1pQiLEKFvRzCBubYUYRki9O0IJjDXliKchAh9O4IJzLWlCKchQt+OYAJzbSnCWYjQtyOYwFxbinAeIvTtCCYw15YiXIQIfTuCCcy1jRHCVmYJWxkwgbm2FCG0I2xlwATm2lKE0I6wlQETmGtLEUI7wlYGTGCuLUUI7QhbGTCBubYUIbQjbGXABObaUoTQjrCVAROYa0sRQjvCVgZMYK4tRQjtCFsZMIG5thQhtCNsZcAE5trGCGErs4StDJjAXFuKENoRtjJgAnNtKUJoR9jKgAnMtaUIoR1hKwMmMNeWIoR2hK0MmMBcW4oQ2hG2MmACc20pQmhH2MqACcy1pQihHWErAyYw15YihHaErQyYwFxbihDaEbYyYAJzbWOEsJVZwlYGTGCuLUUI7QhbGTCBubYUIbQjbGXABObaUoTQjrCVAROYa0sRQjvCVgZMYK4tRQjtCFsZMIG5thQhtCNsZcAE5tpShNCOsJUBE5hrSxFCO8JWBkxgri1FCO0IWxkwgbm2MULYyixhKwMmMNeWIoR2hK0MmMBcW4oQ2hG2MmACc20pQmhH2MqACcy1pQihHWErAyYw15YihHaErQyYwFxbihDaEbYyYAJzbSlCaEfYyoAJzLWlCKEdYSsDJjDXliKEdoStDJjAXNsYIWxllrCVAROYa0sRQjvCVgZMYK4tRQjtCFsZMIG5thQhtCNsZcAE5tpShNCOsJUBE5hrSxFCO8JWBkxgri1FCO0IWxkwgbm2FCG0I2xlwATm2lKE0I6wlQETmGtLEUI7wlYGTGCubYwQtjJL2MqACcy1pQihHWErAyYw15YihHaErQyYwFxbihDaEbYyYAJzbSlCaEfYyoAJzLWlCKEdYSsDJjDXliKEdoStDJjAXFuKENoRtjJgAnNtKUJoR9jKgAnMtaUIoR1hKwMmMNc2RghbmSVsZcAE5tpShNCOsJUBE5hrSxFCO8JWBkxgri1FCO0IWxkwgbm2FCG0I2xlwATm2lKE0I6wlQETmGtLEUI7wlYGTGCuLUUI7QhbGTCBubYUIbQjbGXABObaUoTQjrCVAROYaxsjhK3MErYyYAJzbSlCaEfYyoAJzLWlCKEdYSsDJjDXliKEdoStDJjAXFuKENoRtjJgAnNtKUJoR9jKgAnMtaUIoR1hKwMmMNeWIoR2hK0MmMBcW4oQ2hG2MmACc20pQmhH2MqACcy1jRHCVmYJWxkwgbm2FCG0I2xlwATm2lKE0I6wlQETmGtLEUI7wlYGTGCuLUUI7QhbGTCBubYUIbQjbGXABObaUoTQjrCVAROYa0sRQjvCVgZMYK4tRQjtCFsZMIG5thQhtCNsZcAE5tqGCCdhK3MCWxkwgbm2FGEWIvTtCCYw1/YtwtHdl/V659Vu9fb1x/0//7a6utz/+3Jzc3fwYXN/s3t4WaaDu79v15/2p85//H7wl81Xbze33ny9eXN4/O0Df7q5vd/9eX13t/q8fvrgH7bbzfbpg/uXrq6uNl9/ulrd/PL4w/WD//fl7mqvf1y9v9ytdgeXN//47W/m85NX+/M333/Km8M/3H3YXH1ZHfz2N7OLxavP96uDn1dXn1cfV78LH/Lmw/pgc3/w++v3m7sf9l//r7f7T3x1ebfbf1GfNtvr+6vV7O3hv3+O8VP87vH1h6+Pnl7y+mh8S7q3yPMf/f/4Fr3b3OzuV/t3ZzF79fAenb3aDG/X6unt+uvd+uD++uBmTyfHr67X24efuFtf7v/9cX0wO1gdzI6Pj5/eoq9fNlfrw4PN7Xq72j28/v1693W9volv2yy+H9//a/724dM8wbx4o9IH7t6+vt1/pX9ebT9f7n/RXa0/7X/NHf/w8DcA28vPX55+sNvcPn757ze73eb68T+/rFcf19uHn7D3T5vN7l8/ONqf8nWz/eXxF/fb/wNQSwMEFAAAAAgAYpdtXV7+cGNDBAAAbAsAABgAAAB4bC93b3Jrc2hlZXRzL3NoZWV0Mi54bWyNVm1v4jgQ/iujVKpaiSVvvLRAkVq6d3sf7lRtdS9fh8SAdx07tR1g99ffOAlpaCFbVTR24mfmmWfGY892Sn83G8Ys7DMhzZ23sTaf+L5JNixD01c5k/RlpXSGlqZ67ZtcM0xLUCb8KAhGfoZcevNZ+e5Jz2eqsIJL9qTBFFmG+scDE2p354Xe4cVXvt5Y98Kfz3Jcs2dm/86fNM38xkrKMyYNVxI0W9159+HkMYwdoFzxD2c70xqDC2Wp1Hc3+SO98wLHiAmWWGcC6bFlCyaEs0Q8XmqjXuPTAdvjg/XfyuApmCUatlDiX57azZ1340HKVlgI+1XtvrA6oKGzlyhhyv+wq9bGgQdJYazKajAxyLisnrivhWgBosEZQFQDojeAcHQGENeA+C0gOgMY1IBBqUwVSqnDI1qcz7TagXaryZoblGKWbih8Ll3en62mr5xwdr5QmQKqGCapojQg5AIlFxsk8YCZ/PIiiuNpwpmBy4ubKIymcP+NyzX8jhmb+ZYoOEN+Qj9y3fiPGv9R6X/wzv87SNxA4jOQinLYh6eKMIJRVIOWEW9cInif24S9ngsHteUaUgQyQ4AIrpJqiSgEGmAZ4M9CfEoEanXdh7/oYzSeKkBhmWagDFi3fjy1haBJYyjsd0Q/aEIZdIYSkUOKAJ5UTmz0BNRS8zU6j4N4qrmiEGxFF0YBJKhpnxAtQxLQGCSBDW2/NW0h5KYHhWG0DbTGCXjPjJ7gw7PS9Jeg18V42DAedjKOa8YLTrpXwqx4ooh5njgSosX45ohxh/NR43zU6XzQhy+45BbthGqTSp/yIF1CjMWmPC8vwtt4ui4QnlGsMcVe69WjSiinBdxnS9VJadxQGndSGlImlLQFupjDaV09E5A0GgbTjGkFnCqU05N2VEglGQZB0OX6pnF90+l61IejeoeXgsE3x2A4BbYnUai4pQLDaYNcUaHQTncFA3lVbddgmmKnAAT/SWIZSFQG9cLkOMk9er+p9Ae35fL3gbv9ceggPaBi3Kpyuw2m1LSka/GaMmeQyuUYR4dOQu5dOnmWK22P7Xbpddvoddup17gP9wZWytI2lge/28NAvhKfUKZyxY1LWE1GU1mn3FU4qeJ4OjOuedyn1JRJav1GB1eNlP/jDPUgETxBmTp9KV2YUlWgAoH0Jq1E74o0DF67evDRthq2joLqLBieEejznmW5KOu06nH1ucAp3qtGsUTlnLm+inXXPS5Cynmz9KXghhJeaVgV5ieB15OuEF8PjrA6OUZn2LYb57HBEv7wEfibLnbCzOIXZup+dAL5+AvkibbRpcvr6Rh2H48LykyOBTX+//iejoJTUT18wIbcQ6J/GGVOqtKNf9eDT+rTtuHup9t5OJz523b0futm4+6hf6Jec2lAsBWBgv6YallXV7tqYlVeXpWWytLVqRxu6DrMtFtA31dK2cPE3Z+aC/b8f1BLAwQUAAAACABil21dOtujjP0CAABCDgAADQAAAHhsL3N0eWxlcy54bWzdV+1umzAUfRXEA4wEWhqmEKmlijRpmyq1P/bXCYZYMpgZUyV7+vnaBEjqWzWtqkkjqrB9fM798L1YXbbqwOnjjlLl7Stet6m/U6r5GgTtdkcr0n4RDa01UghZEaWnsgzaRlKSt0CqeBDOZnFQEVb7q2XdVetKtd5WdLVK/ZkfrJaFqMeVa98u6K2kot4z4amfEc42kpm9pGL8YJdDWNgKLqSntCs09eew0v6x8NzOwMtep2K1kLAYWAvndm4lIxzwTa8wGpDlRns7W5vnxMrsLYKX7Z6aP43mXcypTfNqtQLjfMj5lW8XVsuGKEVlvdYTwzGLLyCvHz8dGp30UpLDPLz230xoBWc5mCyzaW5ni5skuTMyE+oHRdfRerG+RUXNS6djI2RO5ZCQ0D8urZacFkrTJSt38FaigTwLpUSlBzkjpaiJydaRMb5hk2caKPXVzjTASTllyX10n/iWDJsnKv1AO7elnD+CyK9i8HCupfaFZ9vpWw6d5MHRHoc6rH5oZewEDE3VrPZE9uZdsl7DnoW663QEtZn/7oSiD5IWbG/m+2Kwj6nPR/XwTJ00DT/cclbWFbWxv9ngakmOPO+ZSsW20BFbPaX2Q7AvcJfC0aVo6tIF9l8JOPrUdIafqn71r0rhAvWgL+1J/5x0z7DqwXc09X/C/cVHCW/TMa5Y3c92LM9p/aKJtLwiG31Bnujr/TktSMfV0wCm/jj+QXPWVcmw6wHC6neN4+/wyZnHwyWkbbE6p3uaZ/1Uf0ZOP6HmAcI5Ml5cLxGMYzE3AhhmB/MA41gWZud/imeBxmMxzLeFE1mgnAXKsSwXkpkfZsfNSfTjjjRJoiiOsYxmmdODDMtbHMOfWw3zDRiYHbB0Wa7x08Yr5PU6wM70tQrBIsUrEYsUzzUg7rwBI0ncp43ZAQZ2CljtgH23HagpNyeK4FQx37AOxpEkwRCoRXeNxjGSnRh+7vPBuiSKksSNAOb2IIowBLoRRzAPwAcMiSJzD57dR8HxngrG/xpXfwFQSwMEFAAAAAgAYpdtXZeKuxzAAAAAEwIAAAsAAABfcmVscy8ucmVsc52SuW7DMAxAf8XQnjAH0CGIM2XxFgT5AVaiD9gSBYpFnb+v2qVxkAsZeT08EtweaUDtOKS2i6kY/RBSaVrVuAFItiWPac6RQq7ULB41h9JARNtjQ7BaLD5ALhlmt71kFqdzpFeIXNedpT3bL09Bb4CvOkxxQmlISzMO8M3SfzL38ww1ReVKI5VbGnjT5f524EnRoSJYFppFydOiHaV/Hcf2kNPpr2MitHpb6PlxaFQKjtxjJYxxYrT+NYLJD+x+AFBLAwQUAAAACABil21d4cgUK1QBAAC4AgAADwAAAHhsL3dvcmtib29rLnhtbLVSW07DMBC8SuQDkDSCSlRNfyiPSggqivrvJJtmVT+i9aaFXghxAE7Qi+E4iihCQvzwtd7Z1Xhm7One0ja3dhu9aGVcJmrmZhLHrqhBS3dmGzB+UlnSkn1Lm9g1BLJ0NQBrFadJMo61RCNm04FrSfFpYxkKRms82AFrhL37mndttEOHOSrk10yEswIRaTSo8QBlJhIRudru7yzhwRqWalWQVSoTo36wBmIsfsCrTuSzzF1AWOZP0gvJxDjxhBWS47AR+KXXuAO/3Hct2xtUDDSXDLdk2wbNpqPxLuITGyGHofYhTugvMdqqwgLmtmg1GO5zJFCdQONqbJyIjNSQiWvXHN8LBNd58pcsyt4fe2EnadEE/YAWZZD4f3IWxjG1x7fjxzdF6S+K0hDakFQJFRooHzyb87h/tWJJUVeCs/T8YnTpX6dV6spjj+beynIIfvg0s09QSwMEFAAAAAgAYpdtXY33LFq0AAAAiQIAABoAAAB4bC9fcmVscy93b3JrYm9vay54bWwucmVsc8WSTQqDMBBGrxJygI7a0kVRV924LV4g6PiD0YTMlOrta3WhgS66ka7CNyHvezCJH6gVt2agprUkxl4PlMiG2d4AqGiwV3QyFof5pjKuVzxHV4NVRadqhCgIruD2DJnGe6bIJ4u/EE1VtQXeTfHsceAvYHgZ11GDyFLkytXIiYRRb2OC5QhPM1mKrEyky8pQwr+FIk8oOlCIeNJIm82avfrzgfU8v8WtfYnr0N/J5eMA3s9L31BLAwQUAAAACABil21dbqckvB4BAABXBAAAEwAAAFtDb250ZW50X1R5cGVzXS54bWzFlM9OwzAMxl+lynVqMnbggNZdgCvswAuE1l2j5p9ib3Rvj9tuk0CjYioSl0aN7e/n+IuyfjtGwKxz1mMhGqL4oBSWDTiNMkTwHKlDcpr4N+1U1GWrd6BWy+W9KoMn8JRTryE26yeo9d5S9tzxNprgC5HAosgex8SeVQgdozWlJo6rg6++UfITQXLlkIONibjgBKGuEvrIz4BT3esBUjIVZFud6EU7zlKdVUhHCyinJa70GOralFCFcu+4RGJMoCtsAMhZOYoupsnEE4bxezebP8hMATlzm0JEdizB7bizJX11HlkIEpnpI16ILD37fNC7XUH1SzaP9yOkdvAD1bDMn/FXjy/6N/ax+sc+3kNo//qq96t02vgzXw3vyeYTUEsBAhQDFAAAAAgAYpdtXUbHTUiVAAAAzQAAABAAAAAAAAAAAAAAAIABAAAAAGRvY1Byb3BzL2FwcC54bWxQSwECFAMUAAAACABil21d702MUe8AAAArAgAAEQAAAAAAAAAAAAAAgAHDAAAAZG9jUHJvcHMvY29yZS54bWxQSwECFAMUAAAACABil21dmVycIxAGAACcJwAAEwAAAAAAAAAAAAAAgAHhAQAAeGwvdGhlbWUvdGhlbWUxLnhtbFBLAQIUAxQAAAAIAGKXbV0PEcjExBkAAGoEAQAYAAAAAAAAAAAAAACAgSIIAAB4bC93b3Jrc2hlZXRzL3NoZWV0MS54bWxQSwECFAMUAAAACABil21dXv5wY0MEAABsCwAAGAAAAAAAAAAAAAAAgIEcIgAAeGwvd29ya3NoZWV0cy9zaGVldDIueG1sUEsBAhQDFAAAAAgAYpdtXTrbo4z9AgAAQg4AAA0AAAAAAAAAAAAAAIABlSYAAHhsL3N0eWxlcy54bWxQSwECFAMUAAAACABil21dl4q7HMAAAAATAgAACwAAAAAAAAAAAAAAgAG9KQAAX3JlbHMvLnJlbHNQSwECFAMUAAAACABil21d4cgUK1QBAAC4AgAADwAAAAAAAAAAAAAAgAGmKgAAeGwvd29ya2Jvb2sueG1sUEsBAhQDFAAAAAgAYpdtXY33LFq0AAAAiQIAABoAAAAAAAAAAAAAAIABJywAAHhsL19yZWxzL3dvcmtib29rLnhtbC5yZWxzUEsBAhQDFAAAAAgAYpdtXW6nJLweAQAAVwQAABMAAAAAAAAAAAAAAIABEy0AAFtDb250ZW50X1R5cGVzXS54bWxQSwUGAAAAAAoACgCEAgAAYi4AAAAA';
+  const SPECIES_TEMPLATE_B64 = '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';
   const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
   let xlsxLoading = null;
   const loadXLSX = () => window.XLSX ? Promise.resolve(window.XLSX) : (xlsxLoading = xlsxLoading || new Promise((resolve, reject) => {
@@ -4263,7 +4294,7 @@ await new Promise(resolve => {
     const touched = posts.filter(p => changedPoints.has(p.speciesId)).map(p => ({ ...p, points: changedPoints.get(p.speciesId) }));
     if (touched.length) { try { await Promise.all(touched.map(p => postsDB.put(p))); await loadPosts(); } catch (_) { postsWarn = ' Algumas publicações não puderam ser recalculadas; edite a espécie para tentar de novo.'; } }
     importBusy = false; closeImport(); renderAll(); renderChampion();
-    $('speciesSaved').textContent = `Importação concluída: ${added} ${added === 1 ? 'espécie nova' : 'espécies novas'}${updated ? ` e ${updated} ${updated === 1 ? 'atualizada' : 'atualizadas'}` : ''}.${added ? ' Para adicionar as fotos, filtre a lista por "Sem foto" e clique no quadro ao lado de cada nome.' : ''}${postsWarn}`;
+    $('speciesSaved').textContent = `Importação concluída: ${added} ${added === 1 ? 'espécie nova' : 'espécies novas'}${updated ? ` e ${updated} ${updated === 1 ? 'atualizada' : 'atualizadas'}` : ''}.${postsWarn}`;
   });
   $('spTemplateBtn').addEventListener('click', () => {
     const bin = atob(SPECIES_TEMPLATE_B64), bytes = new Uint8Array(bin.length);
@@ -5246,7 +5277,7 @@ await new Promise(resolve => {
     $('reqHistory').innerHTML = sh.shown.length ? sh.shown.map(r => `<li class="review-history-row" data-species-history="${esc(r.id)}"><span class="grow"><b>${esc(r.name)}</b><small>${esc(displayName(r.user))} · ${STATUS[r.status].toLowerCase()} por ${esc(displayName(r.reviewer || ''))} em ${fmtShort(r.reviewed)}${r.status === 'approved' ? ` · ${ptsLabel(r.finalPoints)}` : ''}${r.reason ? ` · ${esc(r.reason)}` : ''}</small></span><span class="req-status ${r.status}">${STATUS[r.status]}</span><button class="btn btn-ghost review-edit-btn" type="button" data-review-edit="species"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar análise</button><form class="review-edit-panel" data-review-form="species" hidden>
       <div class="field"><label>Resultado da análise</label><select data-edit-field="status"><option value="approved" ${r.status === 'approved' ? 'selected' : ''}>Aprovada</option><option value="rejected" ${r.status === 'rejected' ? 'selected' : ''}>Recusada</option><option value="pending">Voltar para análise</option></select></div>
       <div class="field"><label>Nome popular</label><input maxlength="60" data-edit-field="name" value="${esc(r.name)}"></div><div class="field"><label>Nome científico</label><input maxlength="80" data-edit-field="sci" value="${esc(r.sci || '')}"></div><div class="field"><label>Habitat</label>${habitatSelect('data-edit-field="habitat"', r.habitat || (getSpecies().find(s => s.id === r.speciesId) || {}).habitat)}</div><div class="field"><label>Pontuação final</label><input type="number" min="1" max="1000" step="1" data-edit-field="points" value="${Number(r.finalPoints || r.points) || 1}"></div>
-      <div class="field"><label>Trocar foto (opcional)</label><input type="file" accept="image/*" data-edit-field="photo"></div><div class="field"><label>Motivo da recusa</label><input maxlength="140" data-edit-field="reason" value="${esc(r.reason || '')}"></div>
+      <div class="field"><label>Foto para nova análise <span class="muted">(opcional)</span></label><input type="file" accept="image/*" data-edit-field="photo"></div><div class="field"><label>Motivo da recusa</label><input maxlength="140" data-edit-field="reason" value="${esc(r.reason || '')}"></div>
       <div class="form-error" data-edit-error role="alert"></div><div class="form-actions"><button class="btn btn-primary" type="submit">Salvar revisão</button><button class="btn btn-ghost" type="button" data-review-cancel>Cancelar</button></div>
     </form></li>`).join('') : `<li class="empty-row">${sh.all ? 'Nenhuma análise encontrada com esse filtro.' : 'Nenhuma solicitação analisada ainda.'}</li>`;
     $('eventRegAdminList').innerHTML = eventRequests.length ? eventRequests.sort((a, b) => a.created - b.created).map(r => `<li class="event-reg-request" data-event-reg="${esc(r.id)}" data-champ="${esc(r.championshipId)}"><span class="grow"><b>${esc(r.championshipName)}</b><small>Solicitada por ${esc(displayName(r.user))} em ${fmtShort(r.created)}</small></span><button class="btn btn-primary" type="button" data-event-reg-act="approve">Aprovar</button><button class="btn btn-danger" type="button" data-event-reg-act="reject">Recusar</button></li>`).join('') : '<li class="empty-row">Nenhuma inscrição aguardando análise.</li>';
@@ -5306,7 +5337,6 @@ await new Promise(resolve => {
       const species = readJSON('ajing-species', []);
       if (species.some(s => norm(s.name) === norm(name))) { err.textContent = `"${name}" já está cadastrada. Recuse a solicitação ou altere o nome.`; return; }
       const spId = uid();
-      try { if (reqPhotos[id]) await setSpeciesPhoto(spId, reqPhotos[id]); } catch(_) { err.textContent = 'Não foi possível salvar a foto da espécie.'; return; }
       species.push({ id: spId, name, sci, points, habitat }); writeJSON('ajing-species', species);
       Object.assign(r, { status: 'approved', name, sci, habitat, finalPoints: points, speciesId: spId, reviewed: Date.now(), reviewer: currentUser() }); saveRequests(list);
       setReqPhoto(id, '').catch(() => {});
@@ -5448,17 +5478,14 @@ await new Promise(resolve => {
         const species = readJSON('ajing-species', []), existingId = request.speciesId || null;
         if (species.some(s => s.id !== existingId && norm(s.name) === norm(name))) { error.textContent = 'Já existe uma espécie cadastrada com esse nome.'; return; }
         const photoFile = field('photo').files && field('photo').files[0];
-        let photo = reqPhotos[request.id] || (existingId && speciesPhotos[existingId]) || '';
+        let photo = reqPhotos[request.id] || '';
         if (photoFile) {
           if (!photoFile.type.startsWith('image/')) { error.textContent = 'Escolha um arquivo de imagem.'; return; }
           try { photo = await resizeImage(photoFile, 640, .76); } catch(_) { error.textContent = 'Não foi possível processar a foto.'; return; }
         }
-        if (status === 'approved' && !photo) { error.textContent = 'Para aprovar novamente, envie uma foto da espécie.'; return; }
         if (status === 'pending' && !photo) { error.textContent = 'Para voltar à fila, envie uma foto da espécie.'; return; }
         if (status === 'approved') {
           const speciesId = existingId || uid();
-          try { await setSpeciesPhoto(speciesId, photo); }
-          catch(_) { error.textContent = 'Não foi possível salvar a foto da espécie.'; return; }
           const current = species.find(s => s.id === speciesId);
           if (current) Object.assign(current, { name, sci, points, habitat }); else species.push({ id: speciesId, name, sci, points, habitat });
           request.speciesId = speciesId; request.finalPoints = points;
@@ -5837,6 +5864,7 @@ await new Promise(resolve => {
     const touches = (...names) => changed.includes('*') || names.some(name => changed.includes(name));
     const loads = [];
     if (touches('posts')) loads.push(loadPosts());
+    if (touches('species') && isAdmin()) seedSpecies();
     if (touches('speciesPhotos')) loads.push(loadSpeciesPhotos());
     if (touches('requestPhotos')) loads.push(loadReqPhotos());
     if (touches('banners')) loads.push(loadChampBanners());
@@ -5883,7 +5911,8 @@ await new Promise(resolve => {
     reloadLevels(); rankAwardConfig = readRankAwardConfig(); renderRankAwardForm();
     renderChampion();
     if (fb.authUid() && !currentUser()) await fb.signOut().catch(() => {});
-    if (currentUser()) { showMembers(); showTab(store.get('ajing-member-tab', true) || 'social'); seedSpecies(); }
+    // O site sempre abre na página inicial; quem já está logado entra pelo botão "Minha área".
+    if (currentUser()) { $('membersBtnLabel').textContent = 'Minha área'; $('membersBtn').setAttribute('aria-label', 'Minha área'); updateUserChip(); }
     else showTab('social');
   });
 })();
