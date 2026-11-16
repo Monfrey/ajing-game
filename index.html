@@ -455,6 +455,8 @@ select{font:inherit;color:inherit}
 .fab svg{width:22px;height:22px}
 .post-card{width:min(720px,100%)}
 .post-form{display:grid;grid-template-columns:240px minmax(0,1fr);gap:20px;padding:20px}
+.post-form.photo-first{grid-template-columns:minmax(0,1fr)}
+.post-form.photo-first .post-media{width:min(320px,100%);justify-self:center}
 .post-media{display:grid;gap:6px;align-content:start}
 .post-media .drop{aspect-ratio:4/5}
 .post-media .hint{font-size:.74rem;color:var(--muted)}
@@ -1129,6 +1131,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   #home>.hero>.container,#home>section.block>.container,#home>.manifesto>.container,#home>.refs>.container,
   #ajing-game .ajing-subnav .container,#ajing-game section.block>.container,#ajing-game .manifesto>.container,#ajing-game .refs>.container,
   #homeContentEntries,#ajingManagedContent .managed-content-section>.container{padding-inline:10px}
+  .ajing-subnav .container{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  .ajing-subnav .container::-webkit-scrollbar{display:none}
+  .ajing-subnav a{flex:0 0 auto;white-space:nowrap;padding:6px 8px;font-size:.78rem}
 }
 </style>
 <script>
@@ -1807,7 +1812,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <div class="modal-head"><strong id="postTitle">Nova publicação</strong>
       <button class="icon-btn" id="postClose" type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
-    <form class="post-form" id="postForm" novalidate>
+    <form class="post-form photo-first" id="postForm" novalidate>
       <div class="post-media">
         <input id="postPhoto" type="file" accept="image/*" hidden>
         <div class="drop" id="dropZone" tabindex="0" role="button" aria-label="Escolher foto da captura">
@@ -1816,8 +1821,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         </div>
         <button class="link-btn" id="changePhoto" type="button" hidden>Trocar foto</button>
         <span class="hint">A imagem inteira será mantida no formato vertical do feed (4:5); o espaço restante será preenchido com a própria foto desfocada.</span>
+        <div class="form-error" id="postError" role="alert"></div>
       </div>
-      <div class="post-fields">
+      <div class="post-fields" id="postFields" hidden>
         <div class="field"><label for="postSpeciesSearch">Espécie</label>
           <div class="sp-pick">
             <svg class="sp-pick-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>
@@ -1827,10 +1833,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
           </div>
           <select id="postSpecies" required hidden tabindex="-1" aria-hidden="true"></select><span class="hint" id="speciesHint"></span></div>
         <div class="field"><label for="postPlace">Local</label><input id="postPlace" maxlength="80" placeholder="Ex.: Píer de Itapoã, Vila Velha - ES" required></div>
-        <div class="field"><label for="postCaptureDate">Data da captura</label><input id="postCaptureDate" type="date" required><span class="hint">Escolha hoje ou um dos dois dias anteriores. A data de hoje é preenchida automaticamente.</span></div>
         <div class="field"><label for="postCaption">Descrição <span class="muted">(opcional)</span></label><textarea id="postCaption" rows="4" maxlength="300" placeholder="Isca, trabalho, condições do dia..."></textarea><span class="hint" id="captionCount">0 / 300</span></div>
         <label class="post-noscore"><input id="postNoScore" type="checkbox"><span><b>Publicar sem pontuar</b><small>A publicação vai direto para o feed, sem validação do administrador, e não conta pontos no ranking nem na carta.</small></span></label>
-        <div class="form-error" id="postError" role="alert"></div>
         <div class="form-actions"><button class="btn btn-primary" id="postSubmit" type="submit">Publicar</button><button class="btn btn-ghost" id="postCancel" type="button">Cancelar</button></div>
       </div>
     </form>
@@ -2753,14 +2757,9 @@ await new Promise(resolve => {
 
   /* ===== Social Fish ===== */
   const postModal = $('postModal'), postForm = $('postForm'), postPhoto = $('postPhoto'), postPreview = $('postPreview'), dropEmpty = $('dropEmpty');
-  const postSpecies = $('postSpecies'), postError = $('postError'), dropZone = $('dropZone'), postCaption = $('postCaption'), postPlace = $('postPlace');
-  const postCaptureDate = $('postCaptureDate');
+  const postSpecies = $('postSpecies'), postError = $('postError'), dropZone = $('dropZone'), postCaption = $('postCaption'), postPlace = $('postPlace'), postFields = $('postFields');
   const localDateValue = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const captureDateLabel = value => value ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(new Date(value + 'T12:00:00')) : '';
-  const setCaptureDateLimits = () => {
-    const today = new Date(), min = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2);
-    postCaptureDate.min = localDateValue(min); postCaptureDate.max = localDateValue(today); postCaptureDate.value = localDateValue(today);
-  };
   let postImage = '', postImageAudit = null, postImagePending = null, postLastFocus = null, editingPostId = null;
   const POST_W = 720, POST_H = 900; // padrão vertical 4:5 para todas as publicações
   const inspectPostImage = async file => {
@@ -2825,7 +2824,10 @@ await new Promise(resolve => {
     if (!file.type.startsWith('image/')) { postError.textContent = 'Escolha um arquivo de imagem (JPG, PNG ou WebP).'; return; }
     postError.textContent = '';
     postImageAudit = null;
-    postImagePending = Promise.all([preparePostImage(file), inspectPostImage(file)]).then(([src, audit]) => { setPostImage(src); postImageAudit = audit; })
+    postImagePending = Promise.all([preparePostImage(file), inspectPostImage(file)]).then(([src, audit]) => {
+      setPostImage(src); postImageAudit = audit;
+      if (!editingPostId) { postFields.hidden = false; postForm.classList.remove('photo-first'); setTimeout(() => postCaption.focus(), 30); }
+    })
       .catch(() => { postError.textContent = 'Não foi possível ler essa imagem. Tente outro arquivo.'; })
       .finally(() => { postImagePending = null; });
   };
@@ -2838,7 +2840,7 @@ await new Promise(resolve => {
   const updateCaptionCount = () => $('captionCount').textContent = `${postCaption.value.length} / 300`;
   postCaption.addEventListener('input', updateCaptionCount);
 
-  const openPostModal = () => {
+  const openPostModal = (choosePhotoFirst = true) => {
     if (!currentUser()) { openLogin(); return; }
     editingPostId = null;
     postImageAudit = null;
@@ -2846,11 +2848,11 @@ await new Promise(resolve => {
     $('postNoScore').closest('.post-noscore').hidden = false;
     postLastFocus = document.activeElement;
     postForm.reset(); setPostImage(''); postError.textContent = '';
-    setCaptureDateLimits();
+    postFields.hidden = choosePhotoFirst; postForm.classList.toggle('photo-first', choosePhotoFirst);
     postPlace.value = readProfile().location || ''; updateCaptionCount(); renderSpeciesSelect();
     postModal.classList.add('open'); postModal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
-    setTimeout(() => dropZone.focus(), 30);
+    if (choosePhotoFirst) postPhoto.click(); else setTimeout(() => dropZone.focus(), 30);
   };
   const closePostModal = (restorePost = true) => {
     const reopenId = editingPostId;
@@ -3069,14 +3071,13 @@ await new Promise(resolve => {
   const openPostEdit = id => {
     const post = posts.find(p => p.id === id);
     if (!post || post.user !== currentUser()) return;
-    closePostView(); openPostModal();
+    closePostView(); openPostModal(false);
     editingPostId = id;
     $('postTitle').textContent = 'Editar publicação'; $('postSubmit').textContent = 'Salvar alterações';
     $('postNoScore').closest('.post-noscore').hidden = true;
     $('postNoScore').checked = post.status === 'unscored';
     setPostImage(post.photo); postSpecies.value = post.speciesId || ''; spPickSync();
-    postPlace.value = post.place || '';
-    postCaptureDate.min = ''; postCaptureDate.max = localDateValue(new Date()); postCaptureDate.value = post.captureDate || localDateValue(new Date());
+    postPlace.value = post.place || ''; postFields.hidden = false;
     postCaption.value = post.caption || ''; updateCaptionCount();
     setTimeout(() => { spPickSync(); postCaption.focus(); }, 30);
   };
@@ -3125,8 +3126,7 @@ await new Promise(resolve => {
     if (!sp) { postError.textContent = 'Busque e escolha a espécie na lista.'; spPickInput.focus(); return; }
     const place = postPlace.value.trim();
     if (!place) { postError.textContent = 'Informe o local da captura.'; postPlace.focus(); return; }
-    const today = new Date(), earliest = localDateValue(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2)), captureDate = postCaptureDate.value;
-    if (!captureDate || captureDate > localDateValue(today) || (!editingPostId && captureDate < earliest)) { postError.textContent = editingPostId ? 'A data da captura não pode ser futura.' : 'A data da captura precisa ser hoje ou uma das duas datas anteriores.'; postCaptureDate.focus(); return; }
+    const today = new Date(), captureDate = editingPostId ? (posts.find(p => p.id === editingPostId)?.captureDate || localDateValue(today)) : localDateValue(today);
     const btn = $('postSubmit'), noScore = $('postNoScore').checked; btn.disabled = true;
     try {
       if (editingPostId) {
