@@ -2613,6 +2613,8 @@ await new Promise(resolve => {
     document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
     document.querySelectorAll('.member-only').forEach(el => el.hidden = isAdmin());
     updateUserChip(); renderAll();
+    // Reaplica a aba atual: além dos painéis, ela decide se o botão de postar aparece
+    showTab(store.get('ajing-member-tab', true) || 'social');
     $('membersBtnLabel').textContent = 'Minha área'; $('membersBtn').setAttribute('aria-label', 'Minha área');
     window.scrollTo({ top: 0 });
   };
