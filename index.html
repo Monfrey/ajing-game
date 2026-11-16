@@ -2802,7 +2802,8 @@ await new Promise(resolve => {
     try { await fb.signOut(); } catch(_) {}
     store.del('ajing-member-tab', true);
     $('membersBtnLabel').textContent = 'Área de membros'; $('membersBtn').setAttribute('aria-label', 'Área de membros');
-    showHome(); window.scrollTo({ top: 0 });
+    // Ao sair, sempre volta para o início da página inicial (mesmo que antes estivesse na página Ajing Game)
+    showHome(); showPublicContentPage('home'); window.scrollTo({ top: 0 });
   };
   $('logoutBtn').addEventListener('click', logout);
 
