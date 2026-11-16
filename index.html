@@ -1141,6 +1141,20 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media (min-width:721px){
   .container,.managed-content-list{padding-inline:clamp(12px,1.25vw,20px)}
 }
+/* Carrossel no celular: a foto ocupa toda a área do slide */
+@media (max-width:720px){
+  /* Slide só com foto: o slide assume a proporção da foto (sem cortes e sem faixas vazias) */
+  .slide.image-overlay.image-only{width:100%;height:auto;min-height:0;aspect-ratio:auto}
+  .slide.image-overlay.image-only .slide-bg-image{position:relative;inset:auto;z-index:0;display:block;width:100%;height:auto;object-fit:fill}
+  /* Foto de fundo com texto: preenche todo o fundo; as bordas podem ser cortadas para o texto caber */
+  .slide.image-overlay:not(.image-only) .slide-bg-image{object-fit:cover}
+  /* Enquanto um slide só de foto está na tela, os outros saem do cálculo de altura do carrossel */
+  .slides:has(>.slide.image-only.on)>.slide:not(.on){position:absolute;inset:0 0 auto 0}
+  /* Imagem ao lado do texto: no celular a foto vai para cima, na largura toda */
+  .slide:not(.image-overlay):not(.champ-slide):has(>.slide-media>img){grid-template-columns:minmax(0,1fr);gap:16px;align-content:start}
+  .slide:not(.image-overlay):not(.champ-slide)>.slide-media:has(>img){grid-row:1;width:100%;height:auto;aspect-ratio:auto}
+  .slide:not(.image-overlay):not(.champ-slide)>.slide-media>img{display:block;width:100%;height:auto;max-height:none;object-fit:contain;border-radius:var(--radius)}
+}
 </style>
 <script>
 (() => {
@@ -1749,7 +1763,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                 <div class="field"><label for="profileName">Nome completo</label><input id="profileName" maxlength="80" placeholder="Seu nome completo" required></div>
                 <div class="field"><label for="profileFishingName">Nome de Pescador</label><input id="profileFishingName" maxlength="50" placeholder="Seu nome na comunidade" required></div>
                 <div class="field"><label for="profileLocation">Cidade</label><input id="profileLocation" maxlength="100" placeholder="Ex.: Vila Velha - ES" required></div>
-                <div class="field"><label for="profileCpf">CPF</label><input id="profileCpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00" required></div>
+                <div class="field"><label for="profileCpf">CPF <span class="muted">(opcional)</span></label><input id="profileCpf" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00"></div>
                 <div class="field full"><label for="profileBio">Breve descrição</label><textarea id="profileBio" rows="3" maxlength="100" placeholder="Conte um pouco sobre seu estilo de pesca"></textarea><span class="hint" id="bioCount">0 / 100 caracteres</span></div>
                 <div class="field full social-fields" role="group" aria-labelledby="socialLegend">
                   <span class="social-legend" id="socialLegend">Redes sociais <small>(opcional)</small></span>
@@ -1925,7 +1939,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       </form>
       <section id="signupSuccess" aria-labelledby="signupSuccessTitle" hidden>
         <h2 id="signupSuccessTitle">Solicitação enviada</h2>
-        <p>Você receberá um e-mail com a resposta da análise do seu cadastro.</p>
+        <p>A administração vai analisar o seu cadastro. Depois da aprovação, é só entrar com o e-mail e a senha que você informou. Se tentar entrar antes, o site mostra que o cadastro ainda está em análise.</p>
         <button class="btn btn-primary" id="signupContinue" type="button">Continuar</button>
       </section>
     </div>
@@ -2538,6 +2552,9 @@ await new Promise(resolve => {
   const profileKey = u => 'ajing-profile:' + u;
   const readProfileOf = u => readJSON(profileKey(u), {}) || {};
   const readProfile = () => readProfileOf(currentUser());
+  // Só os campos aceitos pelas regras do Firestore (perfis antigos podem ter campos que não existem mais)
+  const PROFILE_KEYS = ['name', 'fishingName', 'location', 'bio', 'photo', 'social', 'portfolioSpecies', 'portfolioPosts'];
+  const profileFields = p => { const out = {}; PROFILE_KEYS.forEach(k => { if (p && p[k] !== undefined) out[k] = p[k]; }); return { name: '', location: '', bio: '', photo: '', social: {}, ...out }; };
   const displayName = u => readProfileOf(u).name || (u === 'admin' ? 'Admin' : u);
 
   // Publicações e configurações ficam no Firestore (veja a camada fb no início do script)
@@ -3133,14 +3150,17 @@ await new Promise(resolve => {
     if (!place) { postError.textContent = 'Informe o local da captura.'; postPlace.focus(); return; }
     const today = new Date(), captureDate = editingPostId ? (posts.find(p => p.id === editingPostId)?.captureDate || localDateValue(today)) : localDateValue(today);
     const btn = $('postSubmit'), noScore = $('postNoScore').checked; btn.disabled = true;
+    let revalidate = false;
     try {
       if (editingPostId) {
         const original = posts.find(p => p.id === editingPostId);
         if (!original || original.user !== currentUser()) throw new Error('Publicação não encontrada.');
-        const speciesChanged = original.speciesId !== sp.id;
+        const speciesChanged = original.speciesId !== sp.id, photoChanged = !!postImage && postImage !== original.photo;
         const updated = { ...original, place, captureDate, caption: postCaption.value.trim().slice(0, 300), photo: postImage || original.photo };
-        if (speciesChanged) {
-          updated.speciesId = sp.id; updated.speciesName = sp.name; updated.points = sp.points;
+        if (speciesChanged) { updated.speciesId = sp.id; updated.speciesName = sp.name; updated.points = sp.points; }
+        // Trocar a espécie ou a foto exige nova validação (a análise anterior valia para a foto e a espécie antigas)
+        if (speciesChanged || photoChanged) {
+          revalidate = !noScore && original.status !== 'pending';
           updated.status = noScore ? 'unscored' : 'pending';
           delete updated.pointsOverride; delete updated.reviewed; delete updated.reviewer;
         }
@@ -3155,7 +3175,7 @@ await new Promise(resolve => {
       if (editedId) openPostView(editedId);
       showToast(noScore
         ? `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>Publicada sem pontuar: não entra no ranking nem na carta.</small></div>`
-        : `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>${editedId ? 'Alterações salvas.' : 'A pontuação será adicionada após a validação de um administrador.'}</small></div>`);
+        : `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>${editedId ? (revalidate ? 'A foto ou a espécie mudou: a captura voltou para a validação de um administrador.' : 'Alterações salvas.') : 'A pontuação será adicionada após a validação de um administrador.'}</small></div>`);
       if (!editedId) window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch(_) {
       postError.textContent = `Não foi possível ${editingPostId ? 'salvar as alterações' : 'publicar'}. Verifique a conexão e tente de novo; se persistir, use uma foto menor.`;
@@ -4902,7 +4922,7 @@ await new Promise(resolve => {
     const choices = readPortfolioChoices(member), wasSelected = choices[post.speciesId] === post.id;
     if (wasSelected) delete choices[post.speciesId]; else choices[post.speciesId] = post.id;
     const old = readProfile(), { portfolioSpecies: legacySpecies, ...profileRest } = old;
-    const profile = { name: old.name || displayName(member), fishingName: old.fishingName || '', location: '', bio: '', photo: '', social: {}, ...profileRest, portfolioPosts: choices };
+    const profile = profileFields({ name: old.name || displayName(member), fishingName: old.fishingName || '', location: '', bio: '', photo: '', social: {}, ...profileRest, portfolioPosts: choices });
     button.disabled = true;
     try {
       await fb.saveProfile(member, profile);
@@ -4986,14 +5006,14 @@ await new Promise(resolve => {
     if (name.length < 2 || name.length > 80) { profileError.textContent = 'Informe seu nome completo (de 2 a 80 caracteres).'; $('profileName').focus(); return; }
     if (!fishingName || fishingName.length > 50) { profileError.textContent = 'Informe seu Nome de Pescador (até 50 caracteres).'; $('profileFishingName').focus(); return; }
     if (!location || location.length > 100) { profileError.textContent = 'Informe sua cidade (até 100 caracteres).'; $('profileLocation').focus(); return; }
-    if (!validCPF(cpf)) { profileError.textContent = 'Confira o CPF informado.'; $('profileCpf').focus(); return; }
+    if (cpf && !validCPF(cpf)) { profileError.textContent = 'Confira o CPF informado ou deixe o campo em branco.'; $('profileCpf').focus(); return; }
     const { social, invalid } = readSocialInputs();
     if (invalid.length) {
       const net = SOCIALS[invalid[0]], hint = { instagram: 'instagram.com/usuario', youtube: 'youtube.com/@canal', tiktok: 'tiktok.com/@usuario' }[invalid[0]];
       profileError.textContent = `Não reconheci o ${net.label} informado. Use o @ (ex.: @usuario) ou o link do perfil (${hint}).`; $(net.input).focus(); return;
     }
     if (photoPending) await photoPending;
-    const p = { ...readProfile(), name, fishingName, location, bio: bioInput.value.slice(0, 100).trim(), photo: '', social };
+    const p = profileFields({ ...readProfile(), name, fishingName, location, bio: bioInput.value.slice(0, 100).trim(), photo: '', social });
     let source = null;
     if (cropState) {
       try { p.photo = await bakeCrop(); } catch(_) { profileError.textContent = 'Não foi possível processar a foto. Tente outra imagem.'; return; }
@@ -5190,15 +5210,15 @@ await new Promise(resolve => {
     }
     if (app.status !== 'pending') return renderRequests();
     if (action === 'approve' && (!username || !email || getUsers().some(u => userKey(u.username) === userKey(username)))) { $('reqAdminError').textContent = `Não foi possível aprovar ${username || 'este cadastro'}: confira os dados e se o nome já está sendo usado.`; return; }
-    if (action === 'reject' && !(await askConfirm(`Recusar o pedido de acesso de ${username || email}? A pessoa receberá a resposta por e-mail.`, { danger: true, confirmText: 'Recusar acesso' }))) return;
+    if (action === 'reject' && !(await askConfirm(`Recusar o pedido de acesso de ${username || email}? Ao tentar entrar, a pessoa verá que o cadastro não foi aprovado.`, { danger: true, confirmText: 'Recusar acesso' }))) return;
     button.disabled = true; $('reqAdminError').textContent = ''; $('reqAdminSaved').textContent = '';
     try {
       if (action === 'approve') {
         await fb.approveMemberApplication(uid, app);
-        $('reqAdminSaved').textContent = `Acesso de ${username} aprovado. A pessoa receberá um e-mail e já pode entrar com a senha cadastrada.`;
+        $('reqAdminSaved').textContent = `Acesso de ${username} aprovado. A pessoa já pode entrar com o e-mail e a senha cadastrados.`;
       } else {
         await fb.rejectMemberApplication(uid, currentUser());
-        $('reqAdminSaved').textContent = `Acesso de ${username || email} recusado. A pessoa receberá um e-mail com a resposta.`;
+        $('reqAdminSaved').textContent = `Acesso de ${username || email} recusado. Ao tentar entrar, a pessoa verá que o cadastro não foi aprovado.`;
       }
       renderRequests();
     } catch (approveErr) { $('reqAdminError').textContent = fb.errMsg(approveErr); button.disabled = false; }
