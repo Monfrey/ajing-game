@@ -1337,6 +1337,31 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   /* Carrossel: conteúdo centralizado na altura do slide (sem grande vazio embaixo) */
   .slide:not(.image-overlay){align-content:center}
 }
+/* Correções no celular */
+/* Campos de formulário podem encolher dentro das colunas (no iPhone, campos de data têm largura mínima própria) */
+.field{min-width:0}
+input[type=date],input[type=datetime-local],input[type=time]{min-width:0;max-width:100%;width:100%;box-sizing:border-box}
+@supports (-webkit-touch-callout:none){
+  input[type=date],input[type=datetime-local],input[type=time]{-webkit-appearance:none;appearance:none;display:block;min-height:42px;text-align:left}
+  input[type=date]::-webkit-date-and-time-value{text-align:left}
+}
+.admin-main-nav .sub-ico{display:none;width:20px;height:20px;flex:none}
+@media (max-width:720px){
+  .season-editor-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .season-editor-row>*{min-width:0}
+  .uf-grid,.ch-grid,.sf-grid,.pq-edit{grid-template-columns:minmax(0,1fr)}
+  /* Coroa nas cartas da aba Membros: fica acima do canto da própria carta, sem invadir a carta do lado */
+  .members-grid{row-gap:30px;padding-top:24px}
+  .member-full-card .tc-crown{top:-34px;right:10px}
+  /* Submenu principal da Administração: grade com ícone e nome, igual à barra da área de membros */
+  .admin-main-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;border-bottom:0;margin:0 0 16px}
+  .admin-main-nav button{position:relative;flex-direction:column;justify-content:center;gap:4px;min-height:58px;padding:8px 4px;border:0;border-radius:10px;background:var(--surface-2);color:var(--muted);font-size:.72rem;line-height:1.15;text-align:center;white-space:normal;box-shadow:none}
+  .admin-main-nav button[aria-current="true"]{background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent);border:0;box-shadow:none}
+  .admin-main-nav .sub-ico{display:block}
+  .admin-main-nav .count{position:absolute;top:4px;left:calc(50% + 8px);margin:0;padding:0 5px;min-width:18px;height:18px;display:inline-grid;place-items:center;font-size:.66rem}
+  .admin-main-nav .count:not(.alert){background:var(--surface);color:var(--muted)}
+  .admin-main-nav button[aria-current="true"] .count:not(.alert){background:var(--surface);color:var(--accent)}
+}
 </style>
 <script>
 (() => {
@@ -1647,16 +1672,16 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         </section>
         <section class="panel" role="tabpanel" data-panel="admin" hidden>
           <div class="panel-head"><div><h3>Administração</h3><p>Gerencie o conteúdo do site e o acesso da comunidade.</p></div></div>
-          <nav class="admin-subnav" aria-label="Seções da administração">
-            <button type="button" data-admin-sec="requests">Solicitações<span class="count" id="cntReq"></span></button>
-            <button type="button" data-admin-sec="award">Campeonatos</button>
-            <button type="button" data-admin-sec="rank-award">Temporada do ranking</button>
-            <button type="button" data-admin-sec="levels">Níveis</button>
-            <button type="button" data-admin-sec="carousel" aria-current="true">Carrossel<span class="count" id="cntSlides"></span></button>
-            <button type="button" data-admin-sec="site-content">Conteúdo do site</button>
-            <button type="button" data-admin-sec="partners">Parceiros</button>
-            <button type="button" data-admin-sec="species">Espécies<span class="count" id="cntSpecies"></span></button>
-            <button type="button" data-admin-sec="users">Usuários<span class="count" id="cntUsers"></span></button>
+          <nav class="admin-subnav admin-main-nav" aria-label="Seções da administração">
+            <button type="button" data-admin-sec="requests"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M5 5h14l1 8v6H4v-6z"/></svg>Solicitações<span class="count" id="cntReq"></span></button>
+            <button type="button" data-admin-sec="award"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 20h6"/></svg>Campeonatos</button>
+            <button type="button" data-admin-sec="rank-award"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>Temporada do ranking</button>
+            <button type="button" data-admin-sec="levels"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4v-5H4zM10 20h4V10h-4zM16 20h4V4h-4z"/></svg>Níveis</button>
+            <button type="button" data-admin-sec="carousel" aria-current="true"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 16 5-5 5 5 3-3 5 5"/></svg>Carrossel<span class="count" id="cntSlides"></span></button>
+            <button type="button" data-admin-sec="site-content"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M8 13h8M8 17h6"/></svg>Conteúdo do site</button>
+            <button type="button" data-admin-sec="partners"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 20a4.5 4.5 0 0 1 7.5-3.4"/></svg>Parceiros</button>
+            <button type="button" data-admin-sec="species"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12c4-5.5 10.5-5.5 15 0-4.5 5.5-11 5.5-15 0zM17.5 12 22 8v8z"/></svg>Espécies<span class="count" id="cntSpecies"></span></button>
+            <button type="button" data-admin-sec="users"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Usuários<span class="count" id="cntUsers"></span></button>
           </nav>
           <div class="admin-box car-admin" data-admin-panel="carousel">
             <div class="box-head"><p class="box-desc">Slides exibidos no topo da página inicial, na ordem desta lista.</p><div class="form-actions"><button class="btn btn-ghost" id="champRestore" type="button" hidden>Restaurar slide do campeonato</button><button class="btn btn-ghost" id="rankAwardRestore" type="button" hidden>Restaurar slide da premiação</button><button class="btn btn-primary" id="slideNew" type="button">Novo slide</button></div></div>
@@ -3694,14 +3719,18 @@ await new Promise(resolve => {
     $('rankScheduleMode').value = rankAwardConfig.scheduleMode;
   };
   renderRankAwardForm();
-  $('rankScheduleMode').addEventListener('change', () => { rankAwardConfig.scheduleMode = $('rankScheduleMode').value; renderSeasonCalendar(); renderRankAwardForm(); });
+  // Alterações não salvas no formulário de temporada: atualizações vindas do banco não redesenham o formulário
+  let rankAwardDirty = false;
+  $('rankAwardForm').addEventListener('input', () => { rankAwardDirty = true; });
+  $('rankAwardForm').addEventListener('change', () => { rankAwardDirty = true; });
+  $('rankScheduleMode').addEventListener('change', () => { rankAwardDirty = true; rankAwardConfig.scheduleMode = $('rankScheduleMode').value; renderSeasonCalendar(); renderRankAwardForm(); });
   $('rankAddSeason').addEventListener('click', () => {
     const today = inputDate(Date.now()), end = inputDate(Date.now() + 180 * 86400000);
-    customSeasonDraft.push({ id: uid(), label: `Temporada ${customSeasonDraft.length + 1}`, start: today, end, enabled: true }); renderCustomSeasonEditor();
+    rankAwardDirty = true; customSeasonDraft.push({ id: uid(), label: `Temporada ${customSeasonDraft.length + 1}`, start: today, end, enabled: true }); renderCustomSeasonEditor();
   });
   $('rankCustomSeasonList').addEventListener('click', e => {
     const remove = e.target.closest('[data-season-remove]'); if (!remove) return;
-    customSeasonDraft = customSeasonDraft.filter(p => p.id !== remove.dataset.seasonRemove); renderCustomSeasonEditor();
+    rankAwardDirty = true; customSeasonDraft = customSeasonDraft.filter(p => p.id !== remove.dataset.seasonRemove); renderCustomSeasonEditor();
   });
   $('rankAwardForm').addEventListener('submit', e => {
     e.preventDefault();
@@ -3720,7 +3749,7 @@ await new Promise(resolve => {
     }
     const next = { enabled: $('rankAwardEnabled').checked, period: 'season', scheduleMode, periodOverrides, customPeriods };
     if (!writeJSON('ajing-ranking-award-config', next)) { $('rankAwardError').textContent = 'Não foi possível salvar a configuração.'; return; }
-    rankAwardConfig = next; customSeasonDraft = customPeriods.map(p => ({ ...p })); $('rankAwardError').textContent = '';
+    rankAwardConfig = next; rankAwardDirty = false; customSeasonDraft = customPeriods.map(p => ({ ...p })); $('rankAwardError').textContent = '';
     $('rankAwardSaved').textContent = `Configuração salva. ${next.enabled ? 'Premiação ativada.' : 'Premiação desativada.'} ${currentRankSeason().continuous ? 'O ranking está em acumulação contínua.' : 'As temporadas ativas reiniciam a classificação; pontuação vitalícia e níveis são mantidos.'}`;
     renderRankAwardForm(); renderChampion(); renderAll();
   });
@@ -6319,7 +6348,8 @@ await new Promise(resolve => {
     await Promise.all(loads);
     if (touches('config', 'levelIcons')) reloadLevels();
     if (touches('config')) {
-      rankAwardConfig = readRankAwardConfig(); renderRankAwardForm(); renderSiteCopy();
+      if (!rankAwardDirty) { rankAwardConfig = readRankAwardConfig(); renderRankAwardForm(); }
+      renderSiteCopy();
       if (isAdmin()) renderSiteContentAdmin();
     }
     if (touches('siteContentItems')) { renderManagedContent(); if (isAdmin()) renderManagedContentAdmin(); }
@@ -6356,7 +6386,7 @@ await new Promise(resolve => {
   showScView(store.get('ajing-sc-view', true) || 'copy');
   showProfSec(store.get('ajing-prof-sec', true) || 'card');
   Promise.all([loadPosts(), loadSpeciesPhotos(), loadReqPhotos(), loadChampBanners(), loadSlides()]).then(async () => {
-    reloadLevels(); rankAwardConfig = readRankAwardConfig(); renderRankAwardForm();
+    reloadLevels(); if (!rankAwardDirty) { rankAwardConfig = readRankAwardConfig(); renderRankAwardForm(); }
     renderChampion();
     if (fb.authUid() && !currentUser()) await fb.signOut().catch(() => {});
     // O site sempre abre na página inicial; quem já está logado entra pelo botão "Minha área".
