@@ -427,7 +427,7 @@ select{font:inherit;color:inherit}
 .post.compact .post-head{padding:10px 12px 8px;gap:12px}
 .post.compact .post-head b{font-size:.88rem}
 .post.compact .post-head small{font-size:.76rem}
-.post.compact .post-photo{display:block;width:100%;aspect-ratio:4/5;padding:0;border:0;cursor:zoom-in}
+.post.compact .post-photo{display:block;width:100%;aspect-ratio:4/5;padding:0;border:0;cursor:pointer}
 .post.compact .post-body{padding:9px 12px 12px;gap:5px}
 .post.compact .species-tag{font-size:.72rem;padding:2px 8px}
 .post.compact .post-body time{font-size:.68rem}
@@ -609,7 +609,7 @@ select{font:inherit;color:inherit}
 .member-message .grow{white-space:normal!important}
 .member-message .grow small,.member-message .grow span{display:block;margin-top:5px;white-space:normal}
 .member-message.unread{background:color-mix(in srgb,var(--cyan) 10%,var(--surface))}
-.post-review-thumb{width:56px;height:70px;flex:none;padding:0;border:1px solid var(--line);border-radius:4px;background:var(--surface-2);overflow:hidden;cursor:zoom-in}
+.post-review-thumb{width:56px;height:70px;flex:none;padding:0;border:1px solid var(--line);border-radius:4px;background:var(--surface-2);overflow:hidden;cursor:pointer}
 .post-review-thumb img{width:100%;height:100%;object-fit:cover}
 .req-status{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
 .req-status.pending{background:color-mix(in srgb,var(--yellow) 30%,transparent);color:var(--ink)}
@@ -1254,6 +1254,45 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .user-private-fields legend small{font-weight:400;color:var(--muted)}
 .user-private-fields .user-private-info{grid-column:1/-1;margin:0;padding:0;border:0;background:none;font-size:.82rem;color:var(--muted)}
 @media (max-width:560px){.user-private-fields{grid-template-columns:minmax(0,1fr)}}
+/* 1. Aviso de mensagens não lidas na aba Meu perfil */
+.tab-msg-count{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:6px;padding:0 5px;border-radius:99px;background:var(--red);color:#fff;font-size:.68rem;font-weight:700;line-height:1}
+.tab-msg-count[hidden]{display:none}
+/* 2. Publicação aberta: cabe na tela sem rolagem (a foto se ajusta à altura disponível) */
+.post-view .post-view-box{width:min(440px,100%,calc((100dvh - 32px - 312px) * .8));overflow:auto}
+.post-view .caption{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+/* 5. Texto dos conteúdos sempre quebra antes da imagem */
+.managed-rich,.managed-article-body>div{min-width:0;overflow-wrap:break-word}
+/* Regulamento: aba da área de membros, janela do cadastro e confirmação */
+.regulation-text{max-width:820px;padding:18px 22px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);line-height:1.6;font-size:.94rem}
+.regulation-text p{margin:0 0 .7em}
+.regulation-text ul,.regulation-text ol{margin:0 0 1em;padding-left:1.3em}
+.regulation-text li{margin-bottom:.3em}
+.terms-modal{z-index:60}
+.terms-card{width:min(680px,100%);display:flex;flex-direction:column;max-height:calc(100dvh - 32px)}
+.terms-card .modal-body{display:flex;flex-direction:column;gap:14px;min-height:0;flex:1}
+.terms-card #termsBody{flex:1;min-height:0;overflow:auto;max-width:none;padding:14px 18px}
+.terms-actions{justify-content:flex-end}
+.signup-terms{display:flex;align-items:center;gap:9px;font-size:.88rem;cursor:pointer}
+.signup-terms input{width:18px;height:18px;flex:none;accent-color:var(--accent)}
+.signup-terms .link-btn{padding:0;font-size:inherit}
+.signup-note{grid-column:1/-1}
+.req-photo-hint{display:block;margin-top:6px}
+.img-size-hint{display:block;margin-top:6px}
+/* Cadastro no computador: compacto para caber sem rolagem também em notebooks (768 px de altura) */
+@media (min-width:641px){
+  #loginModal .modal-card:has(#signupForm:not([hidden])) #loginDescription{display:none}
+  #loginModal .modal-card:has(#signupForm:not([hidden])) .modal-body{padding-top:14px;padding-bottom:16px}
+  .signup-form{gap:10px}
+  .signup-group{gap:8px 16px}
+  .signup-note{padding:6px 10px}
+}
+.rules-admin{display:grid;gap:10px}
+.regulation-editor{min-height:420px;max-height:62vh;overflow:auto;line-height:1.6}
+.regulation-editor p{margin:0 0 .6em}
+.regulation-editor ul,.regulation-editor ol{margin:0 0 .9em;padding-left:1.3em}
+.rules-admin .form-actions{align-items:center}
+.regulation-text blockquote{margin:.4em 0 1em;padding:.7em 1em;border-left:3px solid var(--accent);background:var(--bg);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.regulation-text blockquote ol{margin-bottom:0}
 </style>
 <script>
 (() => {
@@ -1308,9 +1347,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       <a href="#ajing-game" data-home>Ajing Game</a>
     </nav>
     <div class="nav-actions">
-      <button class="btn btn-members" id="membersBtn" type="button" aria-label="Área de membros">
+      <button class="btn btn-members" id="membersBtn" type="button" aria-label="Login / Sign up">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
-        <span class="lbl" id="membersBtnLabel">Área de membros</span>
+        <span class="lbl" id="membersBtnLabel">Login / Sign up</span>
       </button>
       <button class="icon-btn" id="themeToggle" type="button" aria-label="Alternar tema"></button>
       <button class="icon-btn menu-toggle" id="menuToggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="navLinks">
@@ -1494,7 +1533,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <button type="button" role="tab" data-tab="ranking" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 20V10M12 20V4M18 20v-7"/></svg>Ranking</button>
         <button type="button" role="tab" data-tab="species" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12c4-6 10-6 14 0-4 6-10 6-14 0zM17 12l4-4v8z"/></svg>Espécies</button>
         <button type="button" role="tab" data-tab="events" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Eventos</button>
-        <button type="button" role="tab" data-tab="profile" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Meu perfil</button>
+        <button type="button" role="tab" data-tab="profile" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Meu perfil<span class="count tab-msg-count" id="cntProfileTab" aria-label="mensagens não lidas" hidden></span></button>
+          <button type="button" role="tab" data-tab="rules" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M8 13h8M8 17h6"/></svg><span>Regulamento</span></button>
         <button type="button" role="tab" data-tab="admin" aria-selected="false" class="admin-only" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/></svg>Administração<span class="tab-badge" id="adminBadge" hidden></span></button>
       </nav>
       <div class="m-user">
@@ -1557,6 +1597,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
           <div class="panel-head"><div><h3>Eventos</h3><p>Campeonatos e ações da comunidade.</p></div></div>
           <div id="eventsBody"></div>
         </section>
+        <section class="panel" role="tabpanel" data-panel="rules" hidden>
+          <div class="panel-head"><div><h3>Regulamento</h3><p>Regras da comunidade Ajing Game para o Social Fish, o ranking e os campeonatos.</p></div></div>
+          <article class="regulation-text managed-rich" id="regulationText" data-site-copy="regulamento.texto"><p><strong>COMUNIDADE AJING GAME – EXTREME FINESSE</strong></p><p><strong>REGULAMENTO GERAL DA PLATAFORMA</strong></p><p>Este regulamento estabelece as normas de acesso, convivência, registro de capturas, pontuação e participação na plataforma <strong>Ajing Game – Extreme Finesse</strong>. Ao solicitar o cadastro, o usuário declara estar ciente e de acordo com todos os termos aqui descritos.</p><p><strong>CAPÍTULO I – DO OBJETIVO DA COMUNIDADE</strong></p><p><strong>Art. 1º</strong> A plataforma Ajing Game – Extreme Finesse tem como finalidade congregar praticantes da pesca esportiva na modalidade Ajing (pesca ultralight voltada à captura de peixes com micro iscas artificiais), promovendo um ambiente digital saudável, colaborativo e técnico.</p><p><strong>Art. 2º</strong> A comunidade oferece aos seus membros:</p><ul><li>Organização e divulgação de encontros, eventos e torneios;</li><li>Sistema gamificado de evolução individual (níveis de experiência);</li><li>Rankings competitivos por temporada;</li><li>Portfólio individual para catalogação de capturas e controle pessoal de espécies.</li></ul><p><strong>CAPÍTULO II – DO CADASTRO, ACESSO E PRIVACIDADE</strong></p><p><strong>Art. 3º</strong> O acesso às funcionalidades da plataforma é restrito a usuários cadastrados e devidamente aprovados pela Administração.</p><p><strong>Art. 4º</strong> O processo de aprovação tem como objetivo preservar o caráter amistoso, ético e colaborativo da comunidade, evitando perfis falsos ou condutas incompatíveis com a pesca esportiva.</p><p><strong>Art. 5º</strong> Para solicitar o ingresso, o interessado deverá preencher o formulário inicial informando obrigatoriamente:</p><ol><li>Nome social ou apelido (como deseja ser chamado na comunidade);</li><li>Nome completo;</li><li>Cidade e Estado de residência;</li><li>Número de CPF (utilizado exclusivamente para validação de unicidade de conta e prevenção de fraudes);</li><li>Endereço de e-mail válido.</li></ol><p><strong>Art. 6º</strong> Após a aprovação pela Administração, o membro poderá complementar seu perfil público inserindo foto de identificação e links para suas redes sociais.</p><p><strong>Art. 7º Proteção de Dados:</strong> Nenhum dado pessoal sensível (como CPF, e-mail ou nome completo, caso o usuário opte por exibir apenas o apelido) será comercializado, cedido ou disponibilizado para terceiros ou outras plataformas, sendo utilizados estritamente para a gestão interna da comunidade.</p><p><strong>CAPÍTULO III – DA CONTRIBUIÇÃO MENSAL</strong></p><p><strong>Art. 8º</strong> Para a manutenção e sustentabilidade da plataforma, cada membro inscrito e aprovado deverá contribuir com uma mensalidade no valor de R$ 9,90 (nove reais e noventa centavos).</p><p><strong>Art. 9º</strong> Os recursos arrecadados com as mensalidades destinam-se exclusivamente ao custeio das despesas operacionais do site (hospedagem, tráfego de dados, desenvolvimento e divulgação) e ao fomento e promoção de eventos da comunidade.</p><p><strong>Art. 10º</strong> O valor da contribuição mensal poderá sofrer reajustes ou atualizações, comprometendo-se a Administração a comunicar todos os membros com antecedência mínima de 60 (sessenta) dias da entrada em vigor do novo valor.</p><p><strong>Art. 11º Inadimplência:</strong> Os usuários que permanecerem inadimplentes por um período superior a 30 (trinta) dias após o vencimento terão o acesso às funcionalidades da plataforma temporariamente bloqueado até a efetiva regularização do débito.</p><p><strong>CAPÍTULO IV – DO PORTFÓLIO E DO ENVIO DE IMAGENS</strong></p><p><strong>Art. 12º</strong> Todo membro aprovado e em dia com suas obrigações poderá publicar fotos de suas capturas realizadas na modalidade Ajing para compor seu portfólio individual e registrar as espécies já capturadas.</p><p><strong>Art. 13º</strong> As publicações podem ser feitas em duas modalidades:</p><ul><li><strong>Registro de Portfólio (Sem Pontuação):</strong> Destinado apenas ao arquivo pessoal e compartilhamento com a comunidade, sem impacto nos rankings ou níveis.</li><li><strong>Submissão para Pontuação:</strong> O usuário deverá marcar explicitamente a opção "Submeter para pontuação" no momento do envio.</li></ul><p><strong>Art. 14º</strong> Para que uma captura submetida para pontuação seja validada e aprovada pela Administração, a imagem deverá atender cumulativamente aos seguintes critérios:</p><blockquote><p><strong>1. Atualidade:</strong> A foto deve ser recente, enviada em até 05 (cinco) dias corridos após a data da captura;</p><p><strong>2. Metadados (EXIF):</strong> O arquivo original da imagem deve conter os metadados (dados EXIF) íntegros, comprovando a data e a hora em que o registro foi realizado;</p><p><strong>3. Autenticidade:</strong> Não serão aceitas capturas de tela (prints) de vídeos, fotos reenviadas por aplicativos de mensagens que removam os dados originais (como WhatsApp sem opção HD/documento) ou imagens retiradas da internet;</p><p><strong>4. Identificação do Pescador:</strong> O pescador cadastrado deve aparecer claramente na imagem segurando o peixe (formato selfie ou foto tirada por terceiros no local da pescaria), permitindo a conferência de sua identidade;</p><p><strong>5. Modalidade:</strong> O peixe deve ter sido capturado utilizando equipamentos compatíveis com a proposta Ajing / Extreme Finesse (preferencialmente visível com o conjunto ou isca utilizada).</p></blockquote><p><strong>Art. 15º</strong> Caso a imagem não cumpra qualquer um dos requisitos do Art. 14º, a pontuação será recusada pela Administração, podendo a foto permanecer apenas como registro simples no portfólio, se assim o usuário desejar.</p><p><strong>CAPÍTULO V – DA PONTUAÇÃO, NÍVEIS E RANKINGS</strong></p><p><strong>Art. 16º</strong> Cada espécie de peixe cadastrada na plataforma possui uma pontuação base predefinida pela Administração, calculada de acordo com sua raridade e o grau de dificuldade técnica para sua captura na modalidade Ajing.</p><p><strong>Art. 17º Sistema de Níveis (Expertise):</strong> A pontuação acumulada pelo pescador ao longo de sua trajetória na plataforma determinará sua evolução entre 09 (nove) níveis de expertise. Os níveis são permanentes e refletem a experiência geral do membro na comunidade.</p><p><strong>Art. 18º Rankings por Temporada:</strong> Além da evolução de níveis, a plataforma manterá disputas sazonais divididas em duas temporadas anuais:</p><ul><li><strong>Temporada Primavera-Verão:</strong> De 22 de setembro a 20 de março;</li><li><strong>Temporada Outono-Inverno:</strong> De 21 de março a 21 de setembro.</li></ul><p><strong>Art. 19º</strong> Ao final de cada temporada, os pescadores que somarem a maior pontuação dentro daquele período serão consagrados vencedores e receberão destaque oficial na página principal do site.</p><p><strong>Art. 20º</strong> No encerramento de cada temporada, a pontuação referente ao ranking sazonal será zerada para todos os participantes, iniciando-se uma nova disputa em igualdade de condições, sem prejuízo aos pontos acumulados para os níveis de expertise (Art. 17º).</p><p><strong>CAPÍTULO VI – DAS ESPÉCIES E ATUALIZAÇÕES DO SISTEMA</strong></p><p><strong>Art. 21º</strong> A lista de espécies pontuáveis é dinâmica e visa abranger a biodiversidade marinha e estuarina acessível ao Ajing.</p><p><strong>Art. 22º</strong> Os membros poderão solicitar, a qualquer tempo, por meio de canal específico no site, a inclusão de novas espécies ainda não catalogadas ou a correção de nomenclaturas e pontuações existentes, cabendo à Administração avaliar e homologar a alteração.</p><p><strong>CAPÍTULO VII – DOS EVENTOS E TORNEIOS</strong></p><p><strong>Art. 23º</strong> A administração do Ajing Game – Extreme Finesse promoverá periodicamente encontros presenciais, desafios online e torneios entre os membros inscritos.</p><p><strong>Art. 24º</strong> Cada evento ou torneio contará com regulamento específico próprio (contendo datas, locais, regras, taxas de inscrição e premiações), que será divulgado previamente na plataforma.</p><p><strong>CAPÍTULO VIII – DA CONDUTA, PENALIDADES E DISPOSIÇÕES FINAIS</strong></p><p><strong>Art. 25º</strong> Espera-se de todos os membros respeito mútuo, incentivo à prática do pesque e solte consciente e preservação dos ambientes aquáticos.</p><p><strong>Art. 26º Combate a Fraudes:</strong> Usuários que tentarem fraudar o sistema de qualquer maneira — incluindo, mas não se limitando a, adulteração de metadados (EXIF), envio de peixes capturados por terceiros, uso de modalidades irregulares (tarrafa, rede, etc.) ou criação de múltiplas contas para obtenção de vantagem indevida — terão seu cadastro imediatamente banido e removido da plataforma, perdendo todo o histórico e pontuação acumulada.</p><p><strong>Art. 27º</strong> Os casos omissos neste regulamento serão analisados e decididos pela Administração da comunidade Ajing Game – Extreme Finesse.</p><p><strong>ANEXO ÚNICO – GUIA RÁPIDO PARA VALIDAÇÃO DE FOTOS (EVITANDO RECUSAS)</strong></p><p>Para garantir que sua captura pontue sem problemas, siga este checklist antes de enviar:</p><blockquote><p><strong>Checklist de Envio de Capturas</strong></p><ol><li><strong>Envie o arquivo original:</strong> Se tirou a foto com o celular e transferiu para o computador, envie o arquivo original (.jpg ou .heic convertido mantendo dados). Nunca envie fotos salvas do WhatsApp ou Instagram, pois esses aplicativos apagam os metadados (EXIF) de data/hora.</li><li><strong>Enquadramento:</strong> O rosto do pescador e o peixe inteiro devem estar visíveis na mesma foto.</li><li><strong>Prazo:</strong> Faça o upload no site em até 5 dias após a pescaria.</li></ol></blockquote></article>
+        </section>
         <section class="panel" role="tabpanel" data-panel="admin" hidden>
           <div class="panel-head"><div><h3>Administração</h3><p>Gerencie o conteúdo do site e o acesso da comunidade.</p></div></div>
           <nav class="admin-subnav" aria-label="Seções da administração">
@@ -1587,7 +1631,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                 <div class="field full url-field" hidden><label for="b2Url">Link do botão secundário</label><input id="b2Url" type="url" placeholder="https://"></div>
                 <div class="field full" id="slideLayoutField"><label for="sLayout">Apresentação do slide</label><select id="sLayout"><option value="split">Imagem ao lado do texto</option><option value="overlay">Imagem de fundo com texto sobreposto</option></select><span class="hint">No modo de fundo, o texto adapta a cor para manter o contraste com a imagem.</span></div>
                 <div class="field full" id="slideImageField"><label for="sImage">Imagem <span class="muted">(no modo de fundo, obrigatória)</span></label>
-                  <div class="img-row"><span class="img-thumb" id="sImgThumb"></span><input id="sImage" type="file" accept="image/*"><button class="btn btn-ghost" id="sImgClear" type="button">Usar a logo</button></div></div>
+                  <div class="img-row"><span class="img-thumb" id="sImgThumb"></span><input id="sImage" type="file" accept="image/*"><button class="btn btn-ghost" id="sImgClear" type="button">Usar a logo</button></div><span class="hint img-size-hint">Tamanho recomendado: 1600 × 900 px (16:9) para foto de fundo ou só imagem; 1200 × 900 px (4:3) para imagem ao lado do texto. JPG, PNG ou WebP, até 10 MB.</span></div>
               </div>
               <div class="form-error" id="slideError" role="alert"></div>
               <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar slide</button><button class="btn btn-ghost" id="slideCancel" type="button">Cancelar</button></div>
@@ -1598,6 +1642,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
             <nav class="req-subnav sc-subnav" aria-label="Seções do conteúdo do site">
               <button type="button" data-sc-view="copy">Marca e textos</button>
               <button type="button" data-sc-view="content">Novos conteúdos<span class="count" id="cntManagedContent"></span></button>
+              <button type="button" data-sc-view="rules">Regulamento</button>
             </nav>
             <form id="siteContentForm" data-sc-panel="copy" novalidate>
               <fieldset class="site-copy-group brand-admin-fields">
@@ -1605,14 +1650,22 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                 <div class="sf-grid">
                   <div class="field"><label for="siteBrandTitle">Título da marca</label><input id="siteBrandTitle" type="text" maxlength="50" value="AJING GAME"></div>
                   <div class="field"><label for="siteBrandSubtitle">Subtítulo <span class="muted">(opcional)</span></label><input id="siteBrandSubtitle" type="text" maxlength="60" value="Extreme Finesse"></div>
-                  <div class="field full"><label for="siteBrandLogo">Logo</label><div class="img-row"><span class="img-thumb brand-logo-preview" id="siteBrandLogoPreview" aria-label="Prévia da logo"></span><input id="siteBrandLogo" type="file" accept="image/*"><button class="btn btn-ghost" id="siteBrandLogoClear" type="button">Usar logo original</button></div><span class="hint">A logo atualiza o cabeçalho e o rodapé do site. Formatos JPG, PNG ou WebP.</span></div>
-                  <div class="field full"><label for="siteBrandFavicon">Favicon <span class="muted">(ícone da aba do navegador)</span></label><div class="img-row"><span class="favicon-preview" aria-label="Prévia do favicon"><img id="siteBrandFaviconPreview" alt="" width="32" height="32"><img id="siteBrandFaviconPreviewLg" alt="" width="64" height="64"></span><input id="siteBrandFavicon" type="file" accept="image/*"><button class="btn btn-ghost" id="siteBrandFaviconClear" type="button">Usar favicon original</button></div><span class="hint">Aparece na aba do navegador e no atalho da tela inicial do celular. Use uma imagem quadrada e simples (PNG com fundo transparente fica melhor); imagens retangulares são centralizadas.</span></div>
+                  <div class="field full"><label for="siteBrandLogo">Logo</label><div class="img-row"><span class="img-thumb brand-logo-preview" id="siteBrandLogoPreview" aria-label="Prévia da logo"></span><input id="siteBrandLogo" type="file" accept="image/*"><button class="btn btn-ghost" id="siteBrandLogoClear" type="button">Usar logo original</button></div><span class="hint">Tamanho recomendado: 512 × 512 px (quadrada), PNG com fundo transparente. A logo atualiza o cabeçalho e o rodapé do site.</span></div>
+                  <div class="field full"><label for="siteBrandFavicon">Favicon <span class="muted">(ícone da aba do navegador)</span></label><div class="img-row"><span class="favicon-preview" aria-label="Prévia do favicon"><img id="siteBrandFaviconPreview" alt="" width="32" height="32"><img id="siteBrandFaviconPreviewLg" alt="" width="64" height="64"></span><input id="siteBrandFavicon" type="file" accept="image/*"><button class="btn btn-ghost" id="siteBrandFaviconClear" type="button">Usar favicon original</button></div><span class="hint">Tamanho recomendado: 512 × 512 px (quadrada). Aparece na aba do navegador e no atalho da tela inicial do celular. Use uma imagem simples (PNG com fundo transparente fica melhor); imagens retangulares são centralizadas.</span></div>
                 </div>
               </fieldset>
               <div id="siteContentFields" class="site-copy-fields"></div>
               <div class="form-error" id="siteContentError" role="alert"></div>
               <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar conteúdo</button><button class="btn btn-ghost" id="siteContentReset" type="button">Restaurar padrão</button><span class="muted" id="siteContentStatus" role="status"></span></div>
             </form>
+            <section class="rules-admin" data-sc-panel="rules" aria-labelledby="rulesAdminTitle" hidden>
+              <h4 class="req-title" id="rulesAdminTitle">Regulamento da comunidade</h4>
+              <p class="box-desc">Este texto aparece na aba <b>Regulamento</b> da área de membros e na janela aberta pelo link do cadastro, onde a pessoa confirma que leu e aceita. Use os botões para negrito, listas e alinhamento.</p>
+              <div class="rich-toolbar" data-rich-toolbar="regulationEditor"></div>
+              <div id="regulationEditor" class="rich-editor regulation-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="rulesAdminTitle"></div>
+              <div class="form-error" id="regulationError" role="alert"></div>
+              <div class="form-actions"><button class="btn btn-primary" id="regulationSave" type="button">Salvar regulamento</button><button class="btn btn-ghost" id="regulationReset" type="button">Restaurar regulamento original</button><span class="saved" id="regulationStatus" aria-live="polite"></span></div>
+            </section>
             <section class="managed-content-admin" data-sc-panel="content" aria-labelledby="managedContentTitle" hidden>
               <div class="panel-head"><div><h3 id="managedContentTitle">Novos conteúdos</h3><p>Cadastre artigos formatados ou galerias de até três fotos. Escolha em que página o conteúdo aparece (Home ou Ajing Game), o submenu e a posição na página.</p></div></div>
               <form id="managedContentForm" class="managed-content-form" novalidate>
@@ -1642,7 +1695,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
               <div class="sf-grid">
                 <div class="field"><label for="partnerName">Nome da marca <span class="muted">(opcional)</span></label><input id="partnerName" maxlength="60"></div>
                 <div class="field"><label for="partnerUrl">Link da marca <span class="muted">(opcional)</span></label><input id="partnerUrl" type="url" maxlength="500" placeholder="https://"></div>
-                <div class="field full"><label for="partnerLogo">Foto do parceiro</label><input id="partnerLogo" type="file" accept="image/*" required><span class="hint" id="partnerLogoHint">A foto é reduzida e otimizada para a página. Formatos JPG, PNG ou WebP.</span></div>
+                <div class="field full"><label for="partnerLogo">Foto do parceiro</label><input id="partnerLogo" type="file" accept="image/*" required><span class="hint" id="partnerLogoHint">Tamanho recomendado: 600 × 400 px (3:2), logo com fundo branco ou transparente. JPG, PNG ou WebP.</span></div>
               </div>
               <div class="form-error" id="partnerError" role="alert"></div>
               <div class="form-actions"><button class="btn btn-primary" id="partnerSubmit" type="submit">Adicionar parceiro</button><button class="btn btn-ghost" id="partnerCancelEdit" type="button" hidden>Cancelar edição</button></div>
@@ -1736,7 +1789,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                   <div class="field ch-desc"><label>Prêmios</label><div id="chPrizes" class="prize-editor"></div><button class="btn btn-ghost" id="chPrizeAdd" type="button">Adicionar prêmio</button><span class="hint">Cadastre cada prêmio separadamente. A categoria ou colocação é opcional.</span></div>
                   <div class="field ch-desc"><label for="chRules">Regras</label><textarea id="chRules" rows="4" maxlength="2000" placeholder="Informe como participar, critérios de pontuação e regras do campeonato"></textarea></div>
                   <div class="field ch-desc"><label for="chDesc">Informações adicionais <span class="muted">(opcional)</span></label><input id="chDesc" maxlength="140" placeholder="Ex.: Local, organização ou observações"></div>
-                  <div class="field ch-desc"><label for="chBanner">Banner do evento <span class="muted">(obrigatório)</span></label><div class="champ-banner-preview" id="chBannerPreview" aria-label="Prévia do banner do campeonato"></div><input id="chBanner" type="file" accept="image/*" aria-required="true"><span class="hint">Use uma imagem horizontal. O arquivo será ajustado para exibição no evento.</span></div>
+                  <div class="field ch-desc"><label for="chBanner">Banner do evento <span class="muted">(obrigatório)</span></label><div class="champ-banner-preview" id="chBannerPreview" aria-label="Prévia do banner do campeonato"></div><input id="chBanner" type="file" accept="image/*" aria-required="true"><span class="hint">Tamanho recomendado: 1600 × 900 px (16:9), com o conteúdo importante no centro, porque a lista de eventos mostra uma faixa mais estreita. JPG, PNG ou WebP, até 10 MB.</span></div>
                 </div>
                 <div class="form-error" id="chError" role="alert"></div>
                 <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar campeonato</button><button class="btn btn-ghost" id="chCancel" type="button">Cancelar</button></div>
@@ -1888,7 +1941,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                   </div>
                   <span class="hint">Cole o link do perfil ou digite o @. Na carta aparecem o ícone da rede e o @; o clique abre o perfil.</span>
                 </div>
-                <div class="field full"><label for="profilePhoto">Foto</label><input id="profilePhoto" type="file" accept="image/*"><span class="hint">A foto aparece num quadro quadrado na carta.</span></div>
+                <div class="field full"><label for="profilePhoto">Foto</label><input id="profilePhoto" type="file" accept="image/*"><span class="hint">Tamanho recomendado: 800 × 800 px (quadrada). A foto aparece num quadro quadrado na carta, e você pode ajustar o enquadramento depois de enviar.</span></div>
               <div class="field full crop-ctrl" id="cropCtrl" hidden>
                 <label for="cropZoom">Ajuste da foto</label>
                 <div class="crop-row">
@@ -1954,7 +2007,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
           <span class="drop-empty" id="dropEmpty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8 5l1.5-2h5L16 5"/></svg><b>Adicionar foto</b><small>Clique ou arraste a imagem</small></span>
         </div>
         <button class="link-btn" id="changePhoto" type="button" hidden>Trocar foto</button>
-        <span class="hint">A imagem inteira será mantida no formato vertical do feed (4:5); o espaço restante será preenchido com a própria foto desfocada.</span>
+        <span class="hint">Tamanho recomendado: 1080 × 1350 px (vertical 4:5). A imagem inteira será mantida no formato vertical do feed (4:5); o espaço restante será preenchido com a própria foto desfocada.</span>
         <div class="form-error" id="postError" role="alert"></div>
       </div>
       <div class="post-fields" id="postFields" hidden>
@@ -1967,7 +2020,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
           </div>
           <select id="postSpecies" required hidden tabindex="-1" aria-hidden="true"></select><span class="hint" id="speciesHint"></span></div>
         <div class="field"><label for="postPlace">Local</label><input id="postPlace" maxlength="80" placeholder="Ex.: Píer de Itapoã, Vila Velha - ES" required></div>
-        <div class="field"><label for="postCaption">Descrição <span class="muted">(opcional)</span></label><textarea id="postCaption" rows="4" maxlength="300" placeholder="Isca, trabalho, condições do dia..."></textarea><span class="hint" id="captionCount">0 / 300</span></div>
+        <div class="field"><label for="postCaption">Descrição <span class="muted">(opcional)</span></label><textarea id="postCaption" rows="3" maxlength="150" placeholder="Isca, trabalho, condições do dia..."></textarea><span class="hint" id="captionCount">0 / 150</span></div>
         <label class="post-noscore"><input id="postNoScore" type="checkbox"><span><b>Publicar sem pontuar</b><small>A publicação vai direto para o feed, sem validação do administrador, e não conta pontos no ranking nem na carta.</small></span></label>
         <div class="form-actions"><button class="btn btn-primary" id="postSubmit" type="submit">Publicar</button><button class="btn btn-ghost" id="postCancel" type="button">Cancelar</button></div>
       </div>
@@ -1994,6 +2047,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
             <img id="reqPreview" alt="Prévia da foto da espécie" hidden>
             <span class="drop-empty" id="reqEmpty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8 5l1.5-2h5L16 5"/></svg><b>Foto da espécie</b><small>Clique ou arraste</small></span>
           </div>
+            <span class="hint req-photo-hint">Tamanho recomendado: 1200 × 900 px (4:3), com o peixe inteiro e bem visível. JPG, PNG ou WebP.</span>
         </div>
         <div class="req-fields">
           <div class="field"><label for="reqName">Nome popular</label><input id="reqName" maxlength="60" placeholder="Ex.: Carapau" required></div>
@@ -2023,6 +2077,16 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 </div>
 
 <!-- Login -->
+<div class="modal terms-modal" id="termsModal" aria-hidden="true">
+  <div class="modal-card terms-card" role="dialog" aria-modal="true" aria-labelledby="termsTitle">
+    <div class="modal-head"><span class="logo-img" aria-hidden="true"></span><strong id="termsTitle">Regulamento</strong>
+      <button class="icon-btn" id="termsClose" type="button" aria-label="Fechar regulamento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="modal-body"><div class="regulation-text managed-rich" id="termsBody"></div>
+      <div class="form-actions terms-actions"><button class="btn btn-primary" id="termsAccept" type="button">Li e aceito</button><button class="btn btn-ghost" id="termsBack" type="button">Fechar</button></div>
+    </div>
+  </div>
+</div>
 <div class="modal" id="loginModal" aria-hidden="true">
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
     <div class="modal-head"><span class="logo-img" aria-hidden="true"></span><strong>Área de membros</strong>
@@ -2045,6 +2109,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
           <div class="field"><label for="signupName">Nome de Pescador</label><input id="signupName" name="nickname" type="text" maxlength="30" autocomplete="nickname" required><span class="hint">De 3 a 30 caracteres.<span class="pc-only"> É o nome exibido no site.</span></span></div>
           <div class="field"><label for="signupFullName">Nome completo</label><input id="signupFullName" name="full-name" type="text" maxlength="80" autocomplete="name" required></div>
           <div class="field"><label for="signupCity">Cidade</label><input id="signupCity" name="address-level2" type="text" maxlength="100" autocomplete="address-level2" required></div>
+          <div class="field"><label for="signupState">Estado</label><select id="signupState" name="address-level1" autocomplete="address-level1" required><option value="">Selecione</option><option value="AC">Acre (AC)</option><option value="AL">Alagoas (AL)</option><option value="AP">Amapá (AP)</option><option value="AM">Amazonas (AM)</option><option value="BA">Bahia (BA)</option><option value="CE">Ceará (CE)</option><option value="DF">Distrito Federal (DF)</option><option value="ES">Espírito Santo (ES)</option><option value="GO">Goiás (GO)</option><option value="MA">Maranhão (MA)</option><option value="MT">Mato Grosso (MT)</option><option value="MS">Mato Grosso do Sul (MS)</option><option value="MG">Minas Gerais (MG)</option><option value="PA">Pará (PA)</option><option value="PB">Paraíba (PB)</option><option value="PR">Paraná (PR)</option><option value="PE">Pernambuco (PE)</option><option value="PI">Piauí (PI)</option><option value="RJ">Rio de Janeiro (RJ)</option><option value="RN">Rio Grande do Norte (RN)</option><option value="RS">Rio Grande do Sul (RS)</option><option value="RO">Rondônia (RO)</option><option value="RR">Roraima (RR)</option><option value="SC">Santa Catarina (SC)</option><option value="SP">São Paulo (SP)</option><option value="SE">Sergipe (SE)</option><option value="TO">Tocantins (TO)</option></select></div>
           <div class="field"><label for="signupPhone">Telefone (com DDD)</label><input id="signupPhone" name="tel" type="tel" inputmode="tel" maxlength="15" autocomplete="tel-national" placeholder="(27) 99999-9999" required></div>
           <div class="field"><label for="signupCpf">CPF</label><input id="signupCpf" name="tax-id" type="text" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00" required></div>
           <p class="signup-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>CPF e telefone são privados e não aparecem no seu perfil público.</p>
@@ -2053,6 +2118,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
           <div class="field"><label for="signupEmail">E-mail</label><input id="signupEmail" name="email" type="email" maxlength="120" autocomplete="email" inputmode="email" required><span class="hint pc-only">Usado para entrar no site.</span></div>
           <div class="field"><label for="signupPass">Senha</label><input id="signupPass" name="new-password" type="password" minlength="6" autocomplete="new-password" required><span class="hint">Use pelo menos 6 caracteres.</span></div>
         </fieldset>
+        <label class="signup-terms"><input type="checkbox" id="signupTerms"><span>Li e aceito o <button class="link-btn" id="openTerms" type="button">regulamento da comunidade</button></span></label>
         <div class="form-error" id="signupError" role="alert"></div>
         <div class="signup-actions"><button class="link-btn" id="backToLogin" type="button">Voltar para entrar</button><button class="btn btn-primary" id="signupSubmit" type="submit">Enviar solicitação</button></div>
       </form>
@@ -2390,8 +2456,8 @@ const fb = {
   },
   memberApplication: async uid => { const s = await getDoc(fsDoc(fdb, 'memberApplications', uid)); return s.exists() ? s.data() : null; },
   approveMemberApplication: async (uid, application) => {
-    const { username, email, fullName, city, cpf, phone } = application;
-    const profile = { name: fullName || username, fishingName: username, location: city || '', bio: '', photo: '', social: {} };
+    const { username, email, fullName, city, state, cpf, phone } = application;
+    const profile = { name: fullName || username, fishingName: username, location: [city, state].filter(Boolean).join(' - '), bio: '', photo: '', social: {} };
     const batch = writeBatch(fdb), sent = Date.now();
     batch.set(fsDoc(fdb, 'users', uid), { username, role: 'member', active: true, seasonChampion: false, goldHooks: 0 });
     batch.set(fsDoc(fdb, 'private', uid), { email });
@@ -2632,7 +2698,7 @@ await new Promise(resolve => {
       <div class="uf-grid level-fields"><div class="field"><label for="levelName${l.n}">Nome do nível</label><input id="levelName${l.n}" data-level-name="${l.n}" maxlength="40" value="${esc(l.name)}"><span class="hint">Nome exibido nas cartas e no ranking.</span></div>
       <div class="field"><label for="levelMin${l.n}">Pontuação mínima</label><input id="levelMin${l.n}" data-level-min="${l.n}" type="number" min="${l.n === 1 ? 0 : 1}" max="1000000" step="1" value="${l.min}" ${l.n === 1 ? 'disabled' : ''}><span class="hint">${l.n === 1 ? 'O nível inicial começa em 0 ponto.' : 'Meta acumulada de pontos aprovados.'}</span></div>
       <div class="field"><label for="levelDesc${l.n}">Descrição</label><textarea id="levelDesc${l.n}" data-level-desc="${l.n}" rows="2" maxlength="180">${esc(l.desc)}</textarea></div>
-      <div class="field"><label for="levelImage${l.n}">Símbolo do nível</label><div class="level-icon-control"><span class="level-icon-preview" id="levelImagePreview${l.n}">${emblem(l, 'sm')}</span><input id="levelImage${l.n}" data-level-image="${l.n}" type="file" accept="image/png,image/jpeg,image/webp"><button class="btn btn-ghost" type="button" data-level-image-clear="${l.n}">Usar símbolo padrão</button></div><span class="hint">Envie uma imagem quadrada. Ela será reduzida e otimizada automaticamente.</span></div></div></fieldset>`).join('');
+      <div class="field"><label for="levelImage${l.n}">Símbolo do nível</label><div class="level-icon-control"><span class="level-icon-preview" id="levelImagePreview${l.n}">${emblem(l, 'sm')}</span><input id="levelImage${l.n}" data-level-image="${l.n}" type="file" accept="image/png,image/jpeg,image/webp"><button class="btn btn-ghost" type="button" data-level-image-clear="${l.n}">Usar símbolo padrão</button></div><span class="hint">Tamanho recomendado: 256 × 256 px (quadrada), PNG com fundo transparente. Ela será reduzida e otimizada automaticamente.</span></div></div></fieldset>`).join('');
   };
   renderLevelsAdminForm();
   $('levelsAdminFields').addEventListener('change', async e => {
@@ -2889,6 +2955,29 @@ await new Promise(resolve => {
   };
   $('membersBtn').addEventListener('click', () => { closeMenu(); currentUser() ? showMembers() : openLogin(); });
   $('loginClose').addEventListener('click', closeLogin);
+  // Regulamento: mesma versão da aba Regulamento (editável em Conteúdo do site › Marca e textos › Regulamento)
+  const termsModal = $('termsModal');
+  let termsReturnFocus = null;
+  const openTerms = () => {
+    termsReturnFocus = document.activeElement;
+    $('termsBody').innerHTML = $('regulationText').innerHTML;
+    termsModal.classList.add('open'); termsModal.setAttribute('aria-hidden', 'false');
+    $('termsBody').scrollTop = 0; setTimeout(() => $('termsClose').focus(), 30);
+  };
+  const closeTerms = () => { termsModal.classList.remove('open'); termsModal.setAttribute('aria-hidden', 'true'); if (termsReturnFocus) termsReturnFocus.focus(); };
+  $('openTerms').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openTerms(); });
+  $('termsClose').addEventListener('click', closeTerms);
+  $('termsBack').addEventListener('click', closeTerms);
+  $('termsAccept').addEventListener('click', () => { $('signupTerms').checked = true; $('signupError').textContent = ''; closeTerms(); });
+  termsModal.addEventListener('click', e => { if (e.target === termsModal) closeTerms(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && termsModal.classList.contains('open')) { e.stopImmediatePropagation(); closeTerms(); } }, true);
+  // Abre a tela de cadastro (botões do carrossel e o endereço ajinggame.com.br/#cadastro)
+  const openSignup = () => {
+    if (currentUser()) { showMembers(); return; }
+    openLogin(); $('showSignup').click();
+  };
+  window.addEventListener('hashchange', () => { if (location.hash === '#cadastro') openSignup(); });
+  if (location.hash === '#cadastro') setTimeout(openSignup, 400);
   $('showSignup').addEventListener('click', () => { signupSuccess.hidden = true; loginForm.hidden = true; signupForm.hidden = false; $('signupError').textContent = ''; setTimeout(() => softFocus($('signupName')), 0); });
   $('backToLogin').addEventListener('click', () => { signupForm.hidden = true; loginForm.hidden = false; $('loginError').textContent = ''; setTimeout(() => softFocus($('loginUser')), 0); });
   modal.addEventListener('click', e => { if (e.target === modal && !showingSignupSuccess) closeLogin(); });
@@ -2916,21 +3005,23 @@ await new Promise(resolve => {
   });
   signupForm.addEventListener('submit', async e => {
     e.preventDefault();
-    const name = $('signupName').value.normalize('NFC').trim().replace(/\s+/g, ' '), fullName = $('signupFullName').value.normalize('NFC').trim().replace(/\s+/g, ' '), city = $('signupCity').value.normalize('NFC').trim().replace(/\s+/g, ' '), cpf = cpfDigits($('signupCpf').value), phone = phoneDigits($('signupPhone').value), email = $('signupEmail').value.trim().toLowerCase(), pass = $('signupPass').value, err = $('signupError');
+    const name = $('signupName').value.normalize('NFC').trim().replace(/\s+/g, ' '), fullName = $('signupFullName').value.normalize('NFC').trim().replace(/\s+/g, ' '), city = $('signupCity').value.normalize('NFC').trim().replace(/\s+/g, ' '), state = $('signupState').value, cpf = cpfDigits($('signupCpf').value), phone = phoneDigits($('signupPhone').value), email = $('signupEmail').value.trim().toLowerCase(), pass = $('signupPass').value, err = $('signupError');
     err.textContent = '';
     if (name.length < 3 || name.length > 30 || !/^[\p{L}\p{N}](?:[\p{L}\p{N} ._'-]*[\p{L}\p{N}.])?$/u.test(name)) { err.textContent = 'Informe um nome de 3 a 30 caracteres, começando e terminando com letra ou número.'; $('signupName').focus(); return; }
     if (fullName.length < 2 || fullName.length > 80) { err.textContent = 'Informe seu nome completo (de 2 a 80 caracteres).'; $('signupFullName').focus(); return; }
     if (!city || city.length > 100) { err.textContent = 'Informe sua cidade (até 100 caracteres).'; $('signupCity').focus(); return; }
+    if (!/^[A-Z]{2}$/.test(state)) { err.textContent = 'Selecione o estado onde você mora.'; $('signupState').focus(); return; }
     if (!validCPF(cpf)) { err.textContent = 'Confira o CPF informado.'; $('signupCpf').focus(); return; }
     if (!validPhone(phone)) { err.textContent = 'Informe um telefone válido com DDD, por exemplo (27) 99999-9999.'; $('signupPhone').focus(); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Informe um e-mail válido.'; $('signupEmail').focus(); return; }
     if (pass.length < 6) { err.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; $('signupPass').focus(); return; }
+    if (!$('signupTerms').checked) { err.textContent = 'Para enviar, leia e aceite o regulamento da comunidade.'; $('signupTerms').focus(); return; }
     const btn = $('signupSubmit'); btn.disabled = true;
     let uid = null;
     try {
       if (getUsers().some(u => norm(u.username) === norm(name))) { err.textContent = 'Esse nome já está em uso. Escolha outro.'; $('signupName').focus(); return; }
       uid = await fb.registerAccount(email, pass);
-      await fb.submitMemberApplication(uid, { username: name, fullName, city, cpf, phone, email });
+      await fb.submitMemberApplication(uid, { username: name, fullName, city, state, cpf, phone, email, termsAcceptedAt: Date.now() });
       await fb.signOut(); signupForm.reset(); setSignupSuccess(true);
     } catch (signupErr) {
       if (uid) { try { await fb.signOut(); } catch (_) {} }
@@ -2948,7 +3039,7 @@ await new Promise(resolve => {
   const logout = async () => {
     try { await fb.signOut(); } catch(_) {}
     store.del('ajing-member-tab', true);
-    $('membersBtnLabel').textContent = 'Área de membros'; $('membersBtn').setAttribute('aria-label', 'Área de membros');
+    $('membersBtnLabel').textContent = 'Login / Sign up'; $('membersBtn').setAttribute('aria-label', 'Login / Sign up');
     // Ao sair, sempre volta para o início da página inicial (mesmo que antes estivesse na página Ajing Game)
     showHome(); showPublicContentPage('home'); window.scrollTo({ top: 0 });
   };
@@ -3070,7 +3161,7 @@ await new Promise(resolve => {
   dropZone.addEventListener('drop', e => takeFile(e.dataTransfer.files && e.dataTransfer.files[0]));
   $('changePhoto').addEventListener('click', () => postPhoto.click());
   dropZone.addEventListener('click', () => postPhoto.click());
-  const updateCaptionCount = () => $('captionCount').textContent = `${postCaption.value.length} / 300`;
+  const updateCaptionCount = () => $('captionCount').textContent = `${postCaption.value.length} / 150`;
   postCaption.addEventListener('input', updateCaptionCount);
 
   const showPostModal = () => {
@@ -3370,7 +3461,7 @@ await new Promise(resolve => {
         const original = posts.find(p => p.id === editingPostId);
         if (!original || original.user !== currentUser()) throw new Error('Publicação não encontrada.');
         const speciesChanged = original.speciesId !== sp.id, photoChanged = !!postImage && postImage !== original.photo;
-        const updated = { ...original, place, captureDate, caption: postCaption.value.trim().slice(0, 300), photo: postImage || original.photo };
+        const updated = { ...original, place, captureDate, caption: postCaption.value.trim().slice(0, 150), photo: postImage || original.photo };
         if (speciesChanged) { updated.speciesId = sp.id; updated.speciesName = sp.name; updated.points = sp.points; }
         // Trocar a espécie ou a foto exige nova validação (a análise anterior valia para a foto e a espécie antigas)
         if (speciesChanged || photoChanged) {
@@ -3381,7 +3472,7 @@ await new Promise(resolve => {
         if (postImageAudit && postImage !== original.photo) await postsDB.putWithAudit(updated, postImageAudit);
         else await postsDB.put(updated);
       } else {
-        await postsDB.create({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate, caption: postCaption.value.trim().slice(0, 300), photo: postImage, created: Date.now(), status: noScore ? 'unscored' : 'pending' }, postImageAudit || { fileType: '', fileSize: 0, imageDate: '', software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true });
+        await postsDB.create({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate, caption: postCaption.value.trim().slice(0, 150), photo: postImage, created: Date.now(), status: noScore ? 'unscored' : 'pending' }, postImageAudit || { fileType: '', fileSize: 0, imageDate: '', software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true });
       }
       const editedId = editingPostId;
       closePostModal(false);
@@ -3788,12 +3879,12 @@ await new Promise(resolve => {
   const siteCopyNodes = [...document.querySelectorAll('[data-site-copy]')];
   const siteCopyDefaults = Object.fromEntries(siteCopyNodes.map(node => [node.dataset.siteCopy, node.textContent]));
   const siteCopyDefaultHTML = new Map(siteCopyNodes.map(node => [node, node.innerHTML]));
-  const siteCopyGroups = { conceito:'Conceito', origem:'Origem', adaptacoes:'Adaptações', trabalhos:'Trabalhos da isca', fundamentos:'Fundamentos', manifesto:'Manifesto', referencias:'Referências', parceiros:'Parceiros', nav:'Menu público' };
+  const siteCopyGroups = { regulamento:'Regulamento', conceito:'Conceito', origem:'Origem', adaptacoes:'Adaptações', trabalhos:'Trabalhos da isca', fundamentos:'Fundamentos', manifesto:'Manifesto', referencias:'Referências', parceiros:'Parceiros', nav:'Menu público' };
   const siteCopyGroupOrder = ['conceito', 'origem', 'adaptacoes', 'trabalhos', 'fundamentos', 'manifesto', 'referencias', 'parceiros', 'nav'];
   const siteVisibilityTargets = { conceito:'#conceito', origem:'#origem', adaptacoes:'#adaptacoes', trabalhos:'#trabalhos', fundamentos:'#fundamentos', manifesto:'#manifesto', referencias:'#referencias', parceiros:'#parceiros', nav:'#navLinks' };
   const siteVisibilityNavTargets = { conceito:'a[href="#conceito"]', origem:'a[href="#origem"]', adaptacoes:'a[href="#adaptacoes"]', trabalhos:'a[href="#trabalhos"]', fundamentos:'a[href="#fundamentos"]', parceiros:'a[href="#parceiros"]' };
   const siteVisibilityDescriptions = { conceito:'Seção Conceito no menu Ajing Game.', origem:'Seção Origem no menu Ajing Game.', adaptacoes:'Seção Adaptações no menu Ajing Game.', trabalhos:'Seção Trabalhos da isca no menu Ajing Game.', fundamentos:'Seção Fundamentos no menu Ajing Game.', manifesto:'Faixa do manifesto no menu Ajing Game.', referencias:'Seção de referências técnicas no menu Ajing Game.', parceiros:'Seção Parceiros na Home.', nav:'Links de navegação pública no cabeçalho.' };
-  const siteCopyParts = { title:'Título', text:'Texto', intro:'Apresentação', label:'Chamada', quote:'Citação', paragraph1:'Texto 1', paragraph2:'Texto 2', paragraph3:'Texto 3', important:'Aviso', componentsTitle:'Título dos componentes', tip:'Dica', stepsTitle:'Título da sequência', actionLabel:'Rótulo da ação', indicationLabel:'Rótulo da indicação' };
+  const siteCopyParts = { texto:'Texto do regulamento', title:'Título', text:'Texto', intro:'Apresentação', label:'Chamada', quote:'Citação', paragraph1:'Texto 1', paragraph2:'Texto 2', paragraph3:'Texto 3', important:'Aviso', componentsTitle:'Título dos componentes', tip:'Dica', stepsTitle:'Título da sequência', actionLabel:'Rótulo da ação', indicationLabel:'Rótulo da indicação' };
   let activeSiteCopyGroup = 'conceito';
   const savedSiteContent = () => window.__ajingSiteConfigLoaded ? (fb.config('siteContent') || {}) : (window.__ajingSiteContentCache || {});
   const SITE_BRAND_DEFAULTS = { title: 'AJING GAME', subtitle: 'Extreme Finesse' };
@@ -3864,7 +3955,8 @@ await new Promise(resolve => {
   const sanitizeSiteRichText = html => {
     const doc = new DOMParser().parseFromString(String(html || ''), 'text/html'), allowed = new Set(['B','STRONG','I','EM','U','S','STRIKE','P','DIV','BR','UL','OL','LI','BLOCKQUOTE','A']);
     const cleanNode = node => {
-      if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.nodeValue || '');
+      // espaços "não separáveis" (texto colado do Word, por exemplo) impediam a quebra de linha
+      if (node.nodeType === Node.TEXT_NODE) return document.createTextNode((node.nodeValue || '').replace(/\u00a0/g, ' '));
       if (node.nodeType !== Node.ELEMENT_NODE) return document.createDocumentFragment();
       const children = [...node.childNodes].map(cleanNode), tag = node.tagName.toUpperCase();
       if (!allowed.has(tag)) { const fragment = document.createDocumentFragment(); children.forEach(child => fragment.append(child)); return fragment; }
@@ -3997,11 +4089,45 @@ await new Promise(resolve => {
     try { await fb.setConfig('siteContent', value); renderSiteCopy(); status.textContent = 'Conteúdo salvo.'; }
     catch (err) { status.textContent = ''; error.textContent = fb.errMsg(err); }
   });
+  // Regulamento: editor próprio (aba Regulamento em Conteúdo do site); grava em siteContent['regulamento.texto']
+  let regulationDirty = false;
+  const regulationNode = () => $('regulationText');
+  const regulationDefault = () => siteCopyDefaultHTML.get(regulationNode()) || '';
+  function loadRegulationEditor(force = false) {
+    if (regulationDirty && !force) return;
+    const saved = savedSiteContent()['regulamento.texto'];
+    $('regulationEditor').innerHTML = sanitizeSiteRichText(typeof saved === 'string' ? saved : regulationDefault());
+    regulationDirty = false;
+  }
+  $('regulationEditor').addEventListener('input', () => { regulationDirty = true; $('regulationStatus').textContent = ''; });
+  const rulesPanel = document.querySelector('[data-sc-panel="rules"]');
+  rulesPanel.addEventListener('mousedown', e => { if (e.target.closest('[data-rich-command]')) e.preventDefault(); });
+  rulesPanel.addEventListener('click', e => {
+    const button = e.target.closest('[data-rich-command]'); if (!button) return;
+    applyRichCommand(button.dataset.richCommand, $(button.dataset.richTarget), button.dataset.richValue); regulationDirty = true;
+  });
+  $('regulationSave').addEventListener('click', async () => {
+    if (!isAdmin()) return;
+    const html = sanitizeSiteRichText($('regulationEditor').innerHTML), plain = new DOMParser().parseFromString(html, 'text/html').body.textContent.trim();
+    const error = $('regulationError'), status = $('regulationStatus'); error.textContent = '';
+    if (plain.length < 20) { error.textContent = 'O regulamento está vazio ou curto demais. Escreva o texto antes de salvar.'; $('regulationEditor').focus(); return; }
+    status.textContent = 'Salvando…';
+    try { await fb.setConfig('siteContent', { ...savedSiteContent(), 'regulamento.texto': html }); regulationDirty = false; renderSiteCopy(); status.textContent = 'Regulamento salvo.'; }
+    catch (err) { status.textContent = ''; error.textContent = fb.errMsg(err); }
+  });
+  $('regulationReset').addEventListener('click', async () => {
+    if (!isAdmin()) return;
+    if (!(await askConfirm('Restaurar o texto original do regulamento? As alterações feitas aqui serão descartadas.', { title: 'Restaurar regulamento?', confirmText: 'Restaurar' }))) return;
+    const value = { ...savedSiteContent() }; delete value['regulamento.texto'];
+    try { await fb.setConfig('siteContent', value); renderSiteCopy(); loadRegulationEditor(true); $('regulationStatus').textContent = 'Regulamento original restaurado.'; }
+    catch (err) { $('regulationError').textContent = fb.errMsg(err); }
+  });
   $('siteContentReset').addEventListener('click', async () => {
     if (!isAdmin()) return;
     if (!(await askConfirm('Restaurar o padrão da página inicial? Isso restaura os textos, a marca original e volta a exibir todas as seções.'))) return;
     $('siteContentError').textContent = ''; $('siteContentStatus').textContent = 'Restaurando…';
-    try { await fb.setConfig('siteContent', {}); renderSiteCopy(); renderSiteContentAdmin(); $('siteContentStatus').textContent = 'Textos e marca originais restaurados.'; }
+    const keepRules = savedSiteContent()['regulamento.texto'];
+    try { await fb.setConfig('siteContent', typeof keepRules === 'string' ? { 'regulamento.texto': keepRules } : {}); renderSiteCopy(); renderSiteContentAdmin(); $('siteContentStatus').textContent = 'Textos e marca originais restaurados. O regulamento foi mantido.'; }
     catch (err) { $('siteContentStatus').textContent = ''; $('siteContentError').textContent = fb.errMsg(err); }
   });
 
@@ -4018,7 +4144,8 @@ await new Promise(resolve => {
   };
   // Conteúdo do site: duas abas (marca e textos fixos / novos conteúdos), para o formulário não aparecer em todas as seções
   const showScView = view => {
-    if (!['copy', 'content'].includes(view)) view = 'copy';
+    if (!['copy', 'content', 'rules'].includes(view)) view = 'copy';
+    if (view === 'rules') loadRegulationEditor();
     document.querySelectorAll('[data-sc-view]').forEach(b => b.setAttribute('aria-current', String(b.dataset.scView === view)));
     document.querySelectorAll('[data-sc-panel]').forEach(p => { p.hidden = p.dataset.scPanel !== view; });
     store.set('ajing-sc-view', view, true);
@@ -4170,7 +4297,7 @@ await new Promise(resolve => {
       const photo = file ? await partnerFileToData(file) : previous.photo || previous.logo;
       const item = { id: editingPartnerId || uid(), name, url, photo };
       await savePartners(editingPartnerId ? sitePartners.map(p => p.id === editingPartnerId ? item : p) : [...sitePartners, item]);
-      editingPartnerId = null; $('partnerForm').reset(); $('partnerLogo').required = true; $('partnerSubmit').textContent = 'Adicionar parceiro'; $('partnerCancelEdit').hidden = true; $('partnerLogoHint').textContent = 'A foto é reduzida e otimizada para a página. Formatos JPG, PNG ou WebP.';
+      editingPartnerId = null; $('partnerForm').reset(); $('partnerLogo').required = true; $('partnerSubmit').textContent = 'Adicionar parceiro'; $('partnerCancelEdit').hidden = true; $('partnerLogoHint').textContent = 'Tamanho recomendado: 600 × 400 px (3:2), logo com fundo branco ou transparente. JPG, PNG ou WebP.';
     } catch (err) { error.textContent = err.code ? fb.errMsg(err) : err.message || 'Não foi possível salvar a marca.'; }
     finally { submit.disabled = false; if (!editingPartnerId) submit.textContent = 'Adicionar parceiro'; else submit.textContent = 'Salvar alterações'; }
   });
@@ -4192,7 +4319,7 @@ await new Promise(resolve => {
   });
   $('partnerCancelEdit').addEventListener('click', () => {
     editingPartnerId = null; $('partnerForm').reset(); $('partnerLogo').required = true; $('partnerSubmit').textContent = 'Adicionar parceiro';
-    $('partnerCancelEdit').hidden = true; $('partnerLogoHint').textContent = 'A foto é reduzida e otimizada para a página. Formatos JPG, PNG ou WebP.'; $('partnerError').textContent = '';
+    $('partnerCancelEdit').hidden = true; $('partnerLogoHint').textContent = 'Tamanho recomendado: 600 × 400 px (3:2), logo com fundo branco ou transparente. JPG, PNG ou WebP.'; $('partnerError').textContent = '';
   });
 
   const showAdminSec = sec => {
@@ -4619,7 +4746,7 @@ await new Promise(resolve => {
   });
 
   /* ===== Carrossel da página inicial ===== */
-  const TARGETS = [['#conceito','Seção: Conceito'],['#origem','Seção: Origem'],['#adaptacoes','Seção: Adaptações'],['#trabalhos','Seção: Trabalhos da isca'],['#fundamentos','Seção: Fundamentos'],['members','Área de membros'],['url','Link externo']];
+  const TARGETS = [['signup','Tela de cadastro (novos membros)'],['#conceito','Seção: Conceito'],['#origem','Seção: Origem'],['#adaptacoes','Seção: Adaptações'],['#trabalhos','Seção: Trabalhos da isca'],['#fundamentos','Seção: Fundamentos'],['members','Área de membros'],['url','Link externo']];
   const defaultChampionSlide = () => ({ id: uid(), type: 'champion', visible: true, title: 'Campeão da edição', sub: '', image: '',
     text: 'O título vai para quem soma mais pontos no ranking do Social Fish durante a edição.',
     b1: { label: '', target: '#conceito', url: '' }, b2: { label: '', target: '#conceito', url: '' } });
@@ -4667,6 +4794,7 @@ await new Promise(resolve => {
   const buttonHTML = (b, cls) => {
     if (!b || !b.label) return '';
     if (b.target === 'members') return `<button class="btn ${cls}" type="button" data-open-members>${esc(b.label)}</button>`;
+    if (b.target === 'signup') return `<button class="btn ${cls}" type="button" data-open-signup>${esc(b.label)}</button>`;
     if (b.target === 'url') return /^https?:\/\//i.test(b.url || '') ? `<a class="btn ${cls}" href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.label)}</a>` : '';
     return `<a class="btn ${cls}" href="${esc(b.target)}">${esc(b.label)}</a>`;
   };
@@ -4802,6 +4930,7 @@ await new Promise(resolve => {
   });
   $('heroSlides').addEventListener('click', e => {
     if (e.target.closest('[data-open-members]')) { currentUser() ? showMembers() : openLogin(); return; }
+    if (e.target.closest('[data-open-signup]')) { openSignup(); return; }
     const link = e.target.closest('a[href^="#"]'); if (!link) return;
     const target = document.querySelector(link.getAttribute('href')); if (!target) return;
     e.preventDefault();
@@ -5195,6 +5324,8 @@ await new Promise(resolve => {
   const renderMemberMessages = () => {
     const messages = fb.memberMessagesDB.all(), unread = messages.filter(m => !m.read).length;
     $('cntMyMessages').textContent = unread || '';
+    const tabBadge = $('cntProfileTab'); tabBadge.textContent = unread > 9 ? '9+' : String(unread); tabBadge.hidden = !unread;
+    tabBadge.setAttribute('aria-label', `${unread} ${unread === 1 ? 'mensagem não lida' : 'mensagens não lidas'}`);
     $('memberMessagesList').innerHTML = messages.length ? messages.map(m => `<li class="member-message ${m.read ? '' : 'unread'}"><span class="grow"><b>Publicação recusada · ${esc(m.speciesName || 'Captura')}</b><small>${fmtShort(m.created)} · Avaliada por ${esc(displayName(m.reviewer || ''))}</small><span>${esc(m.reason)}</span></span></li>`).join('') : '<li class="empty-row">Você ainda não tem mensagens.</li>';
   };
   $('myCaptureFeed').addEventListener('click', async e => {
@@ -5429,7 +5560,7 @@ await new Promise(resolve => {
     const badge = $('adminBadge'); badge.hidden = !isAdmin() || !pendingTotal; badge.textContent = pendingTotal;
     const cnt = $('cntReq'); cnt.textContent = pendingTotal || ''; cnt.classList.toggle('alert', pendingTotal > 0);
     if (!isAdmin()) return;
-    $('memberApplicationList').innerHTML = memberApplications.length ? memberApplications.map(app => `<li class="review-history-row" data-member-application="${esc(app.uid)}"><span class="grow"><b>${esc(app.username || 'Novo membro')}</b><small>${esc(app.fullName || 'Nome completo não informado')} · ${esc(app.city || 'Cidade não informada')} · CPF ${app.cpf ? esc(formatCPF(app.cpf)) : 'não informado'} · Tel. ${app.phone ? esc(formatPhone(app.phone)) : 'não informado'}</small><small>${esc(app.email || '')} · Solicitação em ${fmtShort(app.created)}</small></span><button class="btn btn-primary" type="button" data-member-application-act="approve">Aprovar acesso</button><button class="btn btn-danger" type="button" data-member-application-act="reject">Recusar acesso</button></li>`).join('') : '<li class="empty-row">Nenhum novo cadastro aguardando aprovação.</li>';
+    $('memberApplicationList').innerHTML = memberApplications.length ? memberApplications.map(app => `<li class="review-history-row" data-member-application="${esc(app.uid)}"><span class="grow"><b>${esc(app.username || 'Novo membro')}</b><small>${esc(app.fullName || 'Nome completo não informado')} · ${esc(app.city || 'Cidade não informada')} ${app.state ? ` · ${esc(app.state)}` : ''} · CPF ${app.cpf ? esc(formatCPF(app.cpf)) : 'não informado'} · Tel. ${app.phone ? esc(formatPhone(app.phone)) : 'não informado'}</small><small>${esc(app.email || '')} · Solicitação em ${fmtShort(app.created)}</small></span><button class="btn btn-primary" type="button" data-member-application-act="approve">Aprovar acesso</button><button class="btn btn-danger" type="button" data-member-application-act="reject">Recusar acesso</button></li>`).join('') : '<li class="empty-row">Nenhum novo cadastro aguardando aprovação.</li>';
     $('memberApplicationHistory').innerHTML = rejectedMemberApplications.length ? rejectedMemberApplications.map(app => `<li class="review-history-row" data-member-application="${esc(app.uid)}"><span class="grow"><b>${esc(app.username || 'Novo membro')}</b><small>${esc(app.email || '')} · Recusado em ${fmtShort(app.reviewed)}</small></span><button class="btn btn-ghost" type="button" data-member-application-act="reopen">Reabrir solicitação</button></li>`).join('') : '<li class="empty-row">Nenhum acesso recusado.</li>';
     $('reqAdminList').innerHTML = pending.length ? pending.map(r => `<li class="req-card" data-req="${esc(r.id)}">
         <div class="rphoto" ${safeImageSrc(reqPhotos[r.id]) ? `style="background-image:url('${safeImageSrc(reqPhotos[r.id])}')"` : ''} role="img" aria-label="Foto enviada para ${esc(r.name)}"></div>
@@ -5459,7 +5590,7 @@ await new Promise(resolve => {
         <div class="field pq-species"><label for="pqf-${esc(p.id)}">Espécie</label><input id="pqf-${esc(p.id)}" type="search" data-pq-filter placeholder="Filtrar por nome popular ou científico" autocomplete="off"><select data-pq-species size="6" aria-label="Espécie da captura">${pqSpeciesOptions(p, '')}</select><span class="hint">Atual: ${esc(p.speciesName)} · ${ptsLabel(postPoints(p))}</span></div>
         <div class="field"><label>Local</label><input data-pq-place maxlength="80" value="${esc(p.place || '')}"></div>
         <div class="field"><label>Data da captura</label><input type="date" data-pq-date value="${esc(p.captureDate || '')}" max="${localDateValue(new Date())}"></div>
-        <div class="field pq-full"><label>Descrição</label><textarea data-pq-caption maxlength="300" rows="2">${esc(p.caption || '')}</textarea></div>
+        <div class="field pq-full"><label>Descrição</label><textarea data-pq-caption maxlength="150" rows="2">${esc(p.caption || '')}</textarea></div>
         <div class="form-error pq-full" data-edit-error role="alert"></div>
         <div class="form-actions pq-full"><button class="btn btn-primary" type="submit">Salvar correção</button><button class="btn btn-ghost" type="button" data-pq-cancel>Cancelar</button></div>
       </form>
@@ -5478,7 +5609,7 @@ await new Promise(resolve => {
     $('reqHistory').innerHTML = sh.shown.length ? sh.shown.map(r => `<li class="review-history-row" data-species-history="${esc(r.id)}"><span class="grow"><b>${esc(r.name)}</b><small>${esc(displayName(r.user))} · ${STATUS[r.status].toLowerCase()} por ${esc(displayName(r.reviewer || ''))} em ${fmtShort(r.reviewed)}${r.status === 'approved' ? ` · ${ptsLabel(r.finalPoints)}` : ''}${r.reason ? ` · ${esc(r.reason)}` : ''}</small></span><span class="req-status ${r.status}">${STATUS[r.status]}</span><button class="btn btn-ghost review-edit-btn" type="button" data-review-edit="species"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar análise</button><form class="review-edit-panel" data-review-form="species" hidden>
       <div class="field"><label>Resultado da análise</label><select data-edit-field="status"><option value="approved" ${r.status === 'approved' ? 'selected' : ''}>Aprovada</option><option value="rejected" ${r.status === 'rejected' ? 'selected' : ''}>Recusada</option><option value="pending">Voltar para análise</option></select></div>
       <div class="field"><label>Nome popular</label><input maxlength="60" data-edit-field="name" value="${esc(r.name)}"></div><div class="field"><label>Nome científico</label><input maxlength="80" data-edit-field="sci" value="${esc(r.sci || '')}"></div><div class="field"><label>Habitat</label>${habitatSelect('data-edit-field="habitat"', r.habitat || (getSpecies().find(s => s.id === r.speciesId) || {}).habitat)}</div><div class="field"><label>Pontuação final</label><input type="number" min="1" max="1000" step="1" data-edit-field="points" value="${Number(r.finalPoints || r.points) || 1}"></div>
-      <div class="field"><label>Foto para nova análise <span class="muted">(opcional)</span></label><input type="file" accept="image/*" data-edit-field="photo"></div><div class="field"><label>Motivo da recusa</label><input maxlength="140" data-edit-field="reason" value="${esc(r.reason || '')}"></div>
+      <div class="field"><label>Foto para nova análise <span class="muted">(opcional)</span></label><input type="file" accept="image/*" data-edit-field="photo"><span class="hint">Recomendado: 1200 × 900 px (4:3).</span></div><div class="field"><label>Motivo da recusa</label><input maxlength="140" data-edit-field="reason" value="${esc(r.reason || '')}"></div>
       <div class="form-error" data-edit-error role="alert"></div><div class="form-actions"><button class="btn btn-primary" type="submit">Salvar revisão</button><button class="btn btn-ghost" type="button" data-review-cancel>Cancelar</button></div>
     </form></li>`).join('') : `<li class="empty-row">${sh.all ? 'Nenhuma análise encontrada com esse filtro.' : 'Nenhuma solicitação analisada ainda.'}</li>`;
     $('eventRegAdminList').innerHTML = eventRequests.length ? eventRequests.sort((a, b) => a.created - b.created).map(r => `<li class="event-reg-request" data-event-reg="${esc(r.id)}" data-champ="${esc(r.championshipId)}"><span class="grow"><b>${esc(r.championshipName)}</b><small>Solicitada por ${esc(displayName(r.user))} em ${fmtShort(r.created)}</small></span><button class="btn btn-primary" type="button" data-event-reg-act="approve">Aprovar</button><button class="btn btn-danger" type="button" data-event-reg-act="reject">Recusar</button></li>`).join('') : '<li class="empty-row">Nenhuma inscrição aguardando análise.</li>';
@@ -5568,7 +5699,7 @@ await new Promise(resolve => {
     const sel = form.querySelector('[data-pq-species]'), species = getSpecies().find(s => s.id === sel.value);
     const keepOld = !species && sel.value && sel.value === post.speciesId;
     if (!species && !keepOld) { error.textContent = 'Escolha a espécie na lista.'; sel.focus(); return; }
-    const place = form.querySelector('[data-pq-place]').value.trim(), captureDate = form.querySelector('[data-pq-date]').value, caption = form.querySelector('[data-pq-caption]').value.trim().slice(0, 300);
+    const place = form.querySelector('[data-pq-place]').value.trim(), captureDate = form.querySelector('[data-pq-date]').value, caption = form.querySelector('[data-pq-caption]').value.trim().slice(0, 150);
     if (!place) { error.textContent = 'Informe o local da captura.'; form.querySelector('[data-pq-place]').focus(); return; }
     if (!captureDate || captureDate > localDateValue(new Date())) { error.textContent = 'Informe uma data de captura válida (não pode ser no futuro).'; form.querySelector('[data-pq-date]').focus(); return; }
     const changed = { place, captureDate, caption, edited: Date.now(), editedBy: currentUser() };
