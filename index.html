@@ -2196,7 +2196,7 @@ const syncCol = (name, entries, remote = true) => {
   return Promise.all(ops);
 };
 
-const SHARED_KEYS = ['ajing-users', 'ajing-species', 'ajing-championships', 'ajing-species-requests', 'ajing-rank-champion-history', 'ajing-ranking-award-config', 'ajing-level-config'];
+const SHARED_KEYS = ['ajing-users', 'ajing-species', 'ajing-championships', 'ajing-species-requests', 'ajing-rank-champion-history', 'ajing-ranking-award-config', 'ajing-level-config', 'ajing-auto-awards'];
 const PROFILE = 'ajing-profile:';
 const fbRead = k => {
   switch (k) {
@@ -2209,6 +2209,7 @@ const fbRead = k => {
     case 'ajing-species-requests': return Object.values(C.speciesRequests).map(clean);
     case 'ajing-rank-champion-history': return Object.values(C.rankHistory).map(clean);
     case 'ajing-ranking-award-config': return C.config.rankAward ? clean(C.config.rankAward) : null;
+    case 'ajing-auto-awards': return C.config.autoAwards ? clean(C.config.autoAwards) : null;
     case 'ajing-level-config': {
       const saved = C.config.levelSystem;
       return Array.isArray(saved) ? clean(saved) : saved && Array.isArray(saved.levels) ? clean(saved.levels) : null;
@@ -2237,6 +2238,9 @@ const fbWriteQuiet = (k, v) => {
     case 'ajing-ranking-award-config':
       C.config = { ...C.config, rankAward: clean(v) };
       return fbIsAdmin() ? setDoc(fsDoc(fdb, 'config', 'rankAward'), clean(v)) : Promise.resolve();
+    case 'ajing-auto-awards':
+      C.config = { ...C.config, autoAwards: clean(v) };
+      return fbIsAdmin() ? setDoc(fsDoc(fdb, 'config', 'autoAwards'), clean(v)) : Promise.resolve();
     case 'ajing-level-config':
       C.config = { ...C.config, levelSystem: { levels: clean(v) } };
       return fbIsAdmin() ? setDoc(fsDoc(fdb, 'config', 'levelSystem'), { levels: clean(v) }) : Promise.resolve();
@@ -5782,7 +5786,73 @@ await new Promise(resolve => {
   const renderChampion = () => {
     settleChamps();
     renderHero();
+    scheduleAutoAward();
   };
+
+  /* ===== Premiação automática ao fim de cada temporada e campeonato =====
+     O site não tem servidor: quem aplica a premiação é o navegador do primeiro administrador que abrir o site
+     depois do encerramento. O que já foi premiado fica em config/autoAwards, para nunca premiar duas vezes.
+     - Temporada: coroa para o campeão, +1 insígnia, slide "Premiação do ranking" e registro no histórico.
+     - Campeonato: +1 insígnia e slide "Campeão da edição".
+     A escolha manual continua disponível e sempre prevalece. */
+  function readAutoAwards() { const a = readJSON('ajing-auto-awards', {}) || {}; return { seasons: { ...(a.seasons || {}) }, champs: { ...(a.champs || {}) } }; }
+  let autoAwardTimer = null, autoAwardRunning = false;
+  function scheduleAutoAward() {
+    if (!isAdmin()) return;
+    clearTimeout(autoAwardTimer);
+    autoAwardTimer = setTimeout(() => { runAutoAward().catch(err => console.warn('Premiação automática:', err)); }, 1500);
+  }
+  async function runAutoAward() {
+    if (autoAwardRunning || !isAdmin() || !fb.postsLoaded()) return;
+    autoAwardRunning = true;
+    try {
+      const awards = readAutoAwards(), notes = [], users = getUsers();
+      let awardsChanged = false, usersChanged = false, slidesChanged = false;
+      const activeUser = name => users.find(u => u.username === name && u.active !== false);
+      const addHook = name => { const u = activeUser(name); if (u) { u.goldHooks = Math.max(0, Number(u.goldHooks) || 0) + 1; usersChanged = true; } };
+      // --- última temporada encerrada ---
+      if (rankAwardConfig.enabled) {
+        const period = completedRankAwardPeriod(), key = rankPeriodKey({ ...period, mode: period.mode || rankAwardConfig.period });
+        const inPeriod = posts.filter(p => p.created >= period.start && p.created < period.end);
+        // espera as capturas do período serem validadas: uma pendente pode mudar o campeão
+        if (!awards.seasons[key] && !inPeriod.some(p => p.status === 'pending')) {
+          const history = readRankChampionHistory();
+          const manual = history.find(h => historyPeriodKey(h) === key && h.user && !h.suppressed);
+          const removed = history.some(h => historyPeriodKey(h) === key && h.suppressed && h.suppressedBy === 'admin');
+          if (manual || removed) awards.seasons[key] = { user: manual ? manual.user : null, at: Date.now(), source: 'manual' };
+          else {
+            const row = rankRows('points', inPeriod.filter(isPostScored)).find(r => activeUser(r.user));
+            awards.seasons[key] = { user: row ? row.user : null, label: period.label.replace(/^Campeão (do|da) /, ''), at: Date.now(), source: 'auto' };
+            if (row) {
+              users.forEach(u => { if (!!u.seasonChampion !== (u.username === row.user)) { u.seasonChampion = u.username === row.user; usersChanged = true; } });
+              addHook(row.user);
+              heroSlides.forEach(s => { if (s.type === 'ranking-champion' && s.championUser !== row.user) { s.championUser = row.user; slidesChanged = true; } });
+              saveRankChampionHistory(row.user, period, true);
+              notes.push(`${displayName(row.user)} venceu a temporada ${period.label.replace(/^Campeão (do|da) /, '')} com ${fmtNum(row.points)} pts e recebeu a coroa e +1 insígnia.`);
+            }
+          }
+          awardsChanged = true;
+        }
+      }
+      // --- campeonatos encerrados nos últimos 120 dias ---
+      const recent = Date.now() - 120 * 864e5, latest = latestChampion();
+      getChamps().filter(c => champStatus(c) === 'ended' && c.settled && c.end >= recent && !awards.champs[c.id]).sort((a, b) => a.end - b.end).forEach(c => {
+        const winner = c.champion && activeUser(c.champion.user) ? c.champion.user : null;
+        awards.champs[c.id] = { user: winner, name: c.name, at: Date.now(), source: 'auto' }; awardsChanged = true;
+        if (!winner) return;
+        addHook(winner);
+        if (latest && latest.id === c.id) heroSlides.forEach(s => { if (s.type === 'champion' && s.championUser !== winner) { s.championUser = winner; slidesChanged = true; } });
+        notes.push(`${displayName(winner)} venceu o campeonato "${c.name}" e recebeu +1 insígnia.`);
+      });
+      if (!awardsChanged) return;
+      if (usersChanged) writeJSON('ajing-users', users);
+      if (slidesChanged) await saveSlides();
+      writeJSON('ajing-auto-awards', awards);
+      renderAll(); settleChamps(); renderHero();
+      try { renderRankChampionHistory(); } catch (_) {}
+      if (notes.length) showToast(`<div><b>Premiação automática</b><small>${notes.map(esc).join(' ')}</small></div>`);
+    } finally { autoAwardRunning = false; }
+  }
 
   /* ===== Campeonatos: aba Eventos ===== */
   const STAT = { scheduled: 'Agendado', running: 'Em andamento', ended: 'Encerrado' };
@@ -5803,18 +5873,19 @@ await new Promise(resolve => {
   const eventDetailHTML = c => {
     const st = champStatus(c), joined = registered(c), rows = champRankRows(c), roster = Array.isArray(c.registrations) ? c.registrations : null;
     const prizes = Array.isArray(c.prizes) ? c.prizes : c.prize ? [{ title: '', description: c.prize }] : [];
-    const count = roster ? roster.length : 0, canJoin = registrationOpen(c) && !joined && !isAdmin();
+    const pendingJoin = pendingRegistration(c, currentUser());
+    const count = roster ? roster.length : 0, canJoin = registrationOpen(c) && !joined && !pendingJoin;
     const status = st === 'running' ? 'Em andamento' : st === 'ended' ? 'Encerrado' : 'Agendado';
     const prizesHTML = prizes.length ? `<ul class="ev-prize-list">${prizes.map(p => `<li>${p.title ? `<b>${esc(p.title)}</b>` : ''}<span>${esc(p.description || p.name || '')}</span></li>`).join('')}</ul>` : '<p class="ev-detail-copy">Prêmios não informados.</p>';
     const rankHTML = rows.length ? `<ol class="ev-rank-list">${rows.map(r => `<li><span class="ev-rank-pos">${r.pos}º</span><span><b>${esc(displayName(r.user))}</b><small>${fmtNum(r.points)} pts · ${r.count} ${r.count === 1 ? 'captura' : 'capturas'}</small></span>${r.user === currentUser() ? '<span class="role-badge">Você</span>' : ''}</li>`).join('')}</ol>` : '<div class="empty-row">O ranking será atualizado com as capturas dos inscritos publicadas durante o campeonato.</div>';
     const rosterHTML = roster && roster.length ? `<ul class="ev-rank-list">${roster.map(user => `<li><span class="ev-rank-pos">•</span><span><b>${esc(displayName(user))}</b>${user === currentUser() ? '<small>Você</small>' : ''}</span></li>`).join('')}</ul>`
       : roster ? '<div class="empty-row">Ainda não há participantes inscritos.</div>' : '<div class="empty-row">Este campeonato foi criado antes do cadastro de inscrições.</div>';
-    const joinLabel = joined ? 'Inscrição confirmada' : st === 'running' || st === 'ended' ? 'Inscrições encerradas'
+    const joinLabel = joined ? 'Inscrição confirmada' : pendingJoin ? 'Solicitação aguardando aprovação' : registrationOpen(c) ? 'Inscrições abertas' : st === 'running' || st === 'ended' ? 'Inscrições encerradas'
       : !Number.isFinite(c.registrationStart) || !Number.isFinite(c.registrationEnd) ? 'Inscrição não configurada'
       : Date.now() < c.registrationStart ? 'Inscrições ainda não abertas' : 'Inscrições encerradas';
     return `<button class="btn btn-ghost ev-detail-back" type="button" data-events-back>← Voltar para eventos</button>
       <article class="ev-hero">${eventBannerHTML(c, 'ev-detail-banner')}<div class="ev-detail-heading"><span class="req-status ${st === 'running' ? 'approved' : 'pending'}">${status}</span><h4>${esc(c.name)}</h4><p class="ev-detail-meta">${champRange(c)}${c.desc ? ` · ${esc(c.desc)}` : ''}</p></div>
-        <div class="ev-registration"><span><b>${isAdmin() && !joined ? `Visão do administrador · ${joinLabel.toLowerCase()}` : joinLabel}${joined ? ' · você está participando' : ''}</b><small>${regRange(c)} · ${count} ${count === 1 ? 'inscrito' : 'inscritos'}</small></span>${canJoin ? `<button class="btn btn-primary" type="button" data-enroll="${esc(c.id)}">Solicitar inscrição</button>` : ''}</div>
+        <div class="ev-registration"><span><b>${joinLabel}${joined ? ' · você está participando' : ''}</b><small>${regRange(c)} · ${count} ${count === 1 ? 'inscrito' : 'inscritos'}</small></span>${canJoin ? `<button class="btn btn-primary" type="button" data-enroll="${esc(c.id)}">Solicitar inscrição</button>` : ''}</div>
         <div class="ev-detail-grid"><section class="ev-detail-box"><h5>Prêmios</h5>${prizesHTML}</section><section class="ev-detail-box"><h5>Regras</h5><p class="ev-detail-copy">${c.rules ? esc(c.rules).replace(/\n/g, '<br>') : 'Regras não informadas.'}</p></section>
           <section class="ev-detail-box"><h5>Ranking</h5><p class="muted">Publicações dos inscritos aprovados no Social Fish entre ${champRange(c)}.</p>${rankHTML}</section><section class="ev-detail-box"><h5>Participantes inscritos (${count})</h5>${rosterHTML}</section></div></article>`;
   };
@@ -5847,8 +5918,8 @@ await new Promise(resolve => {
       const timing = Number.isFinite(c.registrationStart) && Number.isFinite(c.registrationEnd)
         ? `Período: ${regRange(c)}` : 'A administração precisa definir o período de inscrição.';
       html += `<article class="ev-hero">${eventBannerHTML(c)}<span class="req-status pending">Agendado</span>${eventTitleControl(c)}${c.desc ? `<p>${esc(c.desc)}</p>` : ''}<p class="muted">${champRange(c)} · começa em ${daysUntil(c.start)} ${daysUntil(c.start) === 1 ? 'dia' : 'dias'}</p>
-        <div class="ev-registration"><span><b>${joined ? 'Inscrição aprovada' : isAdmin() ? `Visão do administrador · ${state.toLowerCase()}` : state}</b><small>${timing} · ${count} ${count === 1 ? 'inscrito' : 'inscritos'}</small></span>${canAccessEvent(c) ? `<button class="btn btn-ghost" type="button" data-open-event="${esc(c.id)}">Acessar evento</button>` : ''}
-        ${open && !joined && !pending && !isAdmin() ? `<button class="btn btn-primary" type="button" data-enroll="${esc(c.id)}">${decision && decision.status === 'rejected' ? 'Solicitar novamente' : 'Solicitar inscrição'}</button>` : ''}</div></article>`;
+        <div class="ev-registration"><span><b>${joined ? 'Inscrição aprovada' : state}</b><small>${timing} · ${count} ${count === 1 ? 'inscrito' : 'inscritos'}</small></span>${canAccessEvent(c) ? `<button class="btn btn-ghost" type="button" data-open-event="${esc(c.id)}">Acessar evento</button>` : ''}
+        ${open && !joined && !pending ? `<button class="btn btn-primary" type="button" data-enroll="${esc(c.id)}">${decision && decision.status === 'rejected' ? 'Solicitar novamente' : 'Solicitar inscrição'}</button>` : ''}</div></article>`;
     });
     const past = list.filter(c => champStatus(c) === 'ended');
     if (past.length) html += `<h4 class="req-title">Campeonatos encerrados</h4><ul class="admin-list req-list">${past.map(c => `<li><span class="grow"><b>${esc(c.name)}</b><small>${champRange(c)}${c.champion ? ` · campeão: ${esc(displayName(c.champion.user))} (${fmtNum(c.champion.points)} pts)` : ' · sem publicações'}</small></span>${canAccessEvent(c) ? `<button class="btn btn-ghost" type="button" data-open-event="${esc(c.id)}">Ver evento</button>` : '<span class="muted">Acesso restrito a inscritos</span>'}${c.champion ? `<button class="btn btn-ghost" type="button" data-card-user="${esc(c.champion.user)}">Ver carta</button>` : ''}</li>`).join('')}</ul>`;
@@ -5867,7 +5938,7 @@ await new Promise(resolve => {
     }
     const b = e.target.closest('[data-enroll]'); if (!b) return;
     const list = getChamps(), c = list.find(x => x.id === b.dataset.enroll), user = currentUser();
-    if (!c || !user || isAdmin() || !registrationOpen(c) || registered(c, user) || pendingRegistration(c, user)) { renderEvents(); return; }
+    if (!c || !user || !registrationOpen(c) || registered(c, user) || pendingRegistration(c, user)) { renderEvents(); return; }
     c.registrationRequests = Array.isArray(c.registrationRequests) ? c.registrationRequests : [];
     c.registrationRequests.push({ id: uid(), user, created: Date.now() });
     saveChamps(list); renderAll();
