@@ -1151,7 +1151,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   /* Enquanto um slide só de foto está na tela, os outros saem do cálculo de altura do carrossel */
   .slides:has(>.slide.image-only.on)>.slide:not(.on){position:absolute;inset:0 0 auto 0}
   /* Imagem ao lado do texto: no celular a foto vai para cima, na largura toda */
-  .slide:not(.image-overlay):not(.champ-slide):has(>.slide-media>img){grid-template-columns:minmax(0,1fr);gap:16px;align-content:start}
+  .slide:not(.image-overlay):not(.champ-slide):has(>.slide-media>img){grid-template-columns:minmax(0,1fr);gap:16px;align-content:center}
   .slide:not(.image-overlay):not(.champ-slide)>.slide-media:has(>img){grid-row:1;width:100%;height:auto;aspect-ratio:auto}
   .slide:not(.image-overlay):not(.champ-slide)>.slide-media>img{display:block;width:100%;height:auto;max-height:none;object-fit:contain;border-radius:var(--radius)}
 }
@@ -1293,6 +1293,50 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .rules-admin .form-actions{align-items:center}
 .regulation-text blockquote{margin:.4em 0 1em;padding:.7em 1em;border-left:3px solid var(--accent);background:var(--bg);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
 .regulation-text blockquote ol{margin-bottom:0}
+/* Abas da área de membros por largura de tela:
+   1680+ barra horizontal completa · 1440–1679 sem o nome do usuário · abaixo de 1440 grade com todas as abas visíveis */
+@media (min-width:1440px) and (max-width:1679px){ .m-name{display:none} }
+@media (max-width:1439px){
+  /* Abas da área de membros: grade com todas visíveis (sem rolagem lateral escondida) e usuário em linha própria */
+  .m-bar{position:static}
+  .m-bar-in{flex-direction:column;align-items:stretch;gap:0;min-height:0;padding-block:6px 4px}
+  .m-user{order:-1;justify-content:flex-end;gap:8px;padding:0 2px 6px;border-bottom:1px solid var(--line)}
+  .m-name{display:inline;max-width:62vw}
+  .m-tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:4px;overflow:visible;padding:6px 0 2px}
+  .m-tabs button{flex-direction:column;justify-content:center;gap:4px;min-height:54px;padding:7px 2px;border-radius:10px;font-size:.7rem;line-height:1.15;text-align:center;white-space:normal;box-shadow:none}
+  .m-tabs button[aria-selected="true"]{background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent);box-shadow:none}
+  .m-tabs svg{width:20px;height:20px}
+  .m-tabs button span.t,.m-tabs button span{display:inline}
+  .m-tabs .tab-badge,.m-tabs .tab-msg-count{position:absolute;top:3px;left:calc(50% + 6px);margin:0}
+}
+@media (max-width:720px){ .m-tabs{grid-template-columns:repeat(4,minmax(0,1fr))} }
+/* ===== Revisão do layout no celular ===== */
+/* Campo de nome da temporada: ocupa só a própria célula (não invade as colunas vizinhas) */
+.season-table td input[type=text]{display:block;width:100%;min-width:0;box-sizing:border-box;margin-top:4px}
+.m-tabs button{position:relative}
+@media (max-width:720px){
+  /* Submenus (Administração, Meu perfil, Solicitações): quebram em linhas, em formato de pílula */
+  .admin-subnav{flex-wrap:wrap;gap:6px;overflow:visible;border-bottom:0;margin:0 0 14px}
+  .admin-subnav button{padding:6px 12px;border:1px solid var(--line);border-radius:999px;font-size:.84rem;box-shadow:none}
+  .admin-subnav button[aria-current="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);box-shadow:none}
+  .admin-subnav button[aria-current="true"] .count{background:rgba(255,255,255,.25);color:inherit}
+  /* Cabeçalhos com texto e botões: empilhados */
+  .box-head{flex-direction:column;align-items:stretch;gap:10px}
+  .box-head .form-actions{flex-wrap:wrap}
+  /* Listas da administração: nome numa linha, botões na linha de baixo */
+  #slideAdminList li,#speciesAdminList li,#userAdminList li{flex-wrap:wrap;row-gap:8px}
+  #slideAdminList li>.grow,#speciesAdminList li>.grow,#userAdminList li>.grow{flex:1 1 calc(100% - 70px);min-width:0;white-space:normal}
+  #slideAdminList li>.grow *,#speciesAdminList li>.grow *{white-space:normal;overflow:visible;text-overflow:clip}
+  /* Parceiros: foto, nome e link empilhados, botões ao lado */
+  #partnerAdminList li{flex-wrap:nowrap}
+  #partnerAdminList li>.grow{flex:1 1 auto;min-width:0}
+  #partnerAdminList li>.grow b,#partnerAdminList li>.grow small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #speciesAdminList li>.pts-inline{margin-left:auto}
+  /* Feed: nome da espécie pode quebrar em duas linhas em vez de ser cortado */
+  .post.compact .pb-row .species-tag{white-space:normal;line-height:1.25;overflow:visible}
+  /* Carrossel: conteúdo centralizado na altura do slide (sem grande vazio embaixo) */
+  .slide:not(.image-overlay){align-content:center}
+}
 </style>
 <script>
 (() => {
@@ -2542,6 +2586,10 @@ await new Promise(resolve => {
 
 (() => {
   const $ = id => document.getElementById(id);
+  // Modelo limpo da carta do pescador: todas as cópias (Membros, portfólio, carrossel, janela da carta)
+  // saem daqui, e não da carta de Meu perfil, que pode estar no modo de ajuste de enquadramento
+  const CARD_TEMPLATE = document.getElementById('tcard').cloneNode(true);
+  const freshCard = () => { const c = CARD_TEMPLATE.cloneNode(true); c.querySelectorAll('.cropping').forEach(a => a.classList.remove('cropping')); const ph = c.querySelector('[data-k=photo]'); if (ph) ph.removeAttribute('style'); return c; };
   const store = {
     get(k, s){ try { return (s ? sessionStorage : localStorage).getItem(k); } catch(_) { return null; } },
     set(k, v, s){ try { (s ? sessionStorage : localStorage).setItem(k, v); return true; } catch(_) { return false; } },
@@ -4880,7 +4928,7 @@ await new Promise(resolve => {
     [...$('heroSlides').querySelectorAll('[data-champ-card]')].forEach(slot => {
       const slide = list.find(s => s.id === slot.dataset.champCard), champion = slide && selectedCarouselChampion(slide);
       if (slide && champion) {
-        const clone = $('tcard').cloneNode(true);
+        const clone = freshCard();
         clone.removeAttribute('id'); clone.removeAttribute('style'); clone.classList.remove('cropping');
         clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
         clone.querySelectorAll('.cropping').forEach(el => { el.classList.remove('cropping'); el.removeAttribute('tabindex'); });
@@ -5238,7 +5286,7 @@ await new Promise(resolve => {
   const cardModal = $('cardModal');
   let cardLastFocus = null;
   const openCardModal = u => {
-    const clone = $('tcard').cloneNode(true);
+    const clone = freshCard();
     clone.removeAttribute('id'); clone.removeAttribute('style'); clone.classList.remove('cropping');
     clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
     clone.querySelectorAll('.cropping').forEach(el => { el.classList.remove('cropping'); el.removeAttribute('tabindex'); });
@@ -5274,7 +5322,7 @@ await new Promise(resolve => {
     const active = getUsers().filter(u => u.active !== false && u.username).sort((a,b) => displayName(a.username).localeCompare(displayName(b.username), 'pt-BR'));
     const list = active.filter(u => !q || [u.username, displayName(u.username), fishingName(u.username)].some(v => normalizeFeedSearch(v).includes(q)));
     $('membersGrid').innerHTML = list.length ? list.map(u => {
-      const card = $('tcard').cloneNode(true);
+      const card = freshCard();
       card.removeAttribute('id'); card.removeAttribute('style'); card.classList.remove('cropping'); card.classList.add('member-full-card');
       card.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
       fillCard(card, u.username, readProfileOf(u.username), false);
@@ -5295,7 +5343,7 @@ await new Promise(resolve => {
     if (!getUsers().some(x => x.username === u && x.active !== false)) return;
     portfolioUser = u;
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    const p = readProfileOf(u), clone = $('tcard').cloneNode(true);
+    const p = readProfileOf(u), clone = freshCard();
     clone.removeAttribute('id'); clone.removeAttribute('style'); clone.classList.remove('cropping'); clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
     fillCard(clone, u, p, false);
     const own = u === currentUser(), catches = portfolioPostList(u);
