@@ -1430,6 +1430,8 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
 .chip-check input[type=checkbox]{-webkit-appearance:auto;appearance:auto;flex:none;width:16px!important;height:16px!important;min-width:0;min-height:0!important;margin:0!important;padding:0!important;border:0;box-shadow:none;background:none;vertical-align:middle}
 .chip-check{display:inline-flex!important;align-items:center!important}
 .chip-check span{line-height:1.2}
+.post-points-badge.reduced{background:rgba(120,90,0,.78)}
+.catch-note{display:block;font-size:.72rem;font-weight:500;opacity:.8;margin-top:2px}
 </style>
 <script>
 (() => {
@@ -3563,14 +3565,14 @@ await new Promise(resolve => {
           ${canManage ? `<div class="post-owner-actions">${editBtn(p.id)}${delBtn(p.id)}</div>` : ''}
         </header>
         ${compact
-          ? `<div class="post-media-wrap"><button class="post-photo" type="button" data-open-post="${esc(p.id)}" aria-label="Abrir publicação de ${esc(name)}: ${esc(p.speciesName)}${isPostScored(p) ? ', ' + ptsLabel(postPoints(p)) : ''}"><img src="${esc(photo)}" alt="${alt}" loading="lazy">${isPostScored(p) ? `<span class="post-points-badge" aria-hidden="true">+${ptsLabel(postPoints(p))}</span>` : ''}</button>${likeButton}</div>`
+          ? `<div class="post-media-wrap"><button class="post-photo" type="button" data-open-post="${esc(p.id)}" aria-label="Abrir publicação de ${esc(name)}: ${esc(p.speciesName)}${isPostScored(p) ? ', ' + ptsLabel(postPoints(p)) : ''}"><img src="${esc(photo)}" alt="${alt}" loading="lazy">${isPostScored(p) ? `<span class="post-points-badge${catchNote(p) ? ' reduced' : ''}" aria-hidden="true">+${ptsLabel(postPoints(p))}${catchNote(p) ? ` · ${Math.round(catchInfo(p).factor * 100)}%` : ''}</span>` : ''}</button>${likeButton}</div>`
           : `<div class="post-media-wrap"><div class="post-photo"><img src="${esc(photo)}" alt="${alt}"></div>${likeButton}</div>`}
         <div class="post-body">
           <div class="pb-row"><span class="species-tag has-score-fish">${esc(p.speciesName)}<span class="score-fish ${scoreStatus}" role="img" aria-label="${scoreLabel}" title="${scoreLabel}">${fishIcon}</span></span>${compact ? time : ''}</div>
           ${p.captureDate ? `<small class="capture-date">Capturada em ${captureDateLabel(p.captureDate)}</small>` : ''}
           ${p.caption ? `<p class="caption">${compact ? '' : `<b>${esc(name)}</b> `}${esc(p.caption)}</p>` : ''}
           ${compact ? '' : time}
-          ${!compact && isPostScored(p) ? `<span class="post-points-detail">+${ptsLabel(postPoints(p))}</span>` : ''}
+          ${!compact && isPostScored(p) ? `<span class="post-points-detail">+${ptsLabel(postPoints(p))}${catchNote(p) ? `<small class="catch-note">${esc(catchNote(p))} (de ${ptsLabel(basePoints(p))})</small>` : ''}</span>` : ''}
           ${portfolioControl}
         </div>
       </article>`;
@@ -3745,7 +3747,33 @@ await new Promise(resolve => {
   let rankMode = 'points';
   let rankScope = 'season', rankChampId = null;
   // Pontos atuais da espécie; se a espécie foi removida, vale o valor do momento da publicação
-  const postPoints = p => { if (p.pointsOverride != null && Number.isFinite(Number(p.pointsOverride))) return Number(p.pointsOverride); const s = readJSON('ajing-species', []).find(x => x.id === p.speciesId); return s ? s.points : (p.points || 0); };
+  // Retornos decrescentes por espécie: capturas aprovadas do mesmo pescador, da mesma espécie e com a mesma data de
+  // captura (a data da foto, quando há metadados), contadas na ordem de publicação:
+  // 1ª a 3ª = 100% · 4ª a 6ª = 50% · 7ª em diante = 10% (mínimo de 1 ponto). Pontuação manual do administrador não sofre desconto.
+  const catchFactor = n => n <= 3 ? 1 : n <= 6 ? 0.5 : 0.1;
+  let catchOrderCache = { posts: null, at: 0, map: new Map() };
+  const catchOrder = () => {
+    if (catchOrderCache.posts === posts && Date.now() - catchOrderCache.at < 1000) return catchOrderCache.map;
+    const groups = new Map();
+    posts.forEach(p => {
+      if (!isPostScored(p)) return;
+      const day = p.captureDate || localDateValue(new Date(p.created || 0));
+      const key = `${p.user}|${p.speciesId}|${day}`;
+      if (!groups.has(key)) groups.set(key, []); groups.get(key).push(p);
+    });
+    const map = new Map();
+    groups.forEach(list => list.sort((a, b) => (a.created || 0) - (b.created || 0) || String(a.id).localeCompare(String(b.id))).forEach((p, i) => map.set(p.id, { n: i + 1, factor: catchFactor(i + 1), total: list.length })));
+    catchOrderCache = { posts, at: Date.now(), map };
+    return map;
+  };
+  const catchInfo = p => (p && isPostScored(p) && !(p.pointsOverride != null && Number.isFinite(Number(p.pointsOverride)))) ? (catchOrder().get(p.id) || null) : null;
+  const basePoints = p => { const s = readJSON('ajing-species', []).find(x => x.id === p.speciesId); return s ? s.points : (p.points || 0); };
+  const postPoints = p => {
+    if (p.pointsOverride != null && Number.isFinite(Number(p.pointsOverride))) return Number(p.pointsOverride);
+    const base = basePoints(p), info = catchInfo(p);
+    return !info || info.factor === 1 ? base : Math.max(1, Math.round(base * info.factor));
+  };
+  const catchNote = p => { const i = catchInfo(p); return i && i.factor < 1 ? `${i.n}ª de ${p.speciesName} no dia · ${Math.round(i.factor * 100)}%` : ''; };
   /* ===== Campeonatos (períodos definidos pelo administrador) ===== */
   // O ranking geral inclui todas as publicações; o evento usa somente posts dentro do período.
   const getChamps = () => readJSON('ajing-championships', []);
@@ -5920,7 +5948,7 @@ await new Promise(resolve => {
       </form>
     </li>`; }).join('') : '<li class="empty-row">Nenhuma postagem aguardando validação.</li>';
     const ph = histApply('posts', postHistory, p => `${displayName(p.user)} ${p.user} ${p.speciesName} ${p.place || ''}`); histFooter('posts', ph, 'postHistCount', 'postHistMore');
-    $('postReviewHistory').innerHTML = ph.shown.length ? ph.shown.map(p => `<li class="review-history-row" data-post-history="${esc(p.id)}"><span class="grow"><b>${esc(displayName(p.user))} · ${esc(p.speciesName)}</b><small>${p.status === 'approved' && p.reviewer === 'auto' ? 'Pontuação aprovada automaticamente (foto com metadados dentro do prazo)' : `${p.status === 'approved' ? 'Pontuação validada' : 'Pontuação recusada'} por ${esc(displayName(p.reviewer || ''))}`} em ${fmtShort(p.reviewed)} · captura em ${captureDateLabel(p.captureDate)} · ${ptsLabel(postPoints(p))}</small></span><span class="req-status ${p.status}">${p.status === 'approved' ? (p.reviewer === 'auto' ? 'Automática' : 'Validada') : 'Recusada'}</span><button class="btn btn-ghost review-edit-btn" type="button" data-review-edit="post"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar análise</button><form class="review-edit-panel" data-review-form="post" hidden>
+    $('postReviewHistory').innerHTML = ph.shown.length ? ph.shown.map(p => `<li class="review-history-row" data-post-history="${esc(p.id)}"><span class="grow"><b>${esc(displayName(p.user))} · ${esc(p.speciesName)}</b><small>${p.status === 'approved' && p.reviewer === 'auto' ? 'Pontuação aprovada automaticamente (foto com metadados dentro do prazo)' : `${p.status === 'approved' ? 'Pontuação validada' : 'Pontuação recusada'} por ${esc(displayName(p.reviewer || ''))}`} em ${fmtShort(p.reviewed)} · captura em ${captureDateLabel(p.captureDate)} · ${ptsLabel(postPoints(p))}${catchNote(p) ? ` (${esc(catchNote(p))})` : ''}</small></span><span class="req-status ${p.status}">${p.status === 'approved' ? (p.reviewer === 'auto' ? 'Automática' : 'Validada') : 'Recusada'}</span><button class="btn btn-ghost review-edit-btn" type="button" data-review-edit="post"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar análise</button><form class="review-edit-panel" data-review-form="post" hidden>
       <div class="field"><label>Resultado da análise</label><select data-edit-field="status"><option value="approved" ${p.status === 'approved' ? 'selected' : ''}>Aprovada</option><option value="rejected" ${p.status === 'rejected' ? 'selected' : ''}>Recusada</option><option value="pending">Voltar para análise</option></select></div>
       <div class="field"><label>Espécie</label><select data-edit-field="speciesId">${!getSpecies().some(s => s.id === p.speciesId) ? `<option value="${esc(p.speciesId || '')}" selected>${esc(p.speciesName)} (fora da lista)</option>` : ''}${getSpecies().map(s => `<option value="${esc(s.id)}" ${s.id === p.speciesId ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
       <div class="field"><label>Data da captura</label><input type="date" data-edit-field="captureDate" value="${esc(p.captureDate || '')}"></div>
