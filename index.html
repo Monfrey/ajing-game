@@ -1395,6 +1395,10 @@ input[type=date],input[type=datetime-local],input[type=time]{min-width:0;max-wid
   #rankChampionHistory li>.grow b,#rankChampionHistory li>.grow small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #rankChampionHistory li>.btn{flex:1 1 auto}
 }
+.tc-hooks svg.gold-fish{width:22px;height:15px;fill:#f7c81e;stroke:#8c5d00;stroke-width:1.1;stroke-linejoin:round}
+.mc-hooks svg.gold-fish{width:9px;height:7px;fill:#f7c81e;stroke:#8c5d00;stroke-width:1.4}
+.rank-history-hook svg.gold-fish{width:22px;height:15px;fill:#f7c81e;stroke:#a06d00;stroke-width:1.1;stroke-linejoin:round}
+svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
 </style>
 <script>
 (() => {
@@ -2260,7 +2264,7 @@ input[type=date],input[type=datetime-local],input[type=time]{min-width:0;max-wid
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword, setPersistence, inMemoryPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection as fsCol, doc as fsDoc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection as fsCol, doc as fsDoc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, arrayUnion, arrayRemove, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 /* =====================================================================
    CONFIGURAÇÃO DO FIREBASE
@@ -2621,6 +2625,15 @@ const fb = {
   setPrivateProfile: (uid, data) => setDoc(fsDoc(fdb, 'privateProfiles', uid), clean(data)),
   deletePrivate: uid => deleteDoc(fsDoc(fdb, 'private', uid)),
   postsLoaded: () => deferredLoaded,
+  // Reserva uma premiação em config/autoAwards dentro de uma transação: se outro aparelho já premiou, devolve false
+  claimAward: (kind, id, data) => runTransaction(fdb, async tx => {
+    const ref = fsDoc(fdb, 'config', 'autoAwards'), snap = await tx.get(ref), cur = snap.exists() ? snap.data() : {};
+    const group = { ...(cur[kind] || {}) };
+    if (group[id]) { C.config = { ...C.config, autoAwards: cur }; return false; }
+    group[id] = clean(data); const next = { ...cur, [kind]: group };
+    tx.set(ref, next); C.config = { ...C.config, autoAwards: next };
+    return true;
+  }),
   ensure: name => ensureCol(name),
   loaded: name => !!(lazy[name] && lazy[name].loaded),
   speciesReady: () => speciesReady(),
@@ -3951,8 +3964,13 @@ await new Promise(resolve => {
       const account = accounts.find(u => u.username === record.user), source = posts.filter(p => p.created >= period.start && p.created < period.end && isPostScored(p)), row = rankRows('points', source).find(r => r.user === record.user);
       items.push({ user: record.user, name: account ? displayName(record.user) : record.user, period, saved: true, recordKey: record.key, savedAt: record.savedAt || record.updatedAt || 0, points: row ? row.points : 0, goldHooks: Math.max(0, Number(account && account.goldHooks) || 0) });
     });
+    // campeões de campeonato (inclusive os encerrados antes do prazo pelo botão "Encerrar agora")
+    getChamps().filter(c => champStatus(c) === 'ended' && c.champion && c.champion.user).forEach(c => {
+      const account = accounts.find(u => u.username === c.champion.user);
+      items.push({ user: c.champion.user, name: account ? displayName(c.champion.user) : c.champion.user, period: { label: `Campeonato · ${c.name}` }, champ: true, saved: false, recordKey: `champ:${c.id}`, savedAt: c.end, points: c.champion.points || 0, goldHooks: Math.max(0, Number(account && account.goldHooks) || 0) });
+    });
     items.sort((a, b) => b.savedAt - a.savedAt);
-    $('rankChampionHistory').innerHTML = items.length ? items.map(item => `<li>${miniCard(item.user, 'sm')}<span class="grow"><b>${esc(item.name)}</b><small>${esc(String(item.period.label || '').replace(/^Campeão (do|da) /i, ''))}</small></span>${item.goldHooks ? `<span class="rank-history-hook" title="${item.goldHooks} insígnias de anzol dourado">${Array.from({ length: item.goldHooks }, () => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M12 3v10a5 5 0 0 1-10 0v-2M2 11l4 1"/></svg>').join('')}</span>` : ''}<button class="btn btn-ghost" type="button" data-card-user="${esc(item.user)}">Ver carta</button>${isAdmin() ? `<button class="btn btn-danger" type="button" data-delete-rank-champion="${esc(item.recordKey)}">Excluir campeão</button>` : ''}</li>`).join('') : '<li class="empty-row">Ainda não há campeões registrados.</li>';
+    $('rankChampionHistory').innerHTML = items.length ? items.map(item => `<li>${miniCard(item.user, 'sm')}<span class="grow"><b>${esc(item.name)}</b><small>${esc(String(item.period.label || '').replace(/^Campeão (do|da) /i, ''))}</small></span>${item.goldHooks ? `<span class="rank-history-hook" title="${hooksLabel(item.goldHooks)}">${hooksHTML(item.goldHooks)}</span>` : ''}<button class="btn btn-ghost" type="button" data-card-user="${esc(item.user)}">Ver carta</button>${isAdmin() && !item.champ ? `<button class="btn btn-danger" type="button" data-delete-rank-champion="${esc(item.recordKey)}">Excluir campeão</button>` : ''}</li>`).join('') : '<li class="empty-row">Ainda não há campeões registrados.</li>';
   };
   const champRankRows = (c, key = 'points') => {
     const rows = rankRows(key, champPosts(c));
@@ -5435,12 +5453,17 @@ await new Promise(resolve => {
   }).join('');
 
   // Preenche uma carta (a do perfil ou uma cópia) com os dados de um membro
+  // Insígnias: cada 3 anzóis dourados viram 1 peixinho dourado (ex.: 7 = 2 peixinhos + 1 anzol)
+  const HOOK_SVG = '<svg class="gold-hook" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M12 3v10a5 5 0 0 1-10 0v-2M2 11l4 1"/></svg>';
+  const GOLD_FISH_SVG = '<svg class="gold-fish" viewBox="0 0 24 16" aria-hidden="true"><path d="M1.5 8c3.6-5 9.7-5 13.6 0-3.9 5-10 5-13.6 0zM15.1 8 22.5 3.2v9.6z"/><circle cx="5.6" cy="7.2" r="1" class="gf-eye"/></svg>';
+  const hooksHTML = n => { n = Math.max(0, Number(n) || 0); return GOLD_FISH_SVG.repeat(Math.floor(n / 3)) + HOOK_SVG.repeat(n % 3); };
+  const hooksLabel = n => { const f = Math.floor(n / 3), h = n % 3; return `${n} ${n === 1 ? 'insígnia' : 'insígnias'} de anzol dourado${f ? ` (${f} ${f === 1 ? 'peixinho dourado' : 'peixinhos dourados'}${h ? ` e ${h} ${h === 1 ? 'anzol' : 'anzóis'}` : ''})` : ''}`; };
   const fillCard = (root, u, p, own) => {
     const k = n => root.querySelector(`[data-k="${n}"]`), mine = posts.filter(x => x.user === u && isPostScored(x));
     const pts = mine.reduce((s, x) => s + postPoints(x), 0), li = levelInfo(pts);
     const crown = k('crown'); if (crown) crown.hidden = !getUsers().some(x => x.username === u && x.seasonChampion);
     const hookCount = Math.max(0, Math.min(999, Number.parseInt(getUsers().find(x => x.username === u)?.goldHooks, 10) || 0));
-    const hooks = k('hooks'); if (hooks) { hooks.innerHTML = Array.from({ length: hookCount }, () => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M12 3v10a5 5 0 0 1-10 0v-2M2 11l4 1"/></svg>').join(''); hooks.hidden = hookCount === 0; hooks.setAttribute('aria-label', `${hookCount} ${hookCount === 1 ? 'insígnia de anzol dourado' : 'insígnias de anzol dourado'}`); }
+    const hooks = k('hooks'); if (hooks) { hooks.innerHTML = hooksHTML(hookCount); hooks.hidden = hookCount === 0; hooks.setAttribute('aria-label', hooksLabel(hookCount)); }
     // na carta aparece o nome de pescador (o nome de usuário do cadastro); o nome completo fica no perfil
     k('name').textContent = String(p.fishingName || '').trim() || displayName(u);
     k('role').textContent = ''; k('role').hidden = true;
@@ -5474,7 +5497,7 @@ await new Promise(resolve => {
     const account = getUsers().find(x => x.username === u), crowned = !!(account && account.seasonChampion), hookCount = Math.max(0, Math.min(999, Number.parseInt(account && account.goldHooks, 10) || 0));
     return `<button type="button" class="mcard ${size || ''}${crowned ? ' has-crown' : ''}" data-card-user="${esc(u)}" aria-label="Ver carta de ${esc(name)}${li.cur ? ', nível ' + li.cur.n + ' ' + li.cur.name : ''}${crowned ? ', campeão da temporada' : ''}">
       <span class="mc-in"><span class="mc-art" ${photo ? `style="background-image:url('${photo}')"` : ''}>${photo ? '' : esc(name.charAt(0).toUpperCase())}</span><i></i><i></i></span>
-      ${li.cur ? `<span class="mc-lvl">${emblem(li.cur, 'xs')}</span>` : ''}${crowned ? '<span class="mc-crown" aria-hidden="true"><svg viewBox="0 0 48 42"><path d="M4 10 14 18 23 4l9 14 12-8-5 26H9z"/></svg></span>' : ''}${hookCount ? `<span class="mc-hooks" aria-hidden="true">${Array.from({ length: hookCount }, () => '<svg viewBox="0 0 24 24"><path d="M9 3h6M12 3v10a5 5 0 0 1-10 0v-2M2 11l4 1"/></svg>').join('')}</span>` : ''}</button>`;
+      ${li.cur ? `<span class="mc-lvl">${emblem(li.cur, 'xs')}</span>` : ''}${crowned ? '<span class="mc-crown" aria-hidden="true"><svg viewBox="0 0 48 42"><path d="M4 10 14 18 23 4l9 14 12-8-5 26H9z"/></svg></span>' : ''}${hookCount ? `<span class="mc-hooks" aria-hidden="true">${hooksHTML(hookCount)}</span>` : ''}</button>`;
   };
 
   // Ver a carta de qualquer membro
@@ -6194,16 +6217,17 @@ await new Promise(resolve => {
           const history = readRankChampionHistory();
           const manual = history.find(h => historyPeriodKey(h) === key && h.user && !h.suppressed);
           const removed = history.some(h => historyPeriodKey(h) === key && h.suppressed && h.suppressedBy === 'admin');
-          if (manual || removed) awards.seasons[key] = { user: manual ? manual.user : null, at: Date.now(), source: 'manual' };
+          if (manual || removed) await fb.claimAward('seasons', key, { user: manual ? manual.user : null, at: Date.now(), source: 'manual' });
           else {
             const row = rankRows('points', inPeriod.filter(isPostScored)).find(r => activeUser(r.user));
-            awards.seasons[key] = { user: row ? row.user : null, label: period.label.replace(/^Campeão (do|da) /, ''), at: Date.now(), source: 'auto' };
-            if (row) {
+            const label = period.label.replace(/^Campeão (do|da) /, '');
+            // só o aparelho que conseguir a reserva aplica a coroa e a insígnia
+            if (await fb.claimAward('seasons', key, { user: row ? row.user : null, label, at: Date.now(), source: 'auto' }) && row) {
               users.forEach(u => { if (!!u.seasonChampion !== (u.username === row.user)) { u.seasonChampion = u.username === row.user; usersChanged = true; } });
               addHook(row.user);
               heroSlides.forEach(s => { if (s.type === 'ranking-champion' && s.championUser !== row.user) { s.championUser = row.user; slidesChanged = true; } });
               saveRankChampionHistory(row.user, period, true);
-              notes.push(`${displayName(row.user)} venceu a temporada ${period.label.replace(/^Campeão (do|da) /, '')} com ${fmtNum(row.points)} pts e recebeu a coroa e +1 insígnia.`);
+              notes.push(`${displayName(row.user)} venceu a temporada ${label} com ${fmtNum(row.points)} pts e recebeu a coroa e +1 insígnia.`);
             }
           }
           awardsChanged = true;
@@ -6211,18 +6235,18 @@ await new Promise(resolve => {
       }
       // --- campeonatos encerrados nos últimos 120 dias ---
       const recent = Date.now() - 120 * 864e5, latest = latestChampion();
-      getChamps().filter(c => champStatus(c) === 'ended' && c.settled && c.end >= recent && !awards.champs[c.id]).sort((a, b) => a.end - b.end).forEach(c => {
+      for (const c of getChamps().filter(c => champStatus(c) === 'ended' && c.settled && c.end >= recent && !awards.champs[c.id]).sort((a, b) => a.end - b.end)) {
         const winner = c.champion && activeUser(c.champion.user) ? c.champion.user : null;
-        awards.champs[c.id] = { user: winner, name: c.name, at: Date.now(), source: 'auto' }; awardsChanged = true;
-        if (!winner) return;
+        awardsChanged = true;
+        // só o aparelho que conseguir a reserva soma a insígnia (evita prêmio em dobro com o site aberto em dois lugares)
+        if (!(await fb.claimAward('champs', c.id, { user: winner, name: c.name, at: Date.now(), source: 'auto' })) || !winner) continue;
         addHook(winner);
         if (latest && latest.id === c.id) heroSlides.forEach(s => { if (s.type === 'champion' && s.championUser !== winner) { s.championUser = winner; slidesChanged = true; } });
         notes.push(`${displayName(winner)} venceu o campeonato "${c.name}" e recebeu +1 insígnia.`);
-      });
+      }
       if (!awardsChanged) return;
       if (usersChanged) writeJSON('ajing-users', users);
       if (slidesChanged) await saveSlides();
-      writeJSON('ajing-auto-awards', awards);
       renderAll(); settleChamps(); renderHero();
       try { renderRankChampionHistory(); } catch (_) {}
       if (notes.length) showToast(`<div><b>Premiação automática</b><small>${notes.map(esc).join(' ')}</small></div>`);
