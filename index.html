@@ -1379,6 +1379,22 @@ input[type=date],input[type=datetime-local],input[type=time]{min-width:0;max-wid
 .post-meta-note.warn b{color:color-mix(in srgb,var(--orange) 70%,#000)}
 .post-meta-note.ok{background:color-mix(in srgb,var(--accent) 9%,var(--surface));border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}
 .post-meta-note.ok b{color:var(--accent)}
+/* Filtros do ranking no celular: quebram em linhas quando há o filtro Campeonato */
+@media (max-width:720px){
+  #rankControls{flex-wrap:wrap;max-width:100%;min-width:0}
+  #rankControls .seg{flex-wrap:wrap;max-width:100%;min-width:0}
+  #rankControls .seg button{flex:1 1 auto}
+}
+/* Histórico de campeões no celular: nome e temporada numa linha, botões na linha de baixo */
+@media (max-width:720px){
+  #rankChampionHistory li{flex-wrap:wrap;row-gap:8px}
+  #rankChampionHistory li>.grow{flex:1 1 0;min-width:0}
+  /* quebra de linha fixa depois do texto: insígnias e botões sempre na linha de baixo */
+  #rankChampionHistory li::after{content:"";order:2;flex-basis:100%;height:0}
+  #rankChampionHistory li>.rank-history-hook,#rankChampionHistory li>.btn{order:3}
+  #rankChampionHistory li>.grow b,#rankChampionHistory li>.grow small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #rankChampionHistory li>.btn{flex:1 1 auto}
+}
 </style>
 <script>
 (() => {
@@ -1652,6 +1668,7 @@ input[type=date],input[type=datetime-local],input[type=time]{min-width:0;max-wid
             <div class="seg" role="group" aria-label="Período do ranking">
               <button type="button" data-rank-scope="season" aria-pressed="true" aria-label="Por temporada"><span class="rank-filter-long">Por temporada</span><span class="rank-filter-short">Temporada</span></button>
               <button type="button" data-rank-scope="general" aria-pressed="false">Geral</button>
+              <button type="button" data-rank-scope="champ" aria-pressed="false" hidden>Campeonato</button>
             </div>
             <div class="seg" role="group" aria-label="Métrica do ranking">
               <button type="button" data-rank="points" aria-pressed="true">Pontuação</button>
@@ -2898,7 +2915,10 @@ await new Promise(resolve => {
   // Só os campos aceitos pelas regras do Firestore (perfis antigos podem ter campos que não existem mais)
   const PROFILE_KEYS = ['name', 'fishingName', 'location', 'bio', 'photo', 'social', 'portfolioSpecies', 'portfolioPosts'];
   const profileFields = p => { const out = {}; PROFILE_KEYS.forEach(k => { if (p && p[k] !== undefined) out[k] = p[k]; }); return { name: '', location: '', bio: '', photo: '', social: {}, ...out }; };
-  const displayName = u => readProfileOf(u).name || (u === 'admin' ? 'Admin' : u);
+  // Nome exibido em todo o site (cartas, ranking, feed, histórico, carrossel): o nome de pescador.
+  // Sem nome de pescador, usa o nome de usuário do cadastro; a conta "admin" usa o nome completo.
+  const displayName = u => { const p = readProfileOf(u); return String(p.fishingName || '').trim() || (u && u !== 'admin' ? u : '') || p.name || 'Admin'; };
+  const fullName = u => readProfileOf(u).name || displayName(u);
 
   // Publicações e configurações ficam no Firestore (veja a camada fb no início do script)
   const postsDB = fb.postsDB, kvDB = fb.kvDB;
@@ -3656,7 +3676,7 @@ await new Promise(resolve => {
 
   /* ===== Ranking (pontuação e quantidade) ===== */
   let rankMode = 'points';
-  let rankScope = 'season';
+  let rankScope = 'season', rankChampId = null;
   // Pontos atuais da espécie; se a espécie foi removida, vale o valor do momento da publicação
   const postPoints = p => { if (p.pointsOverride != null && Number.isFinite(Number(p.pointsOverride))) return Number(p.pointsOverride); const s = readJSON('ajing-species', []).find(x => x.id === p.speciesId); return s ? s.points : (p.points || 0); };
   /* ===== Campeonatos (períodos definidos pelo administrador) ===== */
@@ -3932,7 +3952,7 @@ await new Promise(resolve => {
       items.push({ user: record.user, name: account ? displayName(record.user) : record.user, period, saved: true, recordKey: record.key, savedAt: record.savedAt || record.updatedAt || 0, points: row ? row.points : 0, goldHooks: Math.max(0, Number(account && account.goldHooks) || 0) });
     });
     items.sort((a, b) => b.savedAt - a.savedAt);
-    $('rankChampionHistory').innerHTML = items.length ? items.map(item => `<li>${miniCard(item.user, 'sm')}<span class="grow"><b>${esc(item.name)}</b><small>${esc(item.period.label)} · ${item.saved ? 'registrado pelo administrador' : 'apurado pelas capturas aprovadas'} · ${fmtNum(item.points)} pts</small></span>${item.goldHooks ? `<span class="rank-history-hook" title="${item.goldHooks} insígnias de anzol dourado">${Array.from({ length: item.goldHooks }, () => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M12 3v10a5 5 0 0 1-10 0v-2M2 11l4 1"/></svg>').join('')}</span>` : ''}<button class="btn btn-ghost" type="button" data-card-user="${esc(item.user)}">Ver carta</button>${isAdmin() ? `<button class="btn btn-danger" type="button" data-delete-rank-champion="${esc(item.recordKey)}">Excluir campeão</button>` : ''}</li>`).join('') : '<li class="empty-row">Ainda não há campeões registrados.</li>';
+    $('rankChampionHistory').innerHTML = items.length ? items.map(item => `<li>${miniCard(item.user, 'sm')}<span class="grow"><b>${esc(item.name)}</b><small>${esc(String(item.period.label || '').replace(/^Campeão (do|da) /i, ''))}</small></span>${item.goldHooks ? `<span class="rank-history-hook" title="${item.goldHooks} insígnias de anzol dourado">${Array.from({ length: item.goldHooks }, () => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M12 3v10a5 5 0 0 1-10 0v-2M2 11l4 1"/></svg>').join('')}</span>` : ''}<button class="btn btn-ghost" type="button" data-card-user="${esc(item.user)}">Ver carta</button>${isAdmin() ? `<button class="btn btn-danger" type="button" data-delete-rank-champion="${esc(item.recordKey)}">Excluir campeão</button>` : ''}</li>`).join('') : '<li class="empty-row">Ainda não há campeões registrados.</li>';
   };
   const champRankRows = (c, key = 'points') => {
     const rows = rankRows(key, champPosts(c));
@@ -3945,11 +3965,16 @@ await new Promise(resolve => {
     }
     return rows;
   };
+  // Campeonato do filtro "Campeonato": o escolhido pelo botão "Ver ranking" do evento ou o que está em andamento
+  const rankChamp = () => (rankChampId && getChamps().find(c => c.id === rankChampId)) || activeChamp();
   const renderRanking = () => {
-    const key = rankMode, season = currentRankSeason();
-    const sourcePosts = rankScope === 'season' ? currentRankSeasonPosts() : posts.filter(isPostScored);
-    const rows = rankRows(key, sourcePosts), scopeLabel = rankScope === 'season' ? (season.continuous ? 'Ranking contínuo' : `Temporada · ${season.label}`) : 'Ranking geral';
-    const scopeRange = rankScope !== 'season' ? '' : season.continuous ? `Desde ${season.start ? fmtDay(season.start) : 'o início do histórico'}` : seasonRange(season);
+    const key = rankMode, season = currentRankSeason(), champ = rankChamp();
+    const champBtn = document.querySelector('[data-rank-scope="champ"]'); if (champBtn) champBtn.hidden = !champ;
+    if (rankScope === 'champ' && !champ) rankScope = 'season';
+    // ranking do campeonato: só inscritos aprovados e capturas dentro das datas do evento (mesma regra da página do evento)
+    const sourcePosts = rankScope === 'season' ? currentRankSeasonPosts() : rankScope === 'champ' ? champPosts(champ).filter(isPostScored) : posts.filter(isPostScored);
+    const rows = rankRows(key, sourcePosts), scopeLabel = rankScope === 'season' ? (season.continuous ? 'Ranking contínuo' : `Temporada · ${season.label}`) : rankScope === 'champ' ? `Campeonato · ${champ.name}` : 'Ranking geral';
+    const scopeRange = rankScope === 'champ' ? `${fmtDay(champ.start)} a ${fmtDay(champ.end - 1)} · inscritos aprovados` : rankScope !== 'season' ? '' : season.continuous ? `Desde ${season.start ? fmtDay(season.start) : 'o início do histórico'}` : seasonRange(season);
     const scopeSummary = [scopeRange, `${fmtNum(sourcePosts.length)} ${sourcePosts.length === 1 ? 'captura' : 'capturas'}`].filter(Boolean).join(' · ');
     $('editionBar').innerHTML = `<span class="ed-pill">${esc(scopeLabel)}</span><span class="muted">${esc(scopeSummary)}</span>`;
     $('rankRule').textContent = key === 'points'
@@ -3959,10 +3984,12 @@ await new Promise(resolve => {
     document.querySelectorAll('[data-rank]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.rank === key)));
     const me = currentUser(), mine = rows.find(r => r.user === me);
     $('myRank').hidden = !mine;
-    if (mine) $('myRank').innerHTML = `<span class="my-rank-label"><span class="my-rank-label-long">${rankScope === 'season' ? (season.continuous ? 'Sua posição no ranking contínuo' : 'Sua posição nesta temporada') : 'Sua posição geral'}</span><span class="my-rank-label-short">Você</span></span><strong>${mine.pos}º</strong><span class="muted">·</span>${ptsLabel(mine.points)}<span class="muted">·</span>${mine.count} ${mine.count === 1 ? 'captura' : 'capturas'}`;
+    if (mine) $('myRank').innerHTML = `<span class="my-rank-label"><span class="my-rank-label-long">${rankScope === 'champ' ? 'Sua posição no campeonato' : rankScope === 'season' ? (season.continuous ? 'Sua posição no ranking contínuo' : 'Sua posição nesta temporada') : 'Sua posição geral'}</span><span class="my-rank-label-short">Você</span></span><strong>${mine.pos}º</strong><span class="muted">·</span>${ptsLabel(mine.points)}<span class="muted">·</span>${mine.count} ${mine.count === 1 ? 'captura' : 'capturas'}`;
     $('rankEmpty').hidden = rows.length > 0; $('rankList').hidden = !rows.length;
     $('rankEmpty').querySelector('h4').textContent = 'Ranking ainda vazio';
-    $('rankEmpty').querySelector('p').textContent = rankScope === 'season'
+    $('rankEmpty').querySelector('p').textContent = rankScope === 'champ'
+      ? 'Ainda não há capturas aprovadas de inscritos neste campeonato.'
+      : rankScope === 'season'
       ? (season.continuous ? 'Ainda não há capturas aprovadas no período contínuo. Os pontos e níveis dos perfis continuam acumulados.' : 'Ainda não há capturas aprovadas nesta temporada. Os pontos e níveis dos perfis continuam acumulados.')
       : 'Ainda não há capturas aprovadas no histórico do ranking geral.';
     const num = (r, k) => `<span class="rank-num ${k === key ? 'key' : ''}">${fmtNum(k === 'points' ? r.points : r.count)}</span>`;
@@ -5414,7 +5441,8 @@ await new Promise(resolve => {
     const crown = k('crown'); if (crown) crown.hidden = !getUsers().some(x => x.username === u && x.seasonChampion);
     const hookCount = Math.max(0, Math.min(999, Number.parseInt(getUsers().find(x => x.username === u)?.goldHooks, 10) || 0));
     const hooks = k('hooks'); if (hooks) { hooks.innerHTML = Array.from({ length: hookCount }, () => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M12 3v10a5 5 0 0 1-10 0v-2M2 11l4 1"/></svg>').join(''); hooks.hidden = hookCount === 0; hooks.setAttribute('aria-label', `${hookCount} ${hookCount === 1 ? 'insígnia de anzol dourado' : 'insígnias de anzol dourado'}`); }
-    k('name').textContent = p.name || displayName(u);
+    // na carta aparece o nome de pescador (o nome de usuário do cadastro); o nome completo fica no perfil
+    k('name').textContent = String(p.fishingName || '').trim() || displayName(u);
     k('role').textContent = ''; k('role').hidden = true;
     k('type').textContent = (li.cur ? `Nível ${li.cur.n} · ${li.cur.name}` : 'Pescador finesse') + (p.location ? ' · ' + p.location : '');
     k('lvl').innerHTML = emblem(li.cur, 'md'); k('lvl').hidden = !li.cur;
@@ -5424,7 +5452,7 @@ await new Promise(resolve => {
     if (own && cropState) applyCrop();
     else if (safeImageSrc(p.photo)) { img.removeAttribute('style'); img.src = safeImageSrc(p.photo); img.hidden = false; k('fallback').hidden = true; }
     else { img.removeAttribute('src'); img.removeAttribute('style'); img.hidden = true; k('fallback').hidden = false; }
-    img.alt = `Foto de ${p.name || displayName(u)}`;
+    img.alt = `Foto de ${displayName(u)}`;
     k('pts').textContent = fmtNum(pts);
     k('count').textContent = mine.length;
     const bySp = {}; mine.forEach(x => bySp[x.speciesName] = (bySp[x.speciesName] || 0) + 1);
@@ -5435,7 +5463,7 @@ await new Promise(resolve => {
     k('rankpts').textContent = pos('points'); k('rankcnt').textContent = pos('count');
     const overallPosition = rankRows('points', posts).find(r => r.user === u);
     k('no').textContent = overallPosition ? 'Nº ' + String(overallPosition.pos).padStart(3, '0') : 'Nº —';
-    root.setAttribute('aria-label', `Carta de pescador de ${p.name || displayName(u)}`);
+    root.setAttribute('aria-label', `Carta de pescador de ${displayName(u)}`);
     return { li, pts };
   };
   const renderCard = p => { const u = currentUser() || '', r = fillCard($('tcard'), u, p, true); renderLevelBox(r.li, r.pts); };
@@ -5468,7 +5496,7 @@ await new Promise(resolve => {
     cardLastFocus && cardLastFocus.focus && cardLastFocus.focus();
   };
   let portfolioUser = null, memberFilter = '';
-  const fishingName = u => readProfileOf(u).fishingName || u;
+  const fishingName = u => displayName(u);
   const readPortfolioChoices = u => {
     const profile = readProfileOf(u), owned = posts.filter(p => p.user === u && p.status !== 'rejected'), byId = new Map(owned.map(p => [p.id, p]));
     if (profile.portfolioPosts && typeof profile.portfolioPosts === 'object' && !Array.isArray(profile.portfolioPosts)) {
@@ -5516,7 +5544,7 @@ await new Promise(resolve => {
     const own = u === currentUser(), catches = portfolioPostList(u);
     $('membersDirectory').hidden = true; $('memberPortfolio').hidden = false;
     $('memberPortfolio').innerHTML = `<div class="portfolio-head"><button class="btn btn-ghost" id="portfolioBack" type="button">← Todos os membros</button><span class="muted">Portfólio do pescador</span></div>
-      <section class="portfolio-profile"><div class="tcard-stage"></div><div class="portfolio-copy"><h2>${esc(displayName(u))}</h2><p class="portfolio-fish-name">Nome de Pescador: <b>${esc(fishingName(u))}</b></p><p class="portfolio-description">${esc(p.bio || 'Este pescador ainda não adicionou uma descrição.')}</p>${own ? '<button class="btn btn-ghost" type="button" data-edit-portfolio-profile>Editar meu perfil</button>' : ''}</div></section>
+      <section class="portfolio-profile"><div class="tcard-stage"></div><div class="portfolio-copy"><h2>${esc(displayName(u))}</h2>${fullName(u) !== displayName(u) ? `<p class="portfolio-fish-name">Nome completo: <b>${esc(fullName(u))}</b></p>` : ''}<p class="portfolio-description">${esc(p.bio || 'Este pescador ainda não adicionou uma descrição.')}</p>${own ? '<button class="btn btn-ghost" type="button" data-edit-portfolio-profile>Editar meu perfil</button>' : ''}</div></section>
       <div class="panel-head"><div><h3>Espécies capturadas (${catches.length})</h3><p>Uma publicação para cada espécie selecionada pelo pescador.</p></div></div>
       <div class="portfolio-species">${catches.map(post => postHTML(post, true)).join('')}</div>${catches.length ? '' : '<div class="empty"><h4>Portfólio vazio</h4><p>Este pescador ainda não selecionou espécies para exibir.</p></div>'}`;
     $('memberPortfolio').querySelector('.tcard-stage').appendChild(clone);
@@ -5579,8 +5607,8 @@ await new Promise(resolve => {
     $('lvlLadder').innerHTML = LEVELS.map(l => { const got = pts >= l.min;
       return `<li class="${got ? 'got' : ''} ${li.cur && li.cur.n === l.n ? 'now' : ''}">${emblem(l, 'sm', got ? '' : 'locked')}<span><b>${l.name}</b><small>${fmtNum(l.min)} pts</small></span>${got ? '<em>Conquistado</em>' : ''}</li>`; }).join('');
   }
-  const draftProfile = () => ({ name: $('profileName').value.trim(), location: $('profileLocation').value.trim(), bio: bioInput.value.trim(), photo: photoData, social: readSocialInputs().social });
-  ['profileName', 'profileLocation', 'profileBio', 'profileInstagram', 'profileYoutube', 'profileTiktok'].forEach(id => $(id).addEventListener('input', () => renderCard(draftProfile())));
+  const draftProfile = () => ({ name: $('profileName').value.trim(), fishingName: $('profileFishingName').value.trim(), location: $('profileLocation').value.trim(), bio: bioInput.value.trim(), photo: photoData, social: readSocialInputs().social });
+  ['profileName', 'profileFishingName', 'profileLocation', 'profileBio', 'profileInstagram', 'profileYoutube', 'profileTiktok'].forEach(id => $(id).addEventListener('input', () => renderCard(draftProfile())));
 
   // Efeito de inclinação e brilho holográfico ao passar o mouse
   (() => {
@@ -6254,7 +6282,7 @@ await new Promise(resolve => {
       const mine = registered(cur, me) ? rankRows('points').find(r => r.user === me) : null;
       html += `<article class="ev-hero running">${eventBannerHTML(cur)}<span class="req-status approved">Em andamento</span>${eventTitleControl(cur)}
         ${cur.desc ? `<p>${esc(cur.desc)}</p>` : ''}<p class="muted">${champRange(cur)} · termina em ${daysUntil(cur.end)} ${daysUntil(cur.end) === 1 ? 'dia' : 'dias'}</p>
-        <div class="ev-row"><span>${mine ? `Sua posição: <b>${mine.pos}º</b> · ${fmtNum(mine.points)} pts` : registered(cur, me) ? 'Você está inscrito. Publique capturas no Social Fish para entrar no ranking.' : isAdmin() ? 'Acompanhe a classificação dos inscritos na página do evento.' : 'Acesso disponível após a aprovação da inscrição.'}</span>${canAccessEvent(cur) ? `<button class="btn btn-primary" type="button" data-open-event="${esc(cur.id)}">Acessar evento</button>` : ''}<button class="btn btn-ghost" type="button" data-goto="ranking">Ver ranking</button></div>
+        <div class="ev-row"><span>${mine ? `Sua posição: <b>${mine.pos}º</b> · ${fmtNum(mine.points)} pts` : registered(cur, me) ? 'Você está inscrito. Publique capturas no Social Fish para entrar no ranking.' : isAdmin() ? 'Acompanhe a classificação dos inscritos na página do evento.' : 'Acesso disponível após a aprovação da inscrição.'}</span>${canAccessEvent(cur) ? `<button class="btn btn-primary" type="button" data-open-event="${esc(cur.id)}">Acessar evento</button>` : ''}<button class="btn btn-ghost" type="button" data-champ-ranking="${esc(cur.id)}">Ver ranking</button></div>
         <div class="ev-registration"><span><b>${registered(cur, me) ? 'Inscrição aprovada' : pendingRegistration(cur, me) ? 'Solicitação aguardando aprovação' : isAdmin() ? 'Evento em andamento' : 'Acesso restrito a participantes inscritos'}</b><small>Período: ${regRange(cur)} · ${Array.isArray(cur.registrations) ? cur.registrations.length : '—'} inscritos</small></span></div></article>`;
     }
     upcoming.forEach(c => {
@@ -6275,6 +6303,8 @@ await new Promise(resolve => {
   };
   $('eventsBody').addEventListener('click', e => {
     if (e.target.closest('[data-open-ranking]')) { selectedEventId = null; showTab('ranking'); resetTabHome('ranking'); return; }
+    const champRank = e.target.closest('[data-champ-ranking]');
+    if (champRank) { rankChampId = champRank.dataset.champRanking; showTab('ranking'); rankScope = 'champ'; setRankView('current'); renderRanking(); return; }
     const back = e.target.closest('[data-events-back]');
     if (back) { selectedEventId = null; renderEvents(); return; }
     const open = e.target.closest('[data-open-event]');
@@ -6443,7 +6473,7 @@ await new Promise(resolve => {
       if (needsRender) renderMembers();
     } else if (name === 'ranking') {
       const needsRender = rankScope !== 'season' || rankMode !== 'points';
-      rankView = 'current'; rankScope = 'season'; rankMode = 'points';
+      rankView = 'current'; rankScope = 'season'; rankMode = 'points'; rankChampId = null;
       setRankView('current'); if (needsRender) renderRanking();
     } else if (name === 'species') {
       const needsRender = habFilter !== 'all'; habFilter = 'all'; if (needsRender) renderSpecies();
