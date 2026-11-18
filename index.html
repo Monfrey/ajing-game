@@ -1345,7 +1345,7 @@ input[type=date],input[type=datetime-local],input[type=time]{min-width:0;max-wid
   input[type=date],input[type=datetime-local],input[type=time]{-webkit-appearance:none;appearance:none;display:block;min-height:42px;text-align:left}
   input[type=date]::-webkit-date-and-time-value{text-align:left}
 }
-.admin-main-nav .sub-ico{display:none;width:20px;height:20px;flex:none}
+.admin-main-nav .sub-ico,.req-subnav .sub-ico{display:none;width:20px;height:20px;flex:none}
 @media (max-width:720px){
   .season-editor-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .season-editor-row>*{min-width:0}
@@ -1353,15 +1353,19 @@ input[type=date],input[type=datetime-local],input[type=time]{min-width:0;max-wid
   /* Coroa nas cartas da aba Membros: fica acima do canto da própria carta, sem invadir a carta do lado */
   .members-grid{row-gap:30px;padding-top:24px}
   .member-full-card .tc-crown{top:-34px;right:10px}
-  /* Submenu principal da Administração: grade com ícone e nome, igual à barra da área de membros */
-  .admin-main-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;border-bottom:0;margin:0 0 16px}
-  .admin-main-nav button{position:relative;flex-direction:column;justify-content:center;gap:4px;min-height:58px;padding:8px 4px;border:0;border-radius:10px;background:var(--surface-2);color:var(--muted);font-size:.72rem;line-height:1.15;text-align:center;white-space:normal;box-shadow:none}
-  .admin-main-nav button[aria-current="true"]{background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent);border:0;box-shadow:none}
-  .admin-main-nav .sub-ico{display:block}
-  .admin-main-nav .count{position:absolute;top:4px;left:calc(50% + 8px);margin:0;padding:0 5px;min-width:18px;height:18px;display:inline-grid;place-items:center;font-size:.66rem}
-  .admin-main-nav .count:not(.alert){background:var(--surface);color:var(--muted)}
-  .admin-main-nav button[aria-current="true"] .count:not(.alert){background:var(--surface);color:var(--accent)}
+  /* Submenus da Administração (principal, Solicitações e Conteúdo do site): grade com ícone e nome, igual à barra da área de membros */
+  .admin-main-nav,.req-subnav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;border-bottom:0;margin:0 0 16px}
+  .req-subnav:not(.sc-subnav){grid-template-columns:repeat(4,minmax(0,1fr))}
+  .admin-main-nav button,.req-subnav button{position:relative;flex-direction:column;justify-content:center;gap:4px;min-height:58px;padding:8px 4px;border:0;border-radius:10px;background:var(--surface-2);color:var(--muted);font-size:.72rem;line-height:1.15;text-align:center;white-space:normal;box-shadow:none}
+  .admin-main-nav button[aria-current="true"],.req-subnav button[aria-current="true"]{background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent);border:0;box-shadow:none}
+  .admin-main-nav .sub-ico,.req-subnav .sub-ico{display:block}
+  .admin-main-nav .count,.req-subnav .count{position:absolute;top:4px;left:calc(50% + 8px);margin:0;padding:0 5px;min-width:18px;height:18px;display:inline-grid;place-items:center;font-size:.66rem}
+  .admin-main-nav .count:not(.alert),.req-subnav .count:not(.alert){background:var(--surface);color:var(--muted)}
+  .admin-main-nav button[aria-current="true"] .count:not(.alert),.req-subnav button[aria-current="true"] .count:not(.alert){background:var(--surface);color:var(--accent)}
 }
+/* Quem já está logado não vê chamadas de cadastro */
+.logged-in [data-open-signup],.logged-in a[href="#cadastro"]{display:none!important}
+.logged-in .hero-cta:not(:has(>:not([data-open-signup]))){display:none}
 </style>
 <script>
 (() => {
@@ -1709,9 +1713,9 @@ input[type=date],input[type=datetime-local],input[type=time]{min-width:0;max-wid
           <div class="admin-box" data-admin-panel="site-content" hidden>
             <div class="panel-head"><div><h3>Conteúdo do site</h3><p>Edite a marca e os textos fixos do site, ou cadastre novos conteúdos (artigos e galerias) e escolha onde eles aparecem.</p></div></div>
             <nav class="req-subnav sc-subnav" aria-label="Seções do conteúdo do site">
-              <button type="button" data-sc-view="copy">Marca e textos</button>
-              <button type="button" data-sc-view="content">Novos conteúdos<span class="count" id="cntManagedContent"></span></button>
-              <button type="button" data-sc-view="rules">Regulamento</button>
+              <button type="button" data-sc-view="copy"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></svg>Marca e textos</button>
+              <button type="button" data-sc-view="content"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M12 11v6M9 14h6"/></svg>Novos conteúdos<span class="count" id="cntManagedContent"></span></button>
+              <button type="button" data-sc-view="rules"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M8 13h8M8 17h6"/></svg>Regulamento</button>
             </nav>
             <form id="siteContentForm" data-sc-panel="copy" novalidate>
               <fieldset class="site-copy-group brand-admin-fields">
@@ -1806,10 +1810,10 @@ input[type=date],input[type=datetime-local],input[type=time]{min-width:0;max-wid
             <div class="admin-box" data-admin-panel="requests" hidden>
               <p class="box-desc">Revise o que os membros enviaram. Cada análise fica registrada no histórico e pode ser editada depois, se precisar.</p>
               <nav class="req-subnav" aria-label="Tipos de solicitação">
-                <button type="button" data-req-sec="posts">Postagens<span class="count" id="cntReqPosts"></span></button>
-                <button type="button" data-req-sec="events">Inscrições<span class="count" id="cntReqEvents"></span></button>
-                <button type="button" data-req-sec="species">Espécies<span class="count" id="cntReqSpecies"></span></button>
-                <button type="button" data-req-sec="members">Novos membros<span class="count" id="cntReqMembers"></span></button>
+                <button type="button" data-req-sec="posts"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></svg>Postagens<span class="count" id="cntReqPosts"></span></button>
+                <button type="button" data-req-sec="events"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M9 15l2 2 4-4"/></svg>Inscrições<span class="count" id="cntReqEvents"></span></button>
+                <button type="button" data-req-sec="species"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12c4-5.5 10.5-5.5 15 0-4.5 5.5-11 5.5-15 0zM17.5 12 22 8v8z"/></svg>Espécies<span class="count" id="cntReqSpecies"></span></button>
+                <button type="button" data-req-sec="members"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="8" r="4"/><path d="M3 21a7 7 0 0 1 14 0M19 8v6M16 11h6"/></svg>Novos membros<span class="count" id="cntReqMembers"></span></button>
               </nav>
               <div class="form-error" id="reqAdminError" role="alert"></div>
               <p class="saved" id="reqAdminSaved" aria-live="polite"></p>
@@ -3072,7 +3076,7 @@ await new Promise(resolve => {
       }
       if (u.active === false) { await fb.signOut(); loginError.textContent = 'Esta conta está desativada. Fale com um administrador.'; return; }
       await Promise.all([loadPosts(), loadReqPhotos()]);
-      loginForm.reset(); closeLogin(); showMembers(); showTab('social');
+      touchActivity(true); loginForm.reset(); closeLogin(); showMembers(); showTab('social');
     } catch (err) { loginError.textContent = fb.errMsg(err); }
     finally { btn.disabled = false; }
   });
@@ -3111,12 +3115,39 @@ await new Promise(resolve => {
   });
   const logout = async () => {
     try { await fb.signOut(); } catch(_) {}
+    try { localStorage.removeItem('ajing-last-activity'); } catch (_) {}
     store.del('ajing-member-tab', true);
     $('membersBtnLabel').textContent = 'Login / Sign up'; $('membersBtn').setAttribute('aria-label', 'Login / Sign up');
     // Ao sair, sempre volta para o início da página inicial (mesmo que antes estivesse na página Ajing Game)
     showHome(); showPublicContentPage('home'); window.scrollTo({ top: 0 });
+    syncAuthUI();
   };
   $('logoutBtn').addEventListener('click', logout);
+
+  /* ===== Sessão: encerrada após 20 minutos sem atividade =====
+     A última atividade fica no navegador (vale para todas as abas abertas do site). Ao voltar depois de
+     mais de 20 minutos parado, inclusive reabrindo o site, a pessoa precisa entrar de novo. */
+  const IDLE_LIMIT = 20 * 60 * 1000, IDLE_KEY = 'ajing-last-activity';
+  let idleLastWrite = 0, idleEnding = false;
+  const touchActivity = (force = false) => {
+    const now = Date.now(); if (!force && now - idleLastWrite < 15000) return;
+    idleLastWrite = now; try { localStorage.setItem(IDLE_KEY, String(now)); } catch (_) {}
+  };
+  const lastActivity = () => { const v = Number(localStorage.getItem(IDLE_KEY)); return Number.isFinite(v) && v > 0 ? v : 0; };
+  ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(type => window.addEventListener(type, () => { if (currentUser()) touchActivity(); }, { passive: true, capture: true }));
+  const checkIdle = async () => {
+    if (!currentUser() || idleEnding) return;
+    const last = lastActivity();
+    if (!last) { touchActivity(true); return; }
+    if (Date.now() - last < IDLE_LIMIT) return;
+    idleEnding = true;
+    try {
+      await logout();
+      openLogin(); $('loginError').textContent = 'Sua sessão foi encerrada após 20 minutos sem atividade. Entre novamente.';
+    } finally { idleEnding = false; }
+  };
+  setInterval(checkIdle, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkIdle(); });
 
   /* ===== Abas ===== */
   const tabs = document.querySelectorAll('[data-tab]'), panels = document.querySelectorAll('[data-panel]');
@@ -3143,7 +3174,16 @@ await new Promise(resolve => {
     return photo ? `<span class="m-avatar ${cls||''}" style="background-image:url('${photo}')"></span>`
                    : `<span class="m-avatar ${cls||''}">${esc(n.charAt(0).toUpperCase())}</span>`;
   };
+  // Marca a página como "logado" (esconde chamadas de cadastro) e redesenha o carrossel quando o estado muda
+  let authUIState = null;
+  const syncAuthUI = () => {
+    const logged = !!currentUser();
+    document.documentElement.classList.toggle('logged-in', logged);
+    if (authUIState !== null && authUIState !== logged) { try { renderHero(); } catch (_) {} }
+    authUIState = logged;
+  };
   const updateUserChip = () => {
+    syncAuthUI();
     const u = currentUser() || '', p = readProfile(), name = displayName(u);
     $('membersGreeting').textContent = name;
     const mini = $('miniAvatar');
@@ -4871,7 +4911,7 @@ await new Promise(resolve => {
   const buttonHTML = (b, cls) => {
     if (!b || !b.label) return '';
     if (b.target === 'members') return `<button class="btn ${cls}" type="button" data-open-members>${esc(b.label)}</button>`;
-    if (b.target === 'signup') return `<button class="btn ${cls}" type="button" data-open-signup>${esc(b.label)}</button>`;
+    if (b.target === 'signup') return currentUser() ? '' : `<button class="btn ${cls}" type="button" data-open-signup>${esc(b.label)}</button>`;
     if (b.target === 'url') return /^https?:\/\//i.test(b.url || '') ? `<a class="btn ${cls}" href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.label)}</a>` : '';
     return `<a class="btn ${cls}" href="${esc(b.target)}">${esc(b.label)}</a>`;
   };
@@ -5368,10 +5408,10 @@ await new Promise(resolve => {
   };
   let fitMembersTimer = null;
   window.addEventListener('resize', () => { clearTimeout(fitMembersTimer); fitMembersTimer = setTimeout(fitMemberCards, 120); });
-  const openPortfolio = u => {
+  const openPortfolio = (u, scrollToTop = true) => {
     if (!getUsers().some(x => x.username === u && x.active !== false)) return;
     portfolioUser = u;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (scrollToTop) window.scrollTo({ top: 0, behavior: 'smooth' });
     const p = readProfileOf(u), clone = freshCard();
     clone.removeAttribute('id'); clone.removeAttribute('style'); clone.classList.remove('cropping'); clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
     fillCard(clone, u, p, false);
@@ -5418,7 +5458,8 @@ await new Promise(resolve => {
       await fb.saveProfile(member, profile);
       renderMyCaptures();
       $('portfolioCaptureStatus').textContent = wasSelected ? `${post.speciesName} removida do portfólio.` : `${post.speciesName} adicionada ao portfólio.`;
-      if (portfolioUser === member) openPortfolio(member);
+      // atualiza o portfólio aberto sem mudar a posição da página
+      if (portfolioUser === member) openPortfolio(member, false);
     } catch (err) {
       button.disabled = false;
       $('portfolioCaptureStatus').textContent = 'Não foi possível atualizar o portfólio. ' + fb.errMsg(err);
@@ -6390,7 +6431,7 @@ await new Promise(resolve => {
     renderChampion();
     if (fb.authUid() && !currentUser()) await fb.signOut().catch(() => {});
     // O site sempre abre na página inicial; quem já está logado entra pelo botão "Minha área".
-    if (currentUser()) { $('membersBtnLabel').textContent = 'Minha área'; $('membersBtn').setAttribute('aria-label', 'Minha área'); updateUserChip(); }
+    if (currentUser()) { $('membersBtnLabel').textContent = 'Minha área'; $('membersBtn').setAttribute('aria-label', 'Minha área'); updateUserChip(); checkIdle(); }
     else showTab('social');
   });
 })();
