@@ -1389,9 +1389,12 @@ input[type=date],input[type=datetime-local],input[type=time]{min-width:0;max-wid
 @media (max-width:720px){
   #rankChampionHistory li{flex-wrap:wrap;row-gap:8px}
   #rankChampionHistory li>.grow{flex:1 1 0;min-width:0}
-  /* quebra de linha fixa depois do texto: insígnias e botões sempre na linha de baixo */
-  #rankChampionHistory li::after{content:"";order:2;flex-basis:100%;height:0}
-  #rankChampionHistory li>.rank-history-hook,#rankChampionHistory li>.btn{order:3}
+  /* celular: sem "Ver carta" (a carta e o nome já abrem o portfólio); lista sem rolagem interna */
+  #rankChampionHistory{max-height:none;overflow:visible}
+  #rankChampionHistory .rank-history-view{display:none}
+  #rankChampionHistory li{flex-wrap:nowrap;align-items:center}
+  #rankChampionHistory li>.btn.rank-history-del{flex:0 0 38px;width:38px;height:38px;padding:0;display:inline-grid;place-items:center}
+  #rankChampionHistory .rank-history-del span{display:none}
   #rankChampionHistory li>.grow b,#rankChampionHistory li>.grow small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #rankChampionHistory li>.btn{flex:1 1 auto}
 }
@@ -1399,6 +1402,9 @@ input[type=date],input[type=datetime-local],input[type=time]{min-width:0;max-wid
 .mc-hooks svg.gold-fish{width:9px;height:7px;fill:#f7c81e;stroke:#8c5d00;stroke-width:1.4}
 .rank-history-hook svg.gold-fish{width:22px;height:15px;fill:#f7c81e;stroke:#a06d00;stroke-width:1.1;stroke-linejoin:round}
 svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
+#rankChampionHistory li>.grow[data-card-user]{cursor:pointer}
+.rank-history-del{display:inline-flex;align-items:center;gap:6px}
+.rank-history-del svg{width:16px;height:16px;flex:none}
 </style>
 <script>
 (() => {
@@ -1686,7 +1692,7 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
           <ol class="rank-list" id="rankList"></ol>
           <div class="empty" id="rankEmpty" hidden><h4>Ranking ainda vazio</h4><p>O ranking começa quando os membros publicarem capturas no Social Fish.</p></div>
           </div>
-          <div id="rankHistoryView" hidden><div class="panel-head"><div><h4>Campeões por temporada</h4><p>Histórico dos campeões de cada período e suas insígnias acumuladas.</p></div></div><ul class="admin-list req-list" id="rankChampionHistory"></ul></div>
+          <div id="rankHistoryView" hidden><div class="panel-head"><div><h4>Campeões</h4><p>Campeões de cada temporada e campeonato. Toque na carta para ver o portfólio.</p></div></div><ul class="admin-list req-list" id="rankChampionHistory"></ul></div>
         </section>
         <section class="panel" role="tabpanel" data-panel="species" hidden>
           <div class="panel-head"><div><h3>Espécies</h3><p>Espécies válidas para o Social Fish, com a pontuação no ranking e o total de capturas.</p></div><button class="btn btn-ghost admin-only" type="button" data-goto="admin" data-goto-sec="species" hidden>Gerenciar espécies</button><button class="btn btn-primary member-only" type="button" data-open-req hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Solicitar nova espécie</button></div>
@@ -3970,7 +3976,7 @@ await new Promise(resolve => {
       items.push({ user: c.champion.user, name: account ? displayName(c.champion.user) : c.champion.user, period: { label: `Campeonato · ${c.name}` }, champ: true, saved: false, recordKey: `champ:${c.id}`, savedAt: c.end, points: c.champion.points || 0, goldHooks: Math.max(0, Number(account && account.goldHooks) || 0) });
     });
     items.sort((a, b) => b.savedAt - a.savedAt);
-    $('rankChampionHistory').innerHTML = items.length ? items.map(item => `<li>${miniCard(item.user, 'sm')}<span class="grow"><b>${esc(item.name)}</b><small>${esc(String(item.period.label || '').replace(/^Campeão (do|da) /i, ''))}</small></span>${item.goldHooks ? `<span class="rank-history-hook" title="${hooksLabel(item.goldHooks)}">${hooksHTML(item.goldHooks)}</span>` : ''}<button class="btn btn-ghost" type="button" data-card-user="${esc(item.user)}">Ver carta</button>${isAdmin() && !item.champ ? `<button class="btn btn-danger" type="button" data-delete-rank-champion="${esc(item.recordKey)}">Excluir campeão</button>` : ''}</li>`).join('') : '<li class="empty-row">Ainda não há campeões registrados.</li>';
+    $('rankChampionHistory').innerHTML = items.length ? items.map(item => `<li>${miniCard(item.user, 'sm')}<span class="grow" data-card-user="${esc(item.user)}" role="button" tabindex="0" aria-label="Ver carta de ${esc(item.name)}"><b>${esc(item.name)}</b><small>${esc(String(item.period.label || '').replace(/^Campeão (do|da) /i, ''))}</small></span><button class="btn btn-ghost rank-history-view" type="button" data-card-user="${esc(item.user)}">Ver carta</button>${isAdmin() && !item.champ ? `<button class="btn btn-danger rank-history-del" type="button" data-delete-rank-champion="${esc(item.recordKey)}" aria-label="Excluir campeão ${esc(item.name)}" title="Excluir campeão"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13\"/></svg><span>Excluir campeão</span></button>` : ''}</li>`).join('') : '<li class="empty-row">Ainda não há campeões registrados.</li>';
   };
   const champRankRows = (c, key = 'points') => {
     const rows = rankRows(key, champPosts(c));
@@ -5575,6 +5581,7 @@ await new Promise(resolve => {
     const edit = $('memberPortfolio').querySelector('[data-edit-portfolio-profile]'); if (edit) edit.addEventListener('click', () => { showTab('profile'); showProfSec('card'); $('editProfileBtn').click(); });
   };
   document.addEventListener('click', e => { const b = e.target.closest('[data-card-user]'); if (b) { showTab('members'); openPortfolio(b.dataset.cardUser); } });
+  document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-card-user][role="button"]')) { e.preventDefault(); e.target.click(); } });
   $('memberSearch').addEventListener('input', () => { memberFilter = $('memberSearch').value; renderMembers(); });
   $('cardClose').addEventListener('click', closeCardModal);
   cardModal.addEventListener('click', e => { if (e.target === cardModal) closeCardModal(); });
