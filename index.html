@@ -1366,6 +1366,19 @@ input[type=date],input[type=datetime-local],input[type=time]{min-width:0;max-wid
 /* Quem já está logado não vê chamadas de cadastro */
 .logged-in [data-open-signup],.logged-in a[href="#cadastro"]{display:none!important}
 .logged-in .hero-cta:not(:has(>:not([data-open-signup]))){display:none}
+.sp-clear-panel{display:grid;gap:10px;margin:12px 0;padding:14px 16px;border:1px solid color-mix(in srgb,var(--red) 45%,var(--line));border-radius:var(--radius);background:color-mix(in srgb,var(--red) 5%,var(--surface))}
+.sp-clear-panel[hidden]{display:none}
+.sp-clear-panel h4{margin:0;color:var(--red);font-size:1rem}
+.sp-clear-panel p,.sp-clear-panel ul{margin:0;font-size:.9rem}
+.sp-clear-panel ul{padding-left:1.2em;display:grid;gap:4px}
+.sp-clear-panel .field{max-width:320px}
+.post-meta-note{display:grid;gap:1px;margin-top:8px;padding:8px 11px;border-radius:var(--radius-sm);font-size:.84rem;line-height:1.35;border:1px solid var(--line)}
+.post-meta-note[hidden]{display:none}
+.post-meta-note small{font-size:.76rem;opacity:.85}
+.post-meta-note.warn{background:color-mix(in srgb,var(--orange) 12%,var(--surface));border-color:color-mix(in srgb,var(--orange) 45%,var(--line));color:var(--ink)}
+.post-meta-note.warn b{color:color-mix(in srgb,var(--orange) 70%,#000)}
+.post-meta-note.ok{background:color-mix(in srgb,var(--accent) 9%,var(--surface));border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}
+.post-meta-note.ok b{color:var(--accent)}
 </style>
 <script>
 (() => {
@@ -1778,7 +1791,19 @@ input[type=date],input[type=datetime-local],input[type=time]{min-width:0;max-wid
             <div class="admin-box" data-admin-panel="species" hidden>
               <div class="box-head sp-head">
                 <p class="box-desc">Espécies disponíveis para publicação no Social Fish e a pontuação de cada uma no ranking. Alterar a pontuação recalcula o ranking de todas as publicações daquela espécie.</p>
-                <div class="form-actions"><button class="btn btn-ghost" id="spTemplateBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>Planilha modelo</button><button class="btn btn-primary" id="spImportBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>Importar planilha</button></div>
+                <div class="form-actions"><button class="btn btn-ghost" id="spTemplateBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>Planilha modelo</button><button class="btn btn-primary" id="spImportBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>Importar planilha</button><button class="btn btn-ghost" id="spExportBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Exportar planilha</button><button class="btn btn-danger" id="spClearBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Limpar lista</button></div>
+                <div class="sp-clear-panel" id="spClearPanel" hidden role="group" aria-labelledby="spClearTitle">
+                  <h4 id="spClearTitle">Limpar a lista completa de espécies?</h4>
+                  <p>Todas as <b id="spClearCount">0</b> espécies serão removidas do site. As publicações continuam no feed, com o nome e os pontos que tinham.</p>
+                  <ul>
+                    <li>Enquanto a lista estiver vazia, ninguém consegue publicar capturas com pontuação.</li>
+                    <li>Ao importar ou cadastrar de novo uma espécie com o <b>mesmo nome</b>, ela volta ligada às publicações antigas (contagens, portfólio e pontos).</li>
+                  </ul>
+                  <div class="form-actions"><button class="btn btn-ghost" id="spClearExport" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Baixar a lista atual antes</button></div>
+                  <div class="field"><label for="spClearConfirm">Para confirmar, digite <b>LIMPAR</b></label><input id="spClearConfirm" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
+                  <div class="form-error" id="spClearError" role="alert"></div>
+                  <div class="form-actions"><button class="btn btn-danger" id="spClearDo" type="button">Limpar lista de espécies</button><button class="btn btn-ghost" id="spClearCancel" type="button">Cancelar</button></div>
+                </div>
                 <input id="spImportFile" type="file" accept=".xlsx,.xls,.csv" hidden>
               </div>
               <section class="sp-import" id="spImportPanel" aria-labelledby="spImportTitle" hidden>
@@ -2080,6 +2105,7 @@ input[type=date],input[type=datetime-local],input[type=time]{min-width:0;max-wid
           <span class="drop-empty" id="dropEmpty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8 5l1.5-2h5L16 5"/></svg><b>Adicionar foto</b><small>Clique ou arraste a imagem</small></span>
         </div>
         <button class="link-btn" id="changePhoto" type="button" hidden>Trocar foto</button>
+        <div class="post-meta-note" id="postMetaNote" role="status" hidden></div>
         <span class="hint">Tamanho recomendado: 1080 × 1350 px (vertical 4:5). A imagem inteira será mantida no formato vertical do feed (4:5); o espaço restante será preenchido com a própria foto desfocada.</span>
         <div class="form-error" id="postError" role="alert"></div>
       </div>
@@ -2707,6 +2733,14 @@ await new Promise(resolve => {
   // Espécies pré-cadastradas (editáveis pelo administrador)
   const SEED_POINTS = { 'Carapau': 10, 'Xixarro': 10, 'Robalo-peva': 30, 'Peixe-espada': 20 };
   // Espécies iniciais: gravadas uma única vez, no primeiro acesso de um administrador
+  // Espécies removidas pela opção "Limpar lista" ficam arquivadas em config/speciesArchive. Ao cadastrar de novo uma
+  // espécie com o mesmo nome, ela recebe o código antigo, e as publicações antigas voltam a apontar para ela.
+  const archivedSpeciesId = (name, taken) => {
+    const key = String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+    const arch = (fb.config('speciesArchive') || {}).list || [];
+    const hit = arch.find(s => String(s.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim() === key);
+    return hit && hit.id && !(taken && taken.has(hit.id)) ? hit.id : null;
+  };
   const seedSpecies = () => {
     if (!isAdmin() || !fb.speciesReady() || getSpecies().length || (fb.config('meta') || {}).speciesSeeded) return;
     writeJSON('ajing-species', [
@@ -3199,8 +3233,23 @@ await new Promise(resolve => {
   const captureDateLabel = value => value ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(new Date(value + 'T12:00:00')) : '';
   let postImage = '', postImageAudit = null, postImagePending = null, postLastFocus = null, editingPostId = null;
   const POST_W = 720, POST_H = 900; // padrão vertical 4:5 para todas as publicações
+  // Aprovação automática: foto com metadados (data original), sem sinais de captura de tela e dentro do prazo
+  const PHOTO_MAX_DAYS = 5;
+  const auditEligible = a => !!(a && !a.dateUnverified && a.imageTime > 0 && !a.oldImageDate && !a.possibleScreenshot);
+  const auditNote = a => {
+    if (!a) return null;
+    if (a.dateUnverified || a.possibleScreenshot) return { tone: 'warn', text: 'Foto sem meta dados', sub: 'A pontuação será validada por um administrador.' };
+    if (a.oldImageDate) return { tone: 'warn', text: a.imageTime > Date.now() ? 'Foto com data fora do período permitido' : 'Foto com data anterior à data permitida', sub: `Aceitamos fotos de até ${PHOTO_MAX_DAYS} dias. A pontuação será validada por um administrador.` };
+    return { tone: 'ok', text: 'Foto dentro do prazo', sub: 'A pontuação será aprovada automaticamente ao publicar.' };
+  };
+  const renderAuditNote = () => {
+    const box = $('postMetaNote'); if (!box) return;
+    const n = !editingPostId && !$('postNoScore').checked ? auditNote(postImageAudit) : (postImageAudit && !auditEligible(postImageAudit) ? auditNote(postImageAudit) : null);
+    box.hidden = !n; if (!n) return;
+    box.className = `post-meta-note ${n.tone}`; box.innerHTML = `<b>${esc(n.text)}</b><small>${esc(n.sub)}</small>`;
+  };
   const inspectPostImage = async file => {
-    const audit = { fileType: String(file.type || ''), fileSize: Number(file.size) || 0, imageDate: '', software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true };
+    const audit = { fileType: String(file.type || ''), fileSize: Number(file.size) || 0, imageDate: '', imageTime: 0, software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true };
     audit.possibleScreenshot = /(screenshot|screen.?shot|captura.?de.?tela|print.?screen|snip)/i.test(file.name || '');
     if (!/^image\/(jpeg|jpg)$/.test(file.type || '')) return audit;
     try {
@@ -3222,9 +3271,10 @@ await new Promise(resolve => {
       if (root[0x0131]) audit.software = readAscii(root[0x0131]);
       let dateEntry = root[0x0132];
       if (root[0x8769]) { const exifIfd = exif + u32(root[0x8769] + 8, le), exifTags = entries(exifIfd, [0x9003, 0x9004]); dateEntry = exifTags[0x9003] || exifTags[0x9004] || dateEntry; }
-      if (dateEntry) { const raw = readAscii(dateEntry), match = raw.match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/); if (match) { const [, y, mo, d, h, mi, s] = match; const parsed = new Date(+y, +mo - 1, +d, +h, +mi, +s); if (!Number.isNaN(parsed.getTime())) { audit.imageDate = parsed.toISOString(); audit.dateUnverified = false; } } }
+      if (dateEntry) { const raw = readAscii(dateEntry), match = raw.match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/); if (match) { const [, y, mo, d, h, mi, s] = match; const parsed = new Date(+y, +mo - 1, +d, +h, +mi, +s); if (!Number.isNaN(parsed.getTime())) { audit.imageDate = parsed.toISOString(); audit.imageTime = parsed.getTime(); audit.dateUnverified = false; } } }
       audit.possibleScreenshot ||= /(screenshot|screen.?capture|snip|sharex|snagit|lightshot|greenshot)/i.test(audit.software);
-      if (audit.imageDate) { const t = new Date(audit.imageDate), today = new Date(), earliest = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2); audit.oldImageDate = t < earliest; }
+      // prazo do regulamento: fotos tiradas hoje ou até 5 dias antes (datas no futuro também ficam fora do prazo)
+      if (audit.imageDate) { const t = new Date(audit.imageDate), today = new Date(), earliest = new Date(today.getFullYear(), today.getMonth(), today.getDate() - PHOTO_MAX_DAYS); audit.oldImageDate = t < earliest || t.getTime() > Date.now() + 36e5; }
     } catch (_) { audit.dateUnverified = true; }
     return audit;
   };
@@ -3260,15 +3310,16 @@ await new Promise(resolve => {
     if (!file) return;
     if (!file.type.startsWith('image/')) { postError.textContent = 'Escolha um arquivo de imagem (JPG, PNG ou WebP).'; if (!editingPostId) showPostModal(); return; }
     postError.textContent = '';
-    postImageAudit = null;
+    postImageAudit = null; renderAuditNote();
     postImagePending = Promise.all([preparePostImage(file), inspectPostImage(file)]).then(([src, audit]) => {
-      setPostImage(src); postImageAudit = audit;
+      setPostImage(src); postImageAudit = audit; renderAuditNote();
       if (!editingPostId) { postFields.hidden = false; postForm.classList.remove('photo-first'); showPostModal(); setTimeout(() => postCaption.focus(), 30); }
     })
       .catch(() => { postError.textContent = 'Não foi possível ler essa imagem. Tente outro arquivo.'; if (!editingPostId) showPostModal(); })
       .finally(() => { postImagePending = null; });
   };
   postPhoto.addEventListener('change', () => { takeFile(postPhoto.files && postPhoto.files[0]); postPhoto.value = ''; });
+  $('postNoScore').addEventListener('change', () => renderAuditNote());
   ['dragenter', 'dragover'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('over'); }));
   ['dragleave', 'drop'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('over'); }));
   dropZone.addEventListener('drop', e => takeFile(e.dataTransfer.files && e.dataTransfer.files[0]));
@@ -3286,7 +3337,7 @@ await new Promise(resolve => {
     editingPostId = null;
     postImageAudit = null;
     $('postTitle').textContent = 'Nova publicação'; $('postSubmit').textContent = 'Publicar';
-    $('postNoScore').closest('.post-noscore').hidden = false;
+    $('postNoScore').closest('.post-noscore').hidden = false; $('postMetaNote').hidden = true;
     postLastFocus = document.activeElement;
     postForm.reset(); setPostImage(''); postError.textContent = '';
     postFields.hidden = choosePhotoFirst; postForm.classList.toggle('photo-first', choosePhotoFirst);
@@ -3568,7 +3619,7 @@ await new Promise(resolve => {
     if (!place) { postError.textContent = 'Informe o local da captura.'; postPlace.focus(); return; }
     const today = new Date(), captureDate = editingPostId ? (posts.find(p => p.id === editingPostId)?.captureDate || localDateValue(today)) : localDateValue(today);
     const btn = $('postSubmit'), noScore = $('postNoScore').checked; btn.disabled = true;
-    let revalidate = false;
+    let revalidate = false, autoApproved = false;
     try {
       if (editingPostId) {
         const original = posts.find(p => p.id === editingPostId);
@@ -3585,7 +3636,10 @@ await new Promise(resolve => {
         if (postImageAudit && postImage !== original.photo) await postsDB.putWithAudit(updated, postImageAudit);
         else await postsDB.put(updated);
       } else {
-        await postsDB.create({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate, caption: postCaption.value.trim().slice(0, 150), photo: postImage, created: Date.now(), status: noScore ? 'unscored' : 'pending' }, postImageAudit || { fileType: '', fileSize: 0, imageDate: '', software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true });
+        const autoOk = !noScore && auditEligible(postImageAudit), now = Date.now();
+        autoApproved = autoOk;
+        const shotDate = postImageAudit && postImageAudit.imageTime > 0 && !postImageAudit.oldImageDate ? localDateValue(new Date(postImageAudit.imageTime)) : captureDate;
+        await postsDB.create({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate: shotDate, caption: postCaption.value.trim().slice(0, 150), photo: postImage, created: now, status: noScore ? 'unscored' : autoOk ? 'approved' : 'pending', ...(autoOk ? { reviewed: now, reviewer: 'auto' } : {}) }, postImageAudit || { fileType: '', fileSize: 0, imageDate: '', imageTime: 0, software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true });
       }
       const editedId = editingPostId;
       closePostModal(false);
@@ -3593,7 +3647,7 @@ await new Promise(resolve => {
       if (editedId) openPostView(editedId);
       showToast(noScore
         ? `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>Publicada sem pontuar: não entra no ranking nem na carta.</small></div>`
-        : `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>${editedId ? (revalidate ? 'A foto ou a espécie mudou: a captura voltou para a validação de um administrador.' : 'Alterações salvas.') : 'A pontuação será adicionada após a validação de um administrador.'}</small></div>`);
+        : `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>${editedId ? (revalidate ? 'A foto ou a espécie mudou: a captura voltou para a validação de um administrador.' : 'Alterações salvas.') : autoApproved ? 'Foto dentro do prazo: a pontuação foi aprovada automaticamente.' : 'A pontuação será adicionada após a validação de um administrador.'}</small></div>`);
       if (!editedId) window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch(_) {
       postError.textContent = `Não foi possível ${editingPostId ? 'salvar as alterações' : 'publicar'}. Verifique a conexão e tente de novo; se persistir, use uma foto menor.`;
@@ -4494,9 +4548,53 @@ await new Promise(resolve => {
       catch(_) { err.textContent = 'A espécie foi atualizada, mas algumas publicações não puderam ser sincronizadas.'; }
       closeSpeciesEdit(); softFocus($('spName')); renderAll(); return;
     }
-    const id = uid();
+    const id = archivedSpeciesId(name, new Set(list.map(s => s.id))) || uid();
     list.push({ id, name, sci, points, habitat }); writeJSON('ajing-species', list);
     err.textContent = ''; e.target.reset(); softFocus($('spName')); renderAll();
+  });
+  // Exportar a lista em planilha (mesmo formato da importação)
+  const HABITAT_LABEL = { salt: 'Água Salgada', fresh: 'Água Doce', both: 'Ambos' };
+  const exportSpecies = async () => {
+    const list = getSpecies().slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    if (!list.length) { $('speciesError').textContent = 'Não há espécies cadastradas para exportar.'; return false; }
+    try {
+      const XLSX = await loadXLSX();
+      const ws = XLSX.utils.json_to_sheet(list.map(s => ({ 'Nome Popular': s.name, 'Nome Científico': s.sci || '', 'Habitat': HABITAT_LABEL[s.habitat] || '', 'Pontuação': s.points })), { header: ['Nome Popular', 'Nome Científico', 'Habitat', 'Pontuação'] });
+      ws['!cols'] = [{ wch: 30 }, { wch: 32 }, { wch: 16 }, { wch: 12 }];
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Espécies');
+      XLSX.writeFile(wb, `especies-ajing-game-${localDateValue(new Date())}.xlsx`);
+      $('speciesSaved').textContent = `Planilha com ${list.length} ${list.length === 1 ? 'espécie' : 'espécies'} baixada.`;
+      return true;
+    } catch (_) { $('speciesError').textContent = 'Não foi possível gerar a planilha. Verifique a conexão e tente de novo.'; return false; }
+  };
+  $('spExportBtn').addEventListener('click', () => { $('speciesError').textContent = ''; exportSpecies(); });
+  // Limpar a lista completa (com confirmação digitada)
+  $('spClearBtn').addEventListener('click', () => {
+    if (!isAdmin()) return;
+    const n = getSpecies().length;
+    if (!n) { $('speciesError').textContent = 'A lista de espécies já está vazia.'; return; }
+    $('spClearCount').textContent = fmtNum(n); $('spClearConfirm').value = ''; $('spClearError').textContent = '';
+    $('spClearPanel').hidden = false; $('spClearPanel').scrollIntoView({ behavior: 'smooth', block: 'center' }); softFocus($('spClearConfirm'));
+  });
+  $('spClearCancel').addEventListener('click', () => { $('spClearPanel').hidden = true; });
+  $('spClearExport').addEventListener('click', () => exportSpecies());
+  $('spClearDo').addEventListener('click', async () => {
+    if (!isAdmin()) return;
+    const err = $('spClearError');
+    if ($('spClearConfirm').value.trim().toUpperCase() !== 'LIMPAR') { err.textContent = 'Digite LIMPAR para confirmar.'; $('spClearConfirm').focus(); return; }
+    const current = getSpecies(), btn = $('spClearDo'); btn.disabled = true; err.textContent = '';
+    try {
+      // arquiva a lista (para reaproveitar os códigos) e impede que as espécies iniciais sejam recriadas sozinhas
+      const keep = new Map(((fb.config('speciesArchive') || {}).list || []).map(s => [s.id, s]));
+      current.forEach(s => keep.set(s.id, { id: s.id, name: s.name, sci: s.sci || '', habitat: s.habitat || '', points: s.points }));
+      await fb.setConfig('speciesArchive', { list: [...keep.values()], clearedAt: Date.now() });
+      await fb.setConfig('meta', { ...(fb.config('meta') || {}), speciesSeeded: true });
+      await fb.writeQuiet('ajing-species', []);
+      $('spClearPanel').hidden = true; $('speciesError').textContent = '';
+      $('speciesSaved').textContent = `Lista limpa: ${fmtNum(current.length)} ${current.length === 1 ? 'espécie removida' : 'espécies removidas'}. Importe uma planilha ou cadastre as espécies novamente.`;
+      renderAll();
+    } catch (e2) { err.textContent = 'Não foi possível limpar a lista. ' + fb.errMsg(e2); }
+    finally { btn.disabled = false; }
   });
   $('speciesAdminList').addEventListener('change', e => { if (!isAdmin()) return;
     const inp = e.target.closest('[data-points]'); if (!inp) return;
@@ -4688,7 +4786,7 @@ await new Promise(resolve => {
         Object.assign(s, { sci: r.sci || s.sci || '', habitat: r.habitat, points: r.points }); updated++;
       } else {
         if (list.some(s => normKey(s.name) === normKey(r.name))) return; // cadastrada por outra pessoa enquanto a prévia estava aberta
-        let id = uid(); while (ids.has(id)) id = uid(); ids.add(id);
+        let id = archivedSpeciesId(r.name, ids) || uid(); while (ids.has(id)) id = uid(); ids.add(id);
         list.push({ id, name: r.name, sci: r.sci, habitat: r.habitat, points: r.points }); added++;
       }
     });
@@ -5714,7 +5812,7 @@ await new Promise(resolve => {
       </form>
     </li>`; }).join('') : '<li class="empty-row">Nenhuma postagem aguardando validação.</li>';
     const ph = histApply('posts', postHistory, p => `${displayName(p.user)} ${p.user} ${p.speciesName} ${p.place || ''}`); histFooter('posts', ph, 'postHistCount', 'postHistMore');
-    $('postReviewHistory').innerHTML = ph.shown.length ? ph.shown.map(p => `<li class="review-history-row" data-post-history="${esc(p.id)}"><span class="grow"><b>${esc(displayName(p.user))} · ${esc(p.speciesName)}</b><small>${p.status === 'approved' ? 'Pontuação validada' : 'Pontuação recusada'} por ${esc(displayName(p.reviewer || ''))} em ${fmtShort(p.reviewed)} · captura em ${captureDateLabel(p.captureDate)} · ${ptsLabel(postPoints(p))}</small></span><span class="req-status ${p.status}">${p.status === 'approved' ? 'Validada' : 'Recusada'}</span><button class="btn btn-ghost review-edit-btn" type="button" data-review-edit="post"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar análise</button><form class="review-edit-panel" data-review-form="post" hidden>
+    $('postReviewHistory').innerHTML = ph.shown.length ? ph.shown.map(p => `<li class="review-history-row" data-post-history="${esc(p.id)}"><span class="grow"><b>${esc(displayName(p.user))} · ${esc(p.speciesName)}</b><small>${p.status === 'approved' && p.reviewer === 'auto' ? 'Pontuação aprovada automaticamente (foto com metadados dentro do prazo)' : `${p.status === 'approved' ? 'Pontuação validada' : 'Pontuação recusada'} por ${esc(displayName(p.reviewer || ''))}`} em ${fmtShort(p.reviewed)} · captura em ${captureDateLabel(p.captureDate)} · ${ptsLabel(postPoints(p))}</small></span><span class="req-status ${p.status}">${p.status === 'approved' ? (p.reviewer === 'auto' ? 'Automática' : 'Validada') : 'Recusada'}</span><button class="btn btn-ghost review-edit-btn" type="button" data-review-edit="post"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar análise</button><form class="review-edit-panel" data-review-form="post" hidden>
       <div class="field"><label>Resultado da análise</label><select data-edit-field="status"><option value="approved" ${p.status === 'approved' ? 'selected' : ''}>Aprovada</option><option value="rejected" ${p.status === 'rejected' ? 'selected' : ''}>Recusada</option><option value="pending">Voltar para análise</option></select></div>
       <div class="field"><label>Espécie</label><select data-edit-field="speciesId">${!getSpecies().some(s => s.id === p.speciesId) ? `<option value="${esc(p.speciesId || '')}" selected>${esc(p.speciesName)} (fora da lista)</option>` : ''}${getSpecies().map(s => `<option value="${esc(s.id)}" ${s.id === p.speciesId ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
       <div class="field"><label>Data da captura</label><input type="date" data-edit-field="captureDate" value="${esc(p.captureDate || '')}"></div>
@@ -5786,7 +5884,7 @@ await new Promise(resolve => {
       if (!Number.isInteger(points) || points < 1 || points > 1000) { err.textContent = 'A pontuação precisa ser um número inteiro de 1 a 1000.'; f('points').focus(); return; }
       const species = readJSON('ajing-species', []);
       if (species.some(s => norm(s.name) === norm(name))) { err.textContent = `"${name}" já está cadastrada. Recuse a solicitação ou altere o nome.`; return; }
-      const spId = uid();
+      const spId = archivedSpeciesId(name, new Set(species.map(s => s.id))) || uid();
       species.push({ id: spId, name, sci, points, habitat }); writeJSON('ajing-species', species);
       Object.assign(r, { status: 'approved', name, sci, habitat, finalPoints: points, speciesId: spId, reviewed: Date.now(), reviewer: currentUser() }); saveRequests(list);
       setReqPhoto(id, '').catch(() => {});
