@@ -3247,10 +3247,10 @@ await new Promise(resolve => {
   };
   $('logoutBtn').addEventListener('click', logout);
 
-  /* ===== Sessão: encerrada após 20 minutos sem atividade =====
+  /* ===== Sessão: encerrada após 3 horas sem atividade =====
      A última atividade fica no navegador (vale para todas as abas abertas do site). Ao voltar depois de
-     mais de 20 minutos parado, inclusive reabrindo o site, a pessoa precisa entrar de novo. */
-  const IDLE_LIMIT = 20 * 60 * 1000, IDLE_KEY = 'ajing-last-activity';
+     mais de 3 horas parado, inclusive reabrindo o site, a pessoa precisa entrar de novo. */
+  const IDLE_LIMIT = 3 * 60 * 60 * 1000, IDLE_KEY = 'ajing-last-activity';
   let idleLastWrite = 0, idleEnding = false;
   const touchActivity = (force = false) => {
     const now = Date.now(); if (!force && now - idleLastWrite < 15000) return;
@@ -3266,7 +3266,7 @@ await new Promise(resolve => {
     idleEnding = true;
     try {
       await logout();
-      openLogin(); $('loginError').textContent = 'Sua sessão foi encerrada após 20 minutos sem atividade. Entre novamente.';
+      openLogin(); $('loginError').textContent = 'Sua sessão foi encerrada após 3 horas sem atividade. Entre novamente.';
     } finally { idleEnding = false; }
   };
   setInterval(checkIdle, 30000);
