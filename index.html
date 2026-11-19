@@ -2327,7 +2327,7 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword, setPersistence, inMemoryPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection as fsCol, doc as fsDoc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, arrayUnion, arrayRemove, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection as fsCol, doc as fsDoc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, arrayUnion, arrayRemove, runTransaction, deleteField } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 /* =====================================================================
    CONFIGURAÇÃO DO FIREBASE
@@ -2439,7 +2439,15 @@ const syncCol = (name, entries, remote = true) => {
   const ops = [];
   if (remote) {
     Object.keys(prev).forEach(id => { if (!(id in next)) ops.push(deleteDoc(fsDoc(fdb, name, id))); });
-    Object.entries(next).forEach(([id, data]) => { if (!prev[id] || !same(prev[id], data)) ops.push(setDoc(fsDoc(fdb, name, id), data)); });
+    Object.entries(next).forEach(([id, data]) => {
+      if (!prev[id]) { ops.push(setDoc(fsDoc(fdb, name, id), data)); return; }
+      if (same(prev[id], data)) return;
+      // Atualização de um registro que já existia: usa updateDoc, que só altera documentos existentes no banco.
+      // Assim, um aparelho com dados antigos em cache não recria um registro que foi excluído em outro lugar.
+      const patch = { ...data };
+      Object.keys(prev[id]).forEach(k => { if (!(k in data)) patch[k] = deleteField(); });
+      ops.push(updateDoc(fsDoc(fdb, name, id), patch).catch(err => { if (err && err.code === 'not-found') return; throw err; }));
+    });
   }
   C[name] = next;
   return Promise.all(ops);
