@@ -3702,6 +3702,7 @@ await new Promise(resolve => {
   };
   $('feed').addEventListener('click', handlePostListClick);
   $('myCaptureFeed').addEventListener('click', handlePostListClick);
+  $('memberPortfolio').addEventListener('click', handlePostListClick); // abrir a foto também a partir do portfólio
   $('postViewClose').addEventListener('click', closePostView);
   postView.addEventListener('click', async e => {
     if (e.target === postView) return closePostView();
@@ -5667,6 +5668,8 @@ await new Promise(resolve => {
     return Object.values(choices).map(id => byId.get(id)).filter(Boolean);
   };
   const renderMembers = () => {
+    // portfólio aberto acompanha as atualizações (curtidas, edições), sem mudar a posição da página
+    if (portfolioUser && !$('memberPortfolio').hidden) openPortfolio(portfolioUser, false);
     const q = normalizeFeedSearch(memberFilter);
     const active = getUsers().filter(u => u.active !== false && u.username).sort((a,b) => displayName(a.username).localeCompare(displayName(b.username), 'pt-BR'));
     const list = active.filter(u => !q || [u.username, displayName(u.username), fishingName(u.username)].some(v => normalizeFeedSearch(v).includes(q)));
