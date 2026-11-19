@@ -1432,6 +1432,19 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
 .chip-check span{line-height:1.2}
 .post-points-badge.reduced{background:rgba(120,90,0,.78)}
 .catch-note{display:block;font-size:.72rem;font-weight:500;opacity:.8;margin-top:2px}
+/* Filtros do ranking: menus numa linha só no celular */
+.rank-mobile-filters{display:none}
+@media (max-width:720px){
+  .rank-filter-row{display:none!important}
+  /* reduzido visualmente (a fonte continua com 16 px, então o iPhone não amplia a tela ao tocar) */
+  .rank-mobile-filters{display:flex;gap:7px;width:calc(100% / .86);transform:scale(.86);transform-origin:left top;margin:0 0 6px}
+  .rank-mobile-filters select{-webkit-appearance:none;appearance:none;min-width:0;padding:9px 22px 9px 9px;font-size:16px;font-weight:600;border-radius:10px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%2364748b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;background-size:11px 8px;text-overflow:ellipsis}
+  #rankSelView{flex:1.05 1 0} #rankSelScope{flex:1.25 1 0} #rankSelMode{flex:.95 1 0}
+}
+@media (max-width:374px){
+  .rank-mobile-filters{width:calc(100% / .8);transform:scale(.8);margin-bottom:2px}
+  .rank-mobile-filters select[hidden]{display:none}
+}
 </style>
 <script>
 (() => {
@@ -1712,6 +1725,11 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
               <button type="button" data-rank="count" aria-pressed="false" aria-label="Quantidade de capturas"><span class="rank-filter-long">Quantidade</span><span class="rank-filter-short">Capturas</span></button>
             </div>
           </div></div>
+          <div class="rank-mobile-filters" aria-label="Filtros do ranking">
+            <select id="rankSelView" aria-label="Visualização do ranking"><option value="current">Ranking</option><option value="history">Campeões</option></select>
+            <select id="rankSelScope" aria-label="Período do ranking"><option value="season">Temporada</option><option value="general">Geral</option><option value="champ">Campeonato</option></select>
+            <select id="rankSelMode" aria-label="Ordenar ranking por"><option value="points">Pontos</option><option value="count">Capturas</option></select>
+          </div>
           <div id="rankCurrentView">
           <div class="edition-bar" id="editionBar"></div>
           <p class="rank-rule" id="rankRule"></p>
@@ -4122,6 +4140,23 @@ await new Promise(resolve => {
     renderRankChampionHistory();
   });
   document.querySelectorAll('[data-rank]').forEach(b => b.addEventListener('click', () => { rankMode = b.dataset.rank; renderRanking(); }));
+  // Celular: os filtros do ranking viram três menus numa linha, sincronizados com os botões (que continuam valendo no computador)
+  const syncRankSelects = () => {
+    const pressed = sel => { const b = document.querySelector(`${sel}[aria-pressed="true"]`); return b ? b : null; };
+    const v = pressed('[data-rank-view]'), s = pressed('[data-rank-scope]'), m = pressed('[data-rank]');
+    if (v) $('rankSelView').value = v.dataset.rankView;
+    if (s) $('rankSelScope').value = s.dataset.rankScope;
+    if (m) $('rankSelMode').value = m.dataset.rank;
+    const champBtn = document.querySelector('[data-rank-scope="champ"]'), champOpt = $('rankSelScope').querySelector('option[value="champ"]');
+    champOpt.hidden = champOpt.disabled = !champBtn || champBtn.hidden;
+    const controlsHidden = $('rankControls').hidden || getComputedStyle($('rankControls')).display === 'none' || $('rankSelView').value === 'history';
+    $('rankSelScope').hidden = $('rankSelMode').hidden = controlsHidden;
+  };
+  $('rankSelView').addEventListener('change', e => document.querySelector(`[data-rank-view="${e.target.value}"]`)?.click());
+  $('rankSelScope').addEventListener('change', e => document.querySelector(`[data-rank-scope="${e.target.value}"]`)?.click());
+  $('rankSelMode').addEventListener('change', e => document.querySelector(`[data-rank="${e.target.value}"]`)?.click());
+  new MutationObserver(syncRankSelects).observe(document.querySelector('.rank-filter-row'), { attributes: true, subtree: true, attributeFilter: ['aria-pressed', 'hidden', 'style', 'class'] });
+  syncRankSelects();
   document.querySelectorAll('[data-rank-scope]').forEach(b => b.addEventListener('click', () => { rankScope = b.dataset.rankScope; renderRanking(); }));
 
   /* ===== Habitat das espécies ===== */
