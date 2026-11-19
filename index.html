@@ -1445,6 +1445,8 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
   .rank-mobile-filters{width:calc(100% / .8);transform:scale(.8);margin-bottom:2px}
   .rank-mobile-filters select[hidden]{display:none}
 }
+/* Administração › Usuários: lista sem limite de altura (cresce com a página, sem barra de rolagem própria) */
+.admin-list.user-list{max-height:none;overflow:visible}
 </style>
 <script>
 (() => {
@@ -4687,7 +4689,7 @@ await new Promise(resolve => {
     const ub = (act, u, label, path, cls) => `<button class="post-del ${cls || ''}" type="button" data-user-act="${act}" data-user="${esc(u)}" aria-label="${label}" title="${label}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg></button>`;
     $('userAdminList').innerHTML = getUsers().map(u => { const self = u.username === me, off = u.active === false;
       const hookCount = Math.max(0, Number(u.goldHooks) || 0);
-      return `<li class="${off ? 'off' : ''}"><span class="grow"><b>${esc(u.username)}</b> <span class="muted">${self ? '(você)' : ''}</span></span>${hookCount ? `<span class="user-hook-count" title="${hookCount} insígnias de anzol dourado">${hookCount} anzóis</span>` : ''}${off ? '<span class="status-badge">Desativado</span>' : ''}<span class="role-badge ${u.role === 'admin' ? 'admin' : ''}">${u.role === 'admin' ? 'Administrador' : 'Membro'}</span>${ub('crown', u.username, u.seasonChampion ? 'Remover coroa de campeão da temporada' : 'Definir como campeão da temporada', ui.crown, 'crown-btn' + (u.seasonChampion ? ' crown-active' : ''))}${ub('hook', u.username, 'Adicionar uma insígnia de anzol dourado', ui.hook, 'crown-btn')}${ub('reset', u.username, 'Enviar link de redefinição de senha para ' + u.username, ui.key)}${ub('edit', u.username, 'Editar usuário ' + u.username, ui.edit)}${self ? '' : ub('toggle', u.username, (off ? 'Reativar ' : 'Desativar ') + u.username, ui.off) + ub('delete', u.username, 'Excluir ' + u.username, ui.del)}</li>`; }).join('');
+      return `<li class="${off ? 'off' : ''}"><span class="grow"><b>${esc(u.username)}</b> <span class="muted">${self ? '(você)' : ''}</span></span>${hookCount ? `<span class="user-hook-count" title="${hooksLabel(hookCount)}">${hookCount} ${hookCount === 1 ? 'anzol' : 'anzóis'}</span>` : ''}${off ? '<span class="status-badge">Desativado</span>' : ''}<span class="role-badge ${u.role === 'admin' ? 'admin' : ''}">${u.role === 'admin' ? 'Administrador' : 'Membro'}</span>${ub('crown', u.username, u.seasonChampion ? 'Remover coroa de campeão da temporada' : 'Definir como campeão da temporada', ui.crown, 'crown-btn' + (u.seasonChampion ? ' crown-active' : ''))}${ub('hook', u.username, 'Adicionar uma insígnia de anzol dourado', ui.hook, 'crown-btn')}${ub('reset', u.username, 'Enviar link de redefinição de senha para ' + u.username, ui.key)}${ub('edit', u.username, 'Editar usuário ' + u.username, ui.edit)}${self ? '' : ub('toggle', u.username, (off ? 'Reativar ' : 'Desativar ') + u.username, ui.off) + ub('delete', u.username, 'Excluir ' + u.username, ui.del)}</li>`; }).join('');
     renderLevelsAdminForm();
   };
   let editingSpeciesId = null;
