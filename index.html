@@ -2736,15 +2736,15 @@ const fb = {
   }
 };
 
-// Inicialização: dados públicos, depois o login guardado e os dados de membro
+// Inicialização: começa dados públicos, conteúdo adiado e sessão em paralelo
 // Array.map passa (item, índice, array); chame explicitamente para não confundir o índice com a referência Firestore.
-await Promise.all(FIRST_COLS.map(name => listen(name)));
-if (!speciesFromList()) ensureCol('species').then(maybeMigrateSpecies);
+const firstReady = Promise.all(FIRST_COLS.map(name => listen(name)));
+firstReady.then(() => { if (!speciesFromList()) ensureCol('species').then(maybeMigrateSpecies); });
 const deferredReady = Promise.all(DEFERRED_COLS.map(name => listen(name))).then(() => {
   deferredLoaded = true;
   if (fbHooks.refresh) DEFERRED_COLS.forEach(name => fbHooks.refresh(name));
 });
-await new Promise(resolve => {
+const authReady = new Promise(resolve => {
   let first = true;
   onAuthStateChanged(fbAuth, user => {
     authSeq = authSeq.then(async () => {
@@ -2760,6 +2760,9 @@ await new Promise(resolve => {
     });
   });
 });
+// Antes, a validação da sessão só começava após todos os dados públicos. Esperar os dois
+// fluxos juntos mantém os dados prontos para a interface e encurta a espera inicial.
+await Promise.all([firstReady, authReady]);
 
 (() => {
   const $ = id => document.getElementById(id);
