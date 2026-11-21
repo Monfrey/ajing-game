@@ -485,6 +485,8 @@ select{font:inherit;color:inherit}
 .role-badge.admin{background:color-mix(in srgb,var(--orange) 18%,transparent);color:var(--ink)}
 /* Espécies */
 .species-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.species-search{max-width:420px;margin:12px 0}
+@media (max-width:600px){.species-search{max-width:none;margin:12px 0 16px}.species-search input{min-height:46px;padding-inline:12px;font-size:16px}.species-search .hint{line-height:1.35}}
 .species-card{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);overflow:hidden;display:flex;flex-direction:column}
 .sp-photo{aspect-ratio:4/3;background:#fff;display:grid;place-items:center;color:var(--muted)}
 .sp-photo img{width:84%;height:84%;object-fit:contain;background:#fff}
@@ -1744,8 +1746,9 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
         <section class="panel" role="tabpanel" data-panel="species" hidden>
           <div class="panel-head"><div><h3>Espécies</h3><p>Espécies válidas para o Social Fish, com a pontuação no ranking e o total de capturas.</p></div><button class="btn btn-ghost admin-only" type="button" data-goto="admin" data-goto-sec="species" hidden>Gerenciar espécies</button><button class="btn btn-primary member-only" type="button" data-open-req hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Solicitar nova espécie</button></div>
           <div class="seg hab-filter" role="group" aria-label="Filtrar espécies por habitat"><button type="button" data-hab-filter="all" aria-pressed="true">Todas</button><button type="button" data-hab-filter="salt" aria-pressed="false">Água salgada</button><button type="button" data-hab-filter="fresh" aria-pressed="false">Água doce</button></div>
+          <div class="field species-search"><label for="speciesSearch">Pesquisar espécies</label><input id="speciesSearch" type="search" autocomplete="off" placeholder="Nome popular ou científico" aria-describedby="speciesSearchHint"><small class="hint" id="speciesSearchHint">A pesquisa funciona junto com o filtro de habitat.</small></div>
           <div class="species-grid" id="speciesGrid"></div>
-          <p class="empty-row" id="speciesFilterEmpty" hidden>Nenhuma espécie cadastrada para esse habitat.</p>
+          <p class="empty-row" id="speciesFilterEmpty" hidden></p>
           <div class="empty" id="speciesEmpty" hidden><h4>Nenhuma espécie cadastrada</h4><p>A lista de espécies é mantida pelos administradores.</p></div>
           <div class="sp-pending" id="spPendingBox" hidden>
             <h4 class="req-title">Suas solicitações</h4>
@@ -3055,13 +3058,13 @@ await new Promise(resolve => {
   /* ===== Navegação entre site e área de membros ===== */
   const home = $('home'), membersPage = $('membersPage');
   const showHome = () => { membersPage.hidden = true; home.hidden = false; $('newPostBtn').hidden = true; };
-  const showMembers = () => {
+  const showMembers = (initialTab = null) => {
     home.hidden = true; membersPage.hidden = false;
     document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
     document.querySelectorAll('.member-only').forEach(el => el.hidden = isAdmin());
     updateUserChip(); renderAll();
     // Reaplica a aba atual: além dos painéis, ela decide se o botão de postar aparece
-    showTab(store.get('ajing-member-tab', true) || 'social');
+    showTab(initialTab || store.get('ajing-member-tab', true) || 'social');
     if (isAdmin()) seedSpecies();
     $('membersBtnLabel').textContent = 'Minha área'; $('membersBtn').setAttribute('aria-label', 'Minha área');
     window.scrollTo({ top: 0 });
@@ -3222,7 +3225,7 @@ await new Promise(resolve => {
       }
       if (u.active === false) { await fb.signOut(); loginError.textContent = 'Esta conta está desativada. Fale com um administrador.'; return; }
       await Promise.all([loadPosts(), loadReqPhotos()]);
-      touchActivity(true); loginForm.reset(); closeLogin(); showMembers(); showTab('social');
+      loginForm.reset(); closeLogin(); showMembers('social');
     } catch (err) { loginError.textContent = fb.errMsg(err); }
     finally { btn.disabled = false; }
   });
@@ -3266,7 +3269,6 @@ await new Promise(resolve => {
   });
   const logout = async () => {
     try { await fb.signOut(); } catch(_) {}
-    try { localStorage.removeItem('ajing-last-activity'); } catch (_) {}
     store.del('ajing-member-tab', true);
     $('membersBtnLabel').textContent = 'Login / Sign up'; $('membersBtn').setAttribute('aria-label', 'Login / Sign up');
     // Ao sair, sempre volta para o início da página inicial (mesmo que antes estivesse na página Ajing Game)
@@ -3274,31 +3276,6 @@ await new Promise(resolve => {
     syncAuthUI();
   };
   $('logoutBtn').addEventListener('click', logout);
-
-  /* ===== Sessão: encerrada após 3 horas sem atividade =====
-     A última atividade fica no navegador (vale para todas as abas abertas do site). Ao voltar depois de
-     mais de 3 horas parado, inclusive reabrindo o site, a pessoa precisa entrar de novo. */
-  const IDLE_LIMIT = 3 * 60 * 60 * 1000, IDLE_KEY = 'ajing-last-activity';
-  let idleLastWrite = 0, idleEnding = false;
-  const touchActivity = (force = false) => {
-    const now = Date.now(); if (!force && now - idleLastWrite < 15000) return;
-    idleLastWrite = now; try { localStorage.setItem(IDLE_KEY, String(now)); } catch (_) {}
-  };
-  const lastActivity = () => { const v = Number(localStorage.getItem(IDLE_KEY)); return Number.isFinite(v) && v > 0 ? v : 0; };
-  ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(type => window.addEventListener(type, () => { if (currentUser()) touchActivity(); }, { passive: true, capture: true }));
-  const checkIdle = async () => {
-    if (!currentUser() || idleEnding) return;
-    const last = lastActivity();
-    if (!last) { touchActivity(true); return; }
-    if (Date.now() - last < IDLE_LIMIT) return;
-    idleEnding = true;
-    try {
-      await logout();
-      openLogin(); $('loginError').textContent = 'Sua sessão foi encerrada após 3 horas sem atividade. Entre novamente.';
-    } finally { idleEnding = false; }
-  };
-  setInterval(checkIdle, 30000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkIdle(); });
 
   /* ===== Abas ===== */
   const tabs = document.querySelectorAll('[data-tab]'), panels = document.querySelectorAll('[data-panel]');
@@ -4215,13 +4192,17 @@ await new Promise(resolve => {
   /* ===== Espécies (visão do membro) ===== */
   const renderSpecies = () => {
     document.querySelectorAll('[data-hab-filter]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.habFilter === habFilter)));
-    const all = getSpecies(), list = all.filter(s => habitatMatch(s.habitat, habFilter));
-    $('speciesFilterEmpty').hidden = !all.length || list.length > 0;
+    const all = getSpecies(), query = histNorm($('speciesSearch').value);
+    const list = all.filter(s => habitatMatch(s.habitat, habFilter) && (!query || histNorm(`${s.name} ${s.sci || ''}`).includes(query)));
+    const filterEmpty = $('speciesFilterEmpty');
+    filterEmpty.textContent = query ? 'Nenhuma espécie corresponde à pesquisa e ao habitat selecionados.' : 'Nenhuma espécie cadastrada para esse habitat.';
+    filterEmpty.hidden = !all.length || list.length > 0;
     const count = id => posts.filter(p => p.speciesId === id && isPostScored(p)).length;
     $('speciesGrid').innerHTML = list.map(s => { const n = count(s.id);
       return `<article class="species-card sp-nophoto"><div class="sp-info"><div><b>${esc(s.name)}</b>${s.sci ? `<i>${esc(s.sci)}</i>` : ''}${habitatChip(s.habitat)}</div><div class="sc-right"><strong>${ptsLabel(s.points)}</strong><span>${n} ${n === 1 ? 'captura' : 'capturas'}</span></div></div></article>`; }).join('');
     $('speciesEmpty').hidden = all.length > 0;
   };
+  $('speciesSearch').addEventListener('input', renderSpecies);
 
   /* ===== Administração ===== */
   const siteCopyNodes = [...document.querySelectorAll('[data-site-copy]')];
@@ -6719,8 +6700,8 @@ await new Promise(resolve => {
     reloadLevels(); if (!rankAwardDirty) { rankAwardConfig = readRankAwardConfig(); renderRankAwardForm(); }
     renderChampion();
     if (fb.authUid() && !currentUser()) await fb.signOut().catch(() => {});
-    // O site sempre abre na página inicial; quem já está logado entra pelo botão "Minha área".
-    if (currentUser()) { $('membersBtnLabel').textContent = 'Minha área'; $('membersBtn').setAttribute('aria-label', 'Minha área'); updateUserChip(); checkIdle(); }
+    // Uma sessão ativa abre direto no Social Fish.
+    if (currentUser()) { $('membersBtnLabel').textContent = 'Minha área'; $('membersBtn').setAttribute('aria-label', 'Minha área'); showMembers('social'); }
     else showTab('social');
   });
 })();
