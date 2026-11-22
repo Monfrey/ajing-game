@@ -2171,7 +2171,7 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
             <div class="empty" id="myCapturesEmpty" hidden><h4>Nenhuma captura ainda</h4><p>Suas publicações do Social Fish aparecerão aqui.</p><button class="btn btn-primary" type="button" id="captureFromProfile">Publicar captura</button></div>
           </div>
           <div data-prof-panel="messages" hidden>
-            <div class="panel-head"><div><h4>Caixa de mensagens</h4><p class="muted">Avisos privados sobre a análise das suas publicações.</p></div></div>
+            <div class="panel-head"><div><h4>Caixa de mensagens</h4><p class="muted">Avisos sobre publicações e mensagens enviadas pelo formulário de contato.</p></div></div>
             <ul class="admin-list" id="memberMessagesList"></ul>
           </div>
           <div data-prof-panel="request" hidden>
@@ -2395,7 +2395,7 @@ let deferredLoaded = false;
 // Imagens usadas apenas na área autenticada não são baixadas para visitantes da página pública.
 const MEMBER_COLS = ['banners', 'eventRequests', 'speciesRequests', 'requestPhotos'];
 // Carregadas só quando uma tela precisa delas (economiza leituras do plano gratuito)
-const LAZY_COLS = ['postAudits'];
+const LAZY_COLS = ['postAudits', 'contactMessages'];
 const C = {}; [...PUBLIC_COLS, ...MEMBER_COLS, ...LAZY_COLS].forEach(n => { C[n] = {}; }); C.memberApplications = {};
 C.postAudits = {}; C.memberMessages = {};
 const fbHooks = { refresh: null };
@@ -2609,10 +2609,18 @@ const postsDB = {
   }
 };
 const memberMessagesDB = {
-  all: () => Object.values(C.memberMessages).map(m => ({ ...m })).sort((a, b) => (b.created || 0) - (a.created || 0)),
-  markRead: async id => {
-    await updateDoc(fsDoc(fdb, 'memberMessages', fbUser().username, 'messages', id), { read: true });
-    if (C.memberMessages[id]) C.memberMessages = { ...C.memberMessages, [id]: { ...C.memberMessages[id], read: true } };
+  all: () => [
+    ...Object.values(C.memberMessages).map(m => ({ ...m })),
+    ...(fbIsAdmin() ? Object.values(C.contactMessages || {}).map(m => ({ ...m, type: 'contact' })) : [])
+  ].sort((a, b) => (b.created || 0) - (a.created || 0)),
+  markRead: async message => {
+    if (message.type === 'contact') {
+      await updateDoc(fsDoc(fdb, 'contactMessages', message.id), { read: true });
+      if (C.contactMessages[message.id]) C.contactMessages = { ...C.contactMessages, [message.id]: { ...C.contactMessages[message.id], read: true } };
+      return;
+    }
+    await updateDoc(fsDoc(fdb, 'memberMessages', fbUser().username, 'messages', message.id), { read: true });
+    if (C.memberMessages[message.id]) C.memberMessages = { ...C.memberMessages, [message.id]: { ...C.memberMessages[message.id], read: true } };
   },
   audit: id => C.postAudits[id] ? clean(C.postAudits[id]) : null
 };
@@ -5218,7 +5226,7 @@ await Promise.all([firstReady, authReady]);
   });
 
   /* ===== Carrossel da página inicial ===== */
-  const TARGETS = [['signup','Tela de cadastro (novos membros)'],['#conceito','Seção: Conceito'],['#origem','Seção: Origem'],['#adaptacoes','Seção: Adaptações'],['#trabalhos','Seção: Trabalhos da isca'],['#fundamentos','Seção: Fundamentos'],['members','Área de membros'],['url','Link externo']];
+  const TARGETS = [['signup','Tela de cadastro (novos membros)'],['#conceito','Seção: Conceito'],['#origem','Seção: Origem'],['#adaptacoes','Seção: Adaptações'],['#trabalhos','Seção: Trabalhos da isca'],['#fundamentos','Seção: Fundamentos'],['members','Área de membros'],['contact','Formulário de contato'],['url','Link externo']];
   const defaultChampionSlide = () => ({ id: uid(), type: 'champion', visible: true, title: 'Campeão da edição', sub: '', image: '',
     text: 'O título vai para quem soma mais pontos no ranking do Social Fish durante a edição.',
     b1: { label: '', target: '#conceito', url: '' }, b2: { label: '', target: '#conceito', url: '' } });
@@ -5267,6 +5275,7 @@ await Promise.all([firstReady, authReady]);
     if (!b || !b.label) return '';
     if (b.target === 'members') return `<button class="btn ${cls}" type="button" data-open-members>${esc(b.label)}</button>`;
     if (b.target === 'signup') return currentUser() ? '' : `<button class="btn ${cls}" type="button" data-open-signup>${esc(b.label)}</button>`;
+    if (b.target === 'contact') return `<a class="btn ${cls}" href="contato.html">${esc(b.label)}</a>`;
     if (b.target === 'url') return /^https?:\/\//i.test(b.url || '') ? `<a class="btn ${cls}" href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.label)}</a>` : '';
     return `<a class="btn ${cls}" href="${esc(b.target)}">${esc(b.label)}</a>`;
   };
@@ -5807,7 +5816,9 @@ await Promise.all([firstReady, authReady]);
     $('cntMyMessages').textContent = unread || '';
     const tabBadge = $('cntProfileTab'); tabBadge.textContent = unread > 9 ? '9+' : String(unread); tabBadge.hidden = !unread;
     tabBadge.setAttribute('aria-label', `${unread} ${unread === 1 ? 'mensagem não lida' : 'mensagens não lidas'}`);
-    $('memberMessagesList').innerHTML = messages.length ? messages.map(m => `<li class="member-message ${m.read ? '' : 'unread'}"><span class="grow"><b>Publicação recusada · ${esc(m.speciesName || 'Captura')}</b><small>${fmtShort(m.created)} · Avaliada por ${esc(m.reviewer === 'auto' ? 'Sistema' : displayName(m.reviewer || ''))}</small><span>${esc(m.reason)}</span></span></li>`).join('') : '<li class="empty-row">Você ainda não tem mensagens.</li>';
+    $('memberMessagesList').innerHTML = messages.length ? messages.map(m => m.type === 'contact'
+      ? `<li class="member-message ${m.read ? '' : 'unread'}"><span class="grow"><b>Contato pelo site · ${esc(m.subject)}</b><small>${fmtShort(m.created)} · ${esc(m.fullName)} · ${esc(m.email)}${m.phone ? ' · ' + esc(m.phone) : ''}</small><span>${esc(m.message)}</span></span></li>`
+      : `<li class="member-message ${m.read ? '' : 'unread'}"><span class="grow"><b>Publicação recusada · ${esc(m.speciesName || 'Captura')}</b><small>${fmtShort(m.created)} · Avaliada por ${esc(m.reviewer === 'auto' ? 'Sistema' : displayName(m.reviewer || ''))}</small><span>${esc(m.reason)}</span></span></li>`).join('') : '<li class="empty-row">Você ainda não tem mensagens.</li>';
   };
   $('myCaptureFeed').addEventListener('click', async e => {
     const button = e.target.closest('[data-portfolio-pick]'); if (!button) return;
@@ -5957,7 +5968,11 @@ await Promise.all([firstReady, authReady]);
   };
   document.querySelectorAll('[data-prof-sec]').forEach(b => b.addEventListener('click', () => {
     showProfSec(b.dataset.profSec);
-    if (b.dataset.profSec === 'messages') fb.memberMessagesDB.all().filter(m => !m.read).forEach(m => fb.memberMessagesDB.markRead(m.id).then(renderMemberMessages).catch(() => {}));
+    if (b.dataset.profSec === 'messages') {
+      const markUnread = () => fb.memberMessagesDB.all().filter(m => !m.read).forEach(m => fb.memberMessagesDB.markRead(m).then(renderMemberMessages).catch(() => {}));
+      if (isAdmin()) fb.ensure('contactMessages').then(() => { renderMemberMessages(); markUnread(); }).catch(() => showNotice('Não foi possível carregar as mensagens de contato.'));
+      else markUnread();
+    }
   }));
 
   // Janela de solicitação (aberta pela aba Espécies ou pelo perfil)
@@ -6788,6 +6803,10 @@ await Promise.all([firstReady, authReady]);
       }
       return;
     }
+    if (changed.length === 1 && changed[0] === 'contactMessages') {
+      renderMemberMessages();
+      return;
+    }
     const loads = [];
     if (touches('posts')) loads.push(loadPosts());
     if (touches('species') && isAdmin()) seedSpecies();
@@ -6807,7 +6826,7 @@ await Promise.all([firstReady, authReady]);
     if (touches('posts', 'rankHistory', 'championships', 'slides', 'config', 'users', 'profiles')) renderChampion();
     if (!membersPage.hidden) {
       if (touches('users')) document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
-      const memberDataChanged = touches('users', 'species', 'championships', 'rankHistory', 'profiles', 'posts', 'speciesPhotos', 'banners', 'slides', 'levelIcons', 'eventRequests', 'speciesRequests', 'requestPhotos', 'postAudits', 'memberMessages', 'memberApplications');
+      const memberDataChanged = touches('users', 'species', 'championships', 'rankHistory', 'profiles', 'posts', 'speciesPhotos', 'banners', 'slides', 'levelIcons', 'eventRequests', 'speciesRequests', 'requestPhotos', 'postAudits', 'memberMessages', 'memberApplications', 'contactMessages');
       if (memberDataChanged) { renderAll(); showTab(store.get('ajing-member-tab', true) || 'social'); }
       else {
         const activeTab = store.get('ajing-member-tab', true) || 'social';
