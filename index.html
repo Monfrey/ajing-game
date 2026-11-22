@@ -2568,16 +2568,11 @@ const kvDB = {
 const postsDB = {
   all: async () => Object.values(C.posts).map(p => ({ ...p })),
   put: p => { const d = clean(p); C.posts = { ...C.posts, [d.id]: d }; return setDoc(fsDoc(fdb, 'posts', d.id), d); },
-  create: async (post, audit, autoRejectReason = '') => {
+  create: async (post, audit) => {
     const batch = writeBatch(fdb), data = clean(post);
     batch.set(fsDoc(fdb, 'posts', data.id), data);
-    batch.set(fsDoc(fdb, 'postAudits', data.id), { owner: data.user, ...clean(audit), ...(autoRejectReason ? { reviewReason: autoRejectReason, reviewed: data.reviewed, reviewer: data.reviewer } : {}) });
-    if (autoRejectReason) batch.set(fsDoc(fdb, 'memberMessages', data.user, 'messages', data.id), {
-      id: data.id, postId: data.id, speciesName: data.speciesName || '', reason: autoRejectReason,
-      created: data.reviewed, reviewer: data.reviewer, read: false
-    });
+    batch.set(fsDoc(fdb, 'postAudits', data.id), { owner: data.user, ...clean(audit) });
     await batch.commit(); C.posts = { ...C.posts, [data.id]: data };
-    if (autoRejectReason && data.user === fbUser()?.username) C.memberMessages = { ...C.memberMessages, [data.id]: { id: data.id, postId: data.id, speciesName: data.speciesName || '', reason: autoRejectReason, created: data.reviewed, reviewer: data.reviewer, read: false } };
   },
   putWithAudit: async (post, audit) => {
     const batch = writeBatch(fdb), data = clean(post);
@@ -3376,6 +3371,16 @@ await Promise.all([firstReady, authReady]);
     if (audit.imageDate && captureDate && localDateValue(new Date(audit.imageDate)) !== captureDate) return DATE_MISMATCH_REASON;
     return '';
   };
+  let autoNoScoreLocked = false, noScoreBeforeLock = false;
+  const setAutoNoScoreLock = locked => {
+    const checkbox = $('postNoScore');
+    if (locked) {
+      if (!autoNoScoreLocked) noScoreBeforeLock = checkbox.checked;
+      autoNoScoreLocked = true; checkbox.checked = true; checkbox.disabled = true;
+    } else if (autoNoScoreLocked) {
+      autoNoScoreLocked = false; checkbox.disabled = false; checkbox.checked = noScoreBeforeLock;
+    }
+  };
   const auditNote = a => {
     if (!a) return null;
     if (a.dateUnverified) return { tone: 'warn', text: 'Foto sem metadados', sub: 'Sua imagem não pontuará, porque não possui metadados.' };
@@ -3455,7 +3460,11 @@ await Promise.all([firstReady, authReady]);
     postError.textContent = '';
     postImageAudit = null; renderAuditNote();
     postImagePending = Promise.all([preparePostImage(file), inspectPostImage(file)]).then(([src, audit]) => {
-      setPostImage(src); postImageAudit = audit; renderAuditNote();
+      setPostImage(src); postImageAudit = audit;
+      const original = editingPostId && posts.find(p => p.id === editingPostId);
+      const detectedCaptureDate = audit.imageTime > 0 && !audit.oldImageDate ? localDateValue(new Date(audit.imageTime)) : localDateValue(new Date());
+      setAutoNoScoreLock(!!autoRejectReason(audit, original ? original.captureDate : detectedCaptureDate));
+      renderAuditNote();
       if (!editingPostId) { postFields.hidden = false; postForm.classList.remove('photo-first'); showPostModal(); setTimeout(() => postCaption.focus(), 30); }
     })
       .catch(() => { postError.textContent = 'Não foi possível ler essa imagem. Tente outro arquivo.'; if (!editingPostId) showPostModal(); })
@@ -3478,6 +3487,7 @@ await Promise.all([firstReady, authReady]);
   const openPostModal = (choosePhotoFirst = true) => {
     if (!currentUser()) { openLogin(); return; }
     editingPostId = null;
+    setAutoNoScoreLock(false);
     postImageAudit = null;
     $('postTitle').textContent = 'Nova publicação'; $('postSubmit').textContent = 'Publicar';
     $('postNoScore').closest('.post-noscore').hidden = false; $('postMetaNote').hidden = true; $('postImageHint').hidden = !isAdmin();
@@ -3778,29 +3788,27 @@ await Promise.all([firstReady, authReady]);
         // Trocar a espécie ou a foto exige nova validação (a análise anterior valia para a foto e a espécie antigas)
         if (speciesChanged || photoChanged) {
           revalidate = !noScore && original.status !== 'pending';
-          autoRejectedReason = !noScore && photoChanged ? autoRejectReason(postImageAudit, updated.captureDate) : '';
-          updated.status = noScore ? 'unscored' : autoRejectedReason ? 'rejected' : 'pending';
+          autoRejectedReason = photoChanged ? autoRejectReason(postImageAudit, updated.captureDate) : '';
+          updated.status = noScore || autoRejectedReason ? 'unscored' : 'pending';
           delete updated.pointsOverride;
-          if (autoRejectedReason) { updated.reviewed = Date.now(); updated.reviewer = 'auto'; }
-          else { delete updated.reviewed; delete updated.reviewer; }
+          delete updated.reviewed; delete updated.reviewer;
         }
-        if (autoRejectedReason) await postsDB.reject(updated, autoRejectedReason, updated.reviewed, 'auto', postImageAudit);
-        else if (postImageAudit && postImage !== original.photo) await postsDB.putWithAudit(updated, postImageAudit);
+        if (postImageAudit && postImage !== original.photo) await postsDB.putWithAudit(updated, postImageAudit);
         else await postsDB.put(updated);
       } else {
         const shotDate = postImageAudit && postImageAudit.imageTime > 0 && !postImageAudit.oldImageDate ? localDateValue(new Date(postImageAudit.imageTime)) : captureDate;
-        autoRejectedReason = !noScore ? autoRejectReason(postImageAudit, shotDate) : '';
+        autoRejectedReason = autoRejectReason(postImageAudit, shotDate);
         const autoOk = !noScore && !autoRejectedReason && auditEligible(postImageAudit), now = Date.now();
         autoApproved = autoOk;
-        await postsDB.create({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate: shotDate, caption: postCaption.value.trim().slice(0, 150), photo: postImage, created: now, status: noScore ? 'unscored' : autoRejectedReason ? 'rejected' : autoOk ? 'approved' : 'pending', ...((autoOk || autoRejectedReason) ? { reviewed: now, reviewer: 'auto' } : {}) }, postImageAudit || { fileType: '', fileSize: 0, imageDate: '', imageTime: 0, software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true }, autoRejectedReason);
+        await postsDB.create({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate: shotDate, caption: postCaption.value.trim().slice(0, 150), photo: postImage, created: now, status: noScore || autoRejectedReason ? 'unscored' : autoOk ? 'approved' : 'pending', ...(autoOk ? { reviewed: now, reviewer: 'auto' } : {}) }, postImageAudit || { fileType: '', fileSize: 0, imageDate: '', imageTime: 0, software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true });
       }
       const editedId = editingPostId;
       closePostModal(false);
       await loadPosts(); renderChampion(); renderAll();
       if (editedId) openPostView(editedId);
-      showToast(noScore
-        ? `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>Publicada sem pontuar: não entra no ranking nem na carta.</small></div>`
-        : autoRejectedReason ? `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>${esc(autoRejectedReason)}</small></div>`
+      showToast(autoRejectedReason
+        ? `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>${esc(autoRejectedReason)}</small></div>`
+        : noScore ? `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>Publicada sem pontuar: não entra no ranking nem na carta.</small></div>`
         : `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>${editedId ? (revalidate ? 'A foto ou a espécie mudou: a captura voltou para a validação de um administrador.' : 'Alterações salvas.') : autoApproved ? 'Foto dentro do prazo: a pontuação foi aprovada automaticamente.' : 'A pontuação será adicionada após a validação de um administrador.'}</small></div>`);
       if (!editedId) window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch(_) {
@@ -6010,7 +6018,7 @@ await Promise.all([firstReady, authReady]);
     const eventHistory = getChamps().flatMap(c => (Array.isArray(c.registrationHistory) ? c.registrationHistory : []).map(r => ({ ...r, championshipId: c.id, championshipName: c.name })))
       .sort((a, b) => (b.reviewed || 0) - (a.reviewed || 0));
     const pendingPosts = posts.filter(p => p.status === 'pending').sort((a, b) => a.created - b.created);
-    const postHistory = posts.filter(p => p.status === 'approved' || p.status === 'rejected').sort((a, b) => (b.reviewed || 0) - (a.reviewed || 0));
+    const postHistory = posts.filter(p => p.status === 'approved' || p.status === 'rejected' || (p.status === 'unscored' && autoRejectReason(fb.memberMessagesDB.audit(p.id), p.captureDate))).sort((a, b) => (b.reviewed || b.created || 0) - (a.reviewed || a.created || 0));
     const allMemberApplications = isAdmin() ? Object.entries(fb.memberApplications()).map(([uid, app]) => ({ ...app, uid })) : [];
     const memberApplications = allMemberApplications.filter(app => app.status === 'pending').sort((a, b) => (a.created || 0) - (b.created || 0));
     const rejectedMemberApplications = allMemberApplications.filter(app => app.status === 'rejected').sort((a, b) => (b.reviewed || 0) - (a.reviewed || 0));
@@ -6063,6 +6071,15 @@ await Promise.all([firstReady, authReady]);
       <div class="field" style="grid-column:1/-1"><label>Motivo da recusa (enviado ao membro)</label><textarea maxlength="500" rows="2" data-edit-field="reason">${esc((fb.memberMessagesDB.audit(p.id) || {}).reviewReason || '')}</textarea></div>
       <div class="form-error" data-edit-error role="alert"></div><div class="form-actions"><button class="btn btn-primary" type="submit">Salvar revisão</button><button class="btn btn-ghost" type="button" data-review-cancel>Cancelar</button></div>
     </form></li>`).join('') : `<li class="empty-row">${ph.all ? 'Nenhuma análise encontrada com esse filtro.' : 'Nenhuma postagem analisada ainda.'}</li>`;
+    for (const post of ph.shown.filter(item => item.status === 'unscored')) {
+      const row = [...$('postReviewHistory').querySelectorAll('[data-post-history]')].find(item => item.dataset.postHistory === post.id);
+      if (!row) continue;
+      const select = row.querySelector('[data-edit-field="status"]');
+      const option = document.createElement('option'); option.value = 'unscored'; option.textContent = 'Sem pontuação automática'; option.selected = true; select.add(option, 2);
+      row.querySelector('.req-status').textContent = 'Sem pontos';
+      const reason = autoRejectReason(fb.memberMessagesDB.audit(post.id), post.captureDate);
+      row.querySelector('.grow small').textContent = `${reason} · captura em ${captureDateLabel(post.captureDate)} · publicação sem pontuação`;
+    }
     const done = all.filter(r => r.status !== 'pending').sort((a, b) => (b.reviewed || 0) - (a.reviewed || 0));
     const sh = histApply('species', done, r => `${r.name} ${r.sci || ''} ${displayName(r.user)} ${r.user}`); histFooter('species', sh, 'speciesHistCount', 'speciesHistMore');
     $('reqHistory').innerHTML = sh.shown.length ? sh.shown.map(r => `<li class="review-history-row" data-species-history="${esc(r.id)}"><span class="grow"><b>${esc(r.name)}</b><small>${esc(displayName(r.user))} · ${STATUS[r.status].toLowerCase()} por ${esc(displayName(r.reviewer || ''))} em ${fmtShort(r.reviewed)}${r.status === 'approved' ? ` · ${ptsLabel(r.finalPoints)}` : ''}${r.reason ? ` · ${esc(r.reason)}` : ''}</small></span><span class="req-status ${r.status}">${STATUS[r.status]}</span><button class="btn btn-ghost review-edit-btn" type="button" data-review-edit="species"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar análise</button><form class="review-edit-panel" data-review-form="species" hidden>
