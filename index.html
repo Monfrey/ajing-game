@@ -2415,8 +2415,19 @@ const listen = (name, ref = fsCol(fdb, name)) => new Promise(resolve => {
       const changes = snap.docChanges();
       if (changes.length) {
         const current = C[name] || {};
+        const likesOnly = name === 'posts' && changes.every(change => {
+          if (change.type !== 'modified' || !current[change.doc.id]) return false;
+          const previous = current[change.doc.id], next = change.doc.data();
+          const previousFields = { ...previous }, nextFields = { ...next };
+          delete previousFields.likes; delete nextFields.likes;
+          return same(previousFields, nextFields);
+        });
         changes.forEach(change => { if (change.type === 'removed') delete current[change.doc.id]; else current[change.doc.id] = change.doc.data(); });
         C[name] = current;
+        if (likesOnly) {
+          if ((!snap.metadata.fromCache || timedOut) && fbHooks.refresh) fbHooks.refresh('postLikes');
+          return;
+        }
       }
       if ((!snap.metadata.fromCache && (changes.length || name === 'config') || (timedOut && changes.length)) && fbHooks.refresh) {
         fbHooks.refresh(name);
@@ -3752,19 +3763,44 @@ await Promise.all([firstReady, authReady]);
     closePostView(); await loadPosts(); renderChampion(); renderAll();
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && postView.classList.contains('open')) closePostView(); });
+  const pendingLikePosts = new Set();
+  const updateLikeButtons = (postId, liked, count, pending = false) => {
+    document.querySelectorAll('[data-like-post]').forEach(button => {
+      if (button.dataset.likePost !== postId) return;
+      const post = posts.find(item => item.id === postId), name = post ? displayName(post.user) : 'membro';
+      button.classList.toggle('liked', liked);
+      button.setAttribute('aria-pressed', String(liked));
+      button.setAttribute('aria-label', `${liked ? 'Descurtir' : 'Curtir'} publicação de ${name}`);
+      button.title = liked ? 'Descurtir' : 'Curtir';
+      button.setAttribute('aria-busy', String(pending));
+      button.disabled = pending;
+      const counter = button.querySelector('.post-like-count'); if (counter) counter.textContent = String(count);
+    });
+  };
   document.addEventListener('click', async e => {
     const button = e.target.closest('[data-like-post]'); if (!button) return;
     e.preventDefault();
     const member = currentUser(); if (!member) { openLogin(); return; }
     const post = posts.find(p => p.id === button.dataset.likePost); if (!post) return;
+    if (pendingLikePosts.has(post.id)) return;
     const likes = new Set(Array.isArray(post.likes) ? post.likes : []), liked = !likes.has(member);
+    const previous = [...likes];
+    if (liked) likes.add(member); else likes.delete(member);
+    const nextLikes = [...likes];
+    posts = posts.map(item => item.id === post.id ? { ...item, likes: nextLikes } : item);
+    pendingLikePosts.add(post.id);
+    updateLikeButtons(post.id, liked, nextLikes.length, true);
     try {
-      await fb.setLike(post.id, member, liked); await loadPosts(); renderAll();
-      if (postView.classList.contains('open')) {
-        $('postViewBody').innerHTML = postHTML(posts.find(p => p.id === post.id), false);
-        $('postViewBody').querySelector('[data-like-post]')?.focus();
-      }
-    } catch(_) { await showNotice('Não foi possível salvar a curtida. Verifique a conexão.'); }
+      await fb.setLike(post.id, member, liked);
+    } catch(error) {
+      posts = posts.map(item => item.id === post.id ? { ...item, likes: previous } : item);
+      updateLikeButtons(post.id, previous.includes(member), previous.length);
+      pendingLikePosts.delete(post.id);
+      await showNotice(fb.errMsg(error), 'Não foi possível salvar a curtida');
+      return;
+    }
+    pendingLikePosts.delete(post.id);
+    updateLikeButtons(post.id, liked, nextLikes.length);
   });
   postForm.addEventListener('submit', async e => {
     e.preventDefault();
@@ -6740,6 +6776,18 @@ await Promise.all([firstReady, authReady]);
     if (busy()) { changed.forEach(name => refreshCollections.add(name)); refreshTimer = setTimeout(doRefresh, 1500); return; }
     if (fb.authUid() && !currentUser()) { await logout(); return; } // conta desativada ou excluída
     const touches = (...names) => changed.includes('*') || names.some(name => changed.includes(name));
+    if (changed.length === 1 && changed[0] === 'postLikes') {
+      await loadPosts();
+      renderFeed();
+      if (currentUser()) renderMyCaptures();
+      if (portfolioUser && !$('memberPortfolio').hidden) openPortfolio(portfolioUser, false);
+      if (postView.classList.contains('open')) {
+        const id = $('postViewBody').querySelector('[data-like-post]')?.dataset.likePost;
+        const post = posts.find(item => item.id === id);
+        if (post) $('postViewBody').innerHTML = postHTML(post, false);
+      }
+      return;
+    }
     const loads = [];
     if (touches('posts')) loads.push(loadPosts());
     if (touches('species') && isAdmin()) seedSpecies();
