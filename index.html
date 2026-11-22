@@ -291,6 +291,8 @@ section.alt{background:var(--surface);border-block:1px solid var(--line)}
 .score-fish.approved{color:#16834a}
 .score-fish.rejected{color:#d62828}
 .capture-date{font-size:.72rem;color:var(--muted)}
+.post-meta-row{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
+.post-meta-row .capture-date{font-variant-numeric:tabular-nums;white-space:nowrap}
 .sc-right{display:grid;justify-items:end;gap:1px}
 .sc-right strong{font-size:.9rem;color:var(--accent)}
 .pts-inline{display:flex;align-items:center;gap:4px;font-size:.78rem;color:var(--muted)}
@@ -441,7 +443,11 @@ select{font:inherit;color:inherit}
 .post.compact .post-body{padding:9px 12px 12px;gap:5px}
 .post.compact .species-tag{font-size:.72rem;padding:2px 8px}
 .post.compact .post-body time{font-size:.68rem}
-.post.compact .caption{font-size:.82rem;line-height:1.4;color:var(--muted);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.post.compact .species-tag::before{display:none}
+.post.compact .post-meta-row .score-fish{width:15px;height:15px}
+.post.compact .post-meta-row .score-fish svg{width:15px;height:15px}
+.post.compact .post-meta-row .capture-date{font-size:.68rem}
+.post.compact .caption{display:none}
 .post.compact .post-del{width:24px;height:24px}
 .mcard.sm{width:28px;height:39px;padding:1.5px;border-radius:4px}
 .mcard.sm .mc-in{padding:2px;gap:1.5px}
@@ -455,6 +461,7 @@ select{font:inherit;color:inherit}
 .post-view .post{border:0}
 .post-view .post-head{padding-right:56px}
 .post-view .post-photo{aspect-ratio:4/5}
+.post-view .pb-row .species-tag{white-space:normal;overflow:visible;text-overflow:clip}
 .species-tag{display:inline-flex;align-items:center;gap:6px;justify-self:start;padding:3px 10px;border-radius:999px;background:color-mix(in srgb,var(--cyan) 14%,transparent);color:var(--ink);font-size:.8rem;font-weight:600}
 .species-tag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--cyan)}
 .m-avatar.md{width:34px;height:34px;flex:none;font-size:.85rem}
@@ -1344,8 +1351,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   #partnerAdminList li>.grow{flex:1 1 auto;min-width:0}
   #partnerAdminList li>.grow b,#partnerAdminList li>.grow small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #speciesAdminList li>.pts-inline{margin-left:auto}
-  /* Feed: nome da espécie pode quebrar em duas linhas em vez de ser cortado */
-  .post.compact .pb-row .species-tag{white-space:normal;line-height:1.25;overflow:visible}
+  /* Feed: nome da espécie em uma linha; corta com reticências quando necessário */
+  .post.compact .pb-row .species-tag{max-width:100%;white-space:nowrap;line-height:1.25;overflow:hidden;text-overflow:ellipsis}
   /* Carrossel: conteúdo centralizado na altura do slide (sem grande vazio embaixo) */
   .slide:not(.image-overlay){align-content:center}
 }
@@ -3351,6 +3358,7 @@ await Promise.all([firstReady, authReady]);
   const postSpecies = $('postSpecies'), postError = $('postError'), dropZone = $('dropZone'), postCaption = $('postCaption'), postPlace = $('postPlace'), postFields = $('postFields');
   const localDateValue = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const captureDateLabel = value => value ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(new Date(value + 'T12:00:00')) : '';
+  const captureDateShort = value => { if (!value) return ''; const [year, month, day] = value.split('-'); return `${day}/${month}/${year}`; };
   let postImage = '', postImageAudit = null, postImagePending = null, postLastFocus = null, editingPostId = null;
   const POST_W = 720, POST_H = 900; // padrão vertical 4:5 para todas as publicações
   // Aprovação automática: foto com metadados (data original), sem sinais de captura de tela e dentro do prazo
@@ -3603,9 +3611,9 @@ await Promise.all([firstReady, authReady]);
           ? `<div class="post-media-wrap"><button class="post-photo" type="button" data-open-post="${esc(p.id)}" aria-label="Abrir publicação de ${esc(name)}: ${esc(p.speciesName)}${isPostScored(p) ? ', ' + ptsLabel(postPoints(p)) : ''}"><img src="${esc(photo)}" alt="${alt}" loading="lazy">${isPostScored(p) ? `<span class="post-points-badge${catchNote(p) ? ' reduced' : ''}" aria-hidden="true">+${ptsLabel(postPoints(p))}${catchNote(p) ? ` · ${Math.round(catchInfo(p).factor * 100)}%` : ''}</span>` : ''}</button>${likeButton}</div>`
           : `<div class="post-media-wrap"><div class="post-photo"><img src="${esc(photo)}" alt="${alt}"></div>${likeButton}</div>`}
         <div class="post-body">
-          <div class="pb-row"><span class="species-tag has-score-fish">${esc(p.speciesName)}<span class="score-fish ${scoreStatus}" role="img" aria-label="${scoreLabel}" title="${scoreLabel}">${fishIcon}</span></span>${compact ? time : ''}</div>
-          ${p.captureDate ? `<small class="capture-date">Capturada em ${captureDateLabel(p.captureDate)}</small>` : ''}
-          ${p.caption ? `<p class="caption">${compact ? '' : `<b>${esc(name)}</b> `}${esc(p.caption)}</p>` : ''}
+          <div class="pb-row"><span class="species-tag has-score-fish">${esc(p.speciesName)}</span>${compact ? time : ''}</div>
+          <div class="post-meta-row"><span class="score-fish ${scoreStatus}" role="img" aria-label="${scoreLabel}" title="${scoreLabel}">${fishIcon}</span>${p.captureDate ? `<small class="capture-date">${captureDateShort(p.captureDate)}</small>` : ''}</div>
+          ${!compact && p.caption ? `<p class="caption"><b>${esc(name)}</b> ${esc(p.caption)}</p>` : ''}
           ${compact ? '' : time}
           ${!compact && isPostScored(p) ? `<span class="post-points-detail">+${ptsLabel(postPoints(p))}${catchNote(p) ? `<small class="catch-note">${esc(catchNote(p))} (de ${ptsLabel(basePoints(p))})</small>` : ''}</span>` : ''}
           ${portfolioControl}
