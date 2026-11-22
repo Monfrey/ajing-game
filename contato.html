@@ -5,13 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#07131c">
   <title>Contato · Ajing Game</title>
+  <script>
+    try { const theme = localStorage.getItem('ajing-theme'); if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme; } catch (_) {}
+  </script>
   <style>
-    :root{color-scheme:dark;--bg:#07131c;--panel:#10222e;--line:#294250;--text:#f2f7f9;--muted:#a8bac3;--accent:#22c1d6;--red:#ef4652}
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;padding:28px 16px;display:grid;place-items:center;background:radial-gradient(ellipse at 50% -10%,#183745 0,transparent 55%),var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+    :root{color-scheme:light;--bg:#f5f7f8;--panel:#fff;--line:#dde3e7;--text:#0e1e2a;--muted:#566571;--accent:#08799b;--field:#fff;--field-line:#b9c4cb;--glow:#08799b22;--success:#087443;--error:#b42318}
+    @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0a141c;--panel:#0f1c26;--line:#21343f;--text:#edf2f5;--muted:#98a8b3;--accent:#2cc1e2;--field:#081821;--field-line:#3c5968;--glow:#22c1d622;--success:#7be2b0;--error:#ff9ca3}}
+    :root[data-theme="dark"]{color-scheme:dark;--bg:#0a141c;--panel:#0f1c26;--line:#21343f;--text:#edf2f5;--muted:#98a8b3;--accent:#2cc1e2;--field:#081821;--field-line:#3c5968;--glow:#22c1d622;--success:#7be2b0;--error:#ff9ca3}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;padding:28px 16px;display:grid;place-items:center;background:radial-gradient(ellipse at 50% -10%,color-mix(in srgb,var(--accent) 14%,transparent) 0,transparent 55%),var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
     main{width:min(100%,620px);padding:clamp(22px,5vw,42px);border:1px solid var(--line);border-radius:22px;background:color-mix(in srgb,var(--panel) 94%,transparent);box-shadow:0 24px 80px #0005}
     header{text-align:center;margin-bottom:28px}header img{display:block;width:132px;height:132px;object-fit:contain;margin:0 auto 12px}h1{margin:0;font-size:clamp(1.7rem,5vw,2.25rem);line-height:1.1}header p{margin:10px 0 0;color:var(--muted)}
-    form{display:grid;gap:16px}.field{display:grid;gap:6px}.field label{font-size:.9rem;font-weight:700}.field input,.field textarea{width:100%;padding:12px 13px;border:1px solid #3c5968;border-radius:10px;background:#081821;color:var(--text);font:inherit;outline:none}.field textarea{min-height:150px;resize:vertical}.field input:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px #22c1d622}.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    button{min-height:48px;padding:11px 18px;border:0;border-radius:10px;background:linear-gradient(110deg,#19a9cd,#4bd4c5);color:#061720;font:800 1rem system-ui,sans-serif;cursor:pointer}button:disabled{opacity:.65;cursor:wait}.status{min-height:1.4em;margin:0;font-weight:650}.status.error{color:#ff9ca3}.status.success{color:#7be2b0}.back{display:inline-block;margin-top:18px;color:#8fe3ed;text-decoration:none}.back:hover{text-decoration:underline}.honeypot{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+    form{display:grid;gap:16px}.field{display:grid;gap:6px}.field label{font-size:.9rem;font-weight:700}.field input,.field textarea{width:100%;padding:12px 13px;border:1px solid var(--field-line);border-radius:10px;background:var(--field);color:var(--text);font:inherit;outline:none}.field textarea{min-height:150px;resize:vertical}.field input:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    button{min-height:48px;padding:11px 18px;border:0;border-radius:10px;background:linear-gradient(110deg,#19a9cd,#4bd4c5);color:#061720;font:800 1rem system-ui,sans-serif;cursor:pointer}button:disabled{opacity:.65;cursor:wait}.status{min-height:1.4em;margin:0;font-weight:650}.status.error{color:var(--error)}.status.success{color:var(--success)}.back{display:inline-block;margin-top:18px;color:var(--accent);text-decoration:none}.back:hover{text-decoration:underline}.honeypot{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
     @media(max-width:540px){body{padding:14px 10px}main{border-radius:16px}.row{grid-template-columns:1fr;gap:16px}header img{width:112px;height:112px}}
   </style>
 </head>
@@ -50,8 +55,10 @@
     });
     const db = getFirestore(app), form = document.getElementById('contactForm');
     const status = document.getElementById('status'), sendButton = document.getElementById('sendButton');
+    let sentSuccessfully = false;
     form.addEventListener('submit', async event => {
       event.preventDefault();
+      if (sentSuccessfully) return;
       if (!form.reportValidity()) return;
       if (document.getElementById('website').value) return;
       const data = {
@@ -68,14 +75,16 @@
       try {
         const ref = doc(collection(db, 'contactMessages'));
         await setDoc(ref, { id: ref.id, ...data, created: Date.now(), read: false });
-        form.reset(); status.className = 'status success'; status.textContent = 'Mensagem enviada. Obrigado por entrar em contato!';
+        sentSuccessfully = true; form.reset(); status.className = 'status success';
+        status.textContent = 'Mensagem enviada com sucesso! Voltando para a tela inicial…';
+        setTimeout(() => window.location.replace('./index.html'), 2000);
       } catch (error) {
         console.error('Falha ao enviar contato:', error && error.code);
         status.className = 'status error';
         status.textContent = error && error.code === 'permission-denied'
           ? 'Não foi possível enviar. As regras do Firestore ainda precisam ser atualizadas.'
           : 'Não foi possível enviar agora. Verifique sua conexão e tente novamente.';
-      } finally { sendButton.disabled = false; }
+      } finally { sendButton.disabled = sentSuccessfully; }
     });
   </script>
 </body>

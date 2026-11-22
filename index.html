@@ -2355,7 +2355,7 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword, setPersistence, inMemoryPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection as fsCol, doc as fsDoc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, arrayUnion, arrayRemove, runTransaction, deleteField } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection as fsCol, doc as fsDoc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, arrayUnion, arrayRemove, runTransaction, deleteField, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 /* =====================================================================
    CONFIGURAÇÃO DO FIREBASE
@@ -2395,7 +2395,7 @@ let deferredLoaded = false;
 // Imagens usadas apenas na área autenticada não são baixadas para visitantes da página pública.
 const MEMBER_COLS = ['banners', 'eventRequests', 'speciesRequests', 'requestPhotos'];
 // Carregadas só quando uma tela precisa delas (economiza leituras do plano gratuito)
-const LAZY_COLS = ['postAudits', 'contactMessages'];
+const LAZY_COLS = ['postAudits', 'contactMessages', 'contactUnread'];
 const C = {}; [...PUBLIC_COLS, ...MEMBER_COLS, ...LAZY_COLS].forEach(n => { C[n] = {}; }); C.memberApplications = {};
 C.postAudits = {}; C.memberMessages = {};
 const fbHooks = { refresh: null };
@@ -2440,10 +2440,10 @@ const listen = (name, ref = fsCol(fdb, name)) => new Promise(resolve => {
 
 // Coleções sob demanda: o primeiro pedido abre o listener; os seguintes reaproveitam
 const lazy = {};
-const ensureCol = name => {
+const ensureCol = (name, ref = fsCol(fdb, name)) => {
   if (lazy[name]) return lazy[name].ready;
   const entry = lazy[name] = { loaded: false, unsub: null };
-  entry.ready = listen(name).then(unsub => { entry.unsub = unsub; entry.loaded = true; if (fbHooks.refresh) fbHooks.refresh(name); });
+  entry.ready = listen(name, ref).then(unsub => { entry.unsub = unsub; entry.loaded = true; if (fbHooks.refresh) fbHooks.refresh(name); });
   return entry.ready;
 };
 const dropCol = name => { const e = lazy[name]; if (!e) return; delete lazy[name]; e.ready.then(() => e.unsub && e.unsub()); C[name] = {}; };
@@ -2462,13 +2462,14 @@ const fbUser = () => authUid ? C.users[authUid] || null : null;
 const fbIsAdmin = () => { const u = fbUser(); return !!u && u.role === 'admin' && u.active !== false; };
 const attachMember = async on => {
   memberUnsubs.forEach(u => u()); memberUnsubs = [];
-  if (!on) { MEMBER_COLS.forEach(n => { C[n] = {}; }); dropCol('postAudits'); C.memberMessages = {}; C.memberApplications = {}; return; }
+  if (!on) { MEMBER_COLS.forEach(n => { C[n] = {}; }); dropCol('postAudits'); dropCol('contactMessages'); dropCol('contactUnread'); C.memberMessages = {}; C.memberApplications = {}; return; }
   const username = fbUser().username;
   const refs = MEMBER_COLS.map(name => [name, fsCol(fdb, name)]);
   refs.push(['memberMessages', fsCol(fdb, 'memberMessages', username, 'messages')]);
   if (fbIsAdmin()) refs.push(['memberApplications', fsCol(fdb, 'memberApplications')]);
-  else dropCol('postAudits');
+  else { dropCol('postAudits'); dropCol('contactMessages'); dropCol('contactUnread'); }
   memberUnsubs = await Promise.all(refs.map(([name, ref]) => listen(name, ref)));
+  if (fbIsAdmin()) ensureCol('contactUnread', query(fsCol(fdb, 'contactMessages'), where('read', '==', false)));
 };
 
 // Grava uma coleção inteira a partir de uma lista: cria/atualiza o que mudou e apaga o que saiu
@@ -5812,7 +5813,8 @@ await Promise.all([firstReady, authReady]);
     $('myCapturesEmpty').hidden = mine.length > 0;
   };
   const renderMemberMessages = () => {
-    const messages = fb.memberMessagesDB.all(), unread = messages.filter(m => !m.read).length;
+    const messages = fb.memberMessagesDB.all(), unreadMember = messages.filter(m => !m.read && m.type !== 'contact').length;
+    const unread = unreadMember + (isAdmin() ? Object.keys(C.contactUnread || {}).length : 0);
     $('cntMyMessages').textContent = unread || '';
     const tabBadge = $('cntProfileTab'); tabBadge.textContent = unread > 9 ? '9+' : String(unread); tabBadge.hidden = !unread;
     tabBadge.setAttribute('aria-label', `${unread} ${unread === 1 ? 'mensagem não lida' : 'mensagens não lidas'}`);
@@ -6803,7 +6805,7 @@ await Promise.all([firstReady, authReady]);
       }
       return;
     }
-    if (changed.length === 1 && changed[0] === 'contactMessages') {
+    if (changed.every(name => name === 'contactMessages' || name === 'contactUnread')) {
       renderMemberMessages();
       return;
     }
