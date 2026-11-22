@@ -3364,11 +3364,22 @@ await Promise.all([firstReady, authReady]);
   // Aprovação automática: foto com metadados (data original), sem sinais de captura de tela e dentro do prazo
   const PHOTO_MAX_DAYS = 5;
   const NO_EXIF_REASON = 'Sua imagem não pontuará, porque não possui metadados.';
+  const OLD_PHOTO_REASON = `Aceitamos fotos de até ${PHOTO_MAX_DAYS} dias. A foto será postada, mas não pontuará.`;
+  const SCREENSHOT_REASON = 'A imagem foi identificada como captura de tela e não pontuará.';
+  const DATE_MISMATCH_REASON = 'A data dos metadados não corresponde à data da captura informada. A foto será postada, mas não pontuará.';
   const auditEligible = a => !!(a && !a.dateUnverified && a.imageTime > 0 && !a.oldImageDate && !a.possibleScreenshot);
+  const autoRejectReason = (audit, captureDate) => {
+    if (!audit) return '';
+    if (audit.dateUnverified) return NO_EXIF_REASON;
+    if (audit.oldImageDate) return OLD_PHOTO_REASON;
+    if (audit.possibleScreenshot) return SCREENSHOT_REASON;
+    if (audit.imageDate && captureDate && localDateValue(new Date(audit.imageDate)) !== captureDate) return DATE_MISMATCH_REASON;
+    return '';
+  };
   const auditNote = a => {
     if (!a) return null;
     if (a.dateUnverified) return { tone: 'warn', text: 'Foto sem metadados', sub: 'Sua imagem não pontuará, porque não possui metadados.' };
-    if (a.possibleScreenshot) return { tone: 'warn', text: 'Possível captura de tela', sub: 'A pontuação será validada por um administrador.' };
+    if (a.possibleScreenshot) return { tone: 'warn', text: 'Captura de tela identificada', sub: 'A imagem será postada, mas não pontuará.' };
     if (a.oldImageDate) return a.imageTime > Date.now()
       ? { tone: 'warn', text: 'Data da foto no futuro', sub: 'Confira a data original da imagem. A pontuação será analisada por um administrador.' }
       : { tone: 'warn', text: 'Foto com data anterior à data permitida', sub: `Aceitamos fotos de até ${PHOTO_MAX_DAYS} dias. A foto será postada, mas não pontuará.` };
@@ -3756,7 +3767,7 @@ await Promise.all([firstReady, authReady]);
     if (!place) { postError.textContent = 'Informe o local da captura.'; postPlace.focus(); return; }
     const today = new Date(), captureDate = editingPostId ? (posts.find(p => p.id === editingPostId)?.captureDate || localDateValue(today)) : localDateValue(today);
     const btn = $('postSubmit'), noScore = $('postNoScore').checked; btn.disabled = true;
-    let revalidate = false, autoApproved = false, autoRejected = false;
+    let revalidate = false, autoApproved = false, autoRejectedReason = '';
     try {
       if (editingPostId) {
         const original = posts.find(p => p.id === editingPostId);
@@ -3767,21 +3778,21 @@ await Promise.all([firstReady, authReady]);
         // Trocar a espécie ou a foto exige nova validação (a análise anterior valia para a foto e a espécie antigas)
         if (speciesChanged || photoChanged) {
           revalidate = !noScore && original.status !== 'pending';
-          autoRejected = !noScore && photoChanged && !!postImageAudit?.dateUnverified;
-          updated.status = noScore ? 'unscored' : autoRejected ? 'rejected' : 'pending';
+          autoRejectedReason = !noScore && photoChanged ? autoRejectReason(postImageAudit, updated.captureDate) : '';
+          updated.status = noScore ? 'unscored' : autoRejectedReason ? 'rejected' : 'pending';
           delete updated.pointsOverride;
-          if (autoRejected) { updated.reviewed = Date.now(); updated.reviewer = 'auto'; }
+          if (autoRejectedReason) { updated.reviewed = Date.now(); updated.reviewer = 'auto'; }
           else { delete updated.reviewed; delete updated.reviewer; }
         }
-        if (autoRejected) await postsDB.reject(updated, NO_EXIF_REASON, updated.reviewed, 'auto', postImageAudit);
+        if (autoRejectedReason) await postsDB.reject(updated, autoRejectedReason, updated.reviewed, 'auto', postImageAudit);
         else if (postImageAudit && postImage !== original.photo) await postsDB.putWithAudit(updated, postImageAudit);
         else await postsDB.put(updated);
       } else {
-        autoRejected = !noScore && !!postImageAudit?.dateUnverified;
-        const autoOk = !noScore && !autoRejected && auditEligible(postImageAudit), now = Date.now();
-        autoApproved = autoOk;
         const shotDate = postImageAudit && postImageAudit.imageTime > 0 && !postImageAudit.oldImageDate ? localDateValue(new Date(postImageAudit.imageTime)) : captureDate;
-        await postsDB.create({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate: shotDate, caption: postCaption.value.trim().slice(0, 150), photo: postImage, created: now, status: noScore ? 'unscored' : autoRejected ? 'rejected' : autoOk ? 'approved' : 'pending', ...((autoOk || autoRejected) ? { reviewed: now, reviewer: 'auto' } : {}) }, postImageAudit || { fileType: '', fileSize: 0, imageDate: '', imageTime: 0, software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true }, autoRejected ? NO_EXIF_REASON : '');
+        autoRejectedReason = !noScore ? autoRejectReason(postImageAudit, shotDate) : '';
+        const autoOk = !noScore && !autoRejectedReason && auditEligible(postImageAudit), now = Date.now();
+        autoApproved = autoOk;
+        await postsDB.create({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate: shotDate, caption: postCaption.value.trim().slice(0, 150), photo: postImage, created: now, status: noScore ? 'unscored' : autoRejectedReason ? 'rejected' : autoOk ? 'approved' : 'pending', ...((autoOk || autoRejectedReason) ? { reviewed: now, reviewer: 'auto' } : {}) }, postImageAudit || { fileType: '', fileSize: 0, imageDate: '', imageTime: 0, software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true }, autoRejectedReason);
       }
       const editedId = editingPostId;
       closePostModal(false);
@@ -3789,7 +3800,7 @@ await Promise.all([firstReady, authReady]);
       if (editedId) openPostView(editedId);
       showToast(noScore
         ? `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>Publicada sem pontuar: não entra no ranking nem na carta.</small></div>`
-        : autoRejected ? `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>${NO_EXIF_REASON}</small></div>`
+        : autoRejectedReason ? `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>${esc(autoRejectedReason)}</small></div>`
         : `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>${editedId ? (revalidate ? 'A foto ou a espécie mudou: a captura voltou para a validação de um administrador.' : 'Alterações salvas.') : autoApproved ? 'Foto dentro do prazo: a pontuação foi aprovada automaticamente.' : 'A pontuação será adicionada após a validação de um administrador.'}</small></div>`);
       if (!editedId) window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch(_) {
@@ -5961,7 +5972,26 @@ await Promise.all([firstReady, authReady]);
   });
 
   // Lista do membro + fila e histórico do administrador
+  let autoRejectSweepRunning = false;
+  const autoRejectInvalidPendingPosts = async () => {
+    if (!isAdmin() || autoRejectSweepRunning) return;
+    autoRejectSweepRunning = true;
+    try {
+      await fb.ensure('postAudits');
+      const invalid = posts.filter(p => p.status === 'pending').map(post => {
+        const audit = fb.memberMessagesDB.audit(post.id);
+        return { post, audit, reason: autoRejectReason(audit, post.captureDate) };
+      }).filter(item => item.reason);
+      for (const item of invalid) {
+        const reviewed = Date.now(), updated = { ...item.post, status: 'rejected', reviewed, reviewer: 'auto' };
+        await postsDB.reject(updated, item.reason, reviewed, 'auto', item.audit);
+      }
+      if (invalid.length) { await loadPosts(); renderChampion(); renderRequests(); }
+    } catch (error) { console.warn('Não foi possível atualizar recusas automáticas:', error); }
+    finally { autoRejectSweepRunning = false; }
+  };
   const renderRequests = () => {
+    autoRejectInvalidPendingPosts();
     const all = getRequests(), me = currentUser();
     const mine = all.filter(r => r.user === me).sort((a, b) => b.created - a.created);
     $('cntMyReq').textContent = mine.filter(r => r.status === 'pending').length || '';
