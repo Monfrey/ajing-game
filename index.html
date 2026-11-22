@@ -3361,7 +3361,9 @@ await Promise.all([firstReady, authReady]);
     if (!a) return null;
     if (a.dateUnverified) return { tone: 'warn', text: 'Foto sem metadados', sub: 'Sua imagem não pontuará, porque não possui metadados.' };
     if (a.possibleScreenshot) return { tone: 'warn', text: 'Possível captura de tela', sub: 'A pontuação será validada por um administrador.' };
-    if (a.oldImageDate) return { tone: 'warn', text: a.imageTime > Date.now() ? 'Foto com data fora do período permitido' : 'Foto com data anterior à data permitida', sub: `Aceitamos fotos de até ${PHOTO_MAX_DAYS} dias. A pontuação será validada por um administrador.` };
+    if (a.oldImageDate) return a.imageTime > Date.now()
+      ? { tone: 'warn', text: 'Data da foto no futuro', sub: 'Confira a data original da imagem. A pontuação será analisada por um administrador.' }
+      : { tone: 'warn', text: 'Foto com data anterior à data permitida', sub: `Aceitamos fotos de até ${PHOTO_MAX_DAYS} dias. A foto será postada, mas não pontuará.` };
     return { tone: 'ok', text: 'Foto dentro do prazo', sub: 'A pontuação será aprovada automaticamente ao publicar.' };
   };
   const renderAuditNote = () => {
