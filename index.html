@@ -667,6 +667,7 @@ select{font:inherit;color:inherit}
 .admin-subnav button:hover{color:var(--ink)}
 .admin-subnav button[aria-current="true"]{color:var(--ink);font-weight:650;box-shadow:inset 0 -2px 0 var(--accent)}
 .admin-subnav .count{font-size:.72rem;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--surface-2);color:var(--muted)}
+#profSubnav svg{display:none}
 .box-desc{font-size:.86rem;color:var(--muted);margin:0 0 14px;max-width:70ch}
 .box-head .box-desc{margin:0}
 [data-admin-panel]{background:transparent;border:0;padding:0}
@@ -1339,8 +1340,16 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .admin-subnav button{padding:6px 12px;border:1px solid var(--line);border-radius:999px;font-size:.84rem;box-shadow:none}
   .admin-subnav button[aria-current="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);box-shadow:none}
   .admin-subnav button[aria-current="true"] .count{background:rgba(255,255,255,.25);color:inherit}
-  #profSubnav{flex-wrap:nowrap;overflow:visible}
-  #profSubnav button{flex:1 1 0;min-width:0;justify-content:center;padding:6px 7px;text-align:center;white-space:normal;line-height:1.2}
+  #profSubnav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;overflow:visible;border:0;padding:6px 0 2px;margin:0 0 14px}
+  #profSubnav:has([data-prof-sec="request"][hidden]){grid-template-columns:repeat(3,minmax(0,1fr))}
+  #profSubnav button{position:relative;display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0;min-height:54px;padding:7px 2px;border:0;border-radius:10px;font-size:.7rem;line-height:1.15;text-align:center;white-space:normal;box-shadow:none}
+  #profSubnav button[aria-current="true"]{background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent);box-shadow:none}
+  #profSubnav svg{display:block;width:20px;height:20px;flex:none}
+  #profSubnav button span{display:inline}
+  #profSubnav .count:empty{display:none}
+  #profSubnav .count{position:absolute;top:3px;left:calc(50% + 6px);margin:0;padding:0 5px;min-width:18px;height:18px;display:inline-grid;place-items:center;font-size:.66rem}
+  #profSubnav .count:not(.alert){background:var(--surface);color:var(--muted)}
+  #profSubnav button[aria-current="true"] .count:not(.alert){background:var(--surface);color:var(--accent)}
   /* Cabeçalhos com texto e botões: empilhados */
   .box-head{flex-direction:column;align-items:stretch;gap:10px}
   .box-head .form-actions{flex-wrap:wrap}
@@ -2075,10 +2084,10 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
             </div>
           </div>
           <nav class="admin-subnav" id="profSubnav" aria-label="Seções do perfil">
-            <button type="button" data-prof-sec="card" aria-current="true">Minha carta</button>
-            <button type="button" data-prof-sec="captures">Minhas capturas<span class="count" id="cntMyCaptures"></span></button>
-            <button type="button" data-prof-sec="messages">Mensagens<span class="count" id="cntMyMessages"></span></button>
-            <button type="button" data-prof-sec="request">Solicitar espécie<span class="count" id="cntMyReq"></span></button>
+            <button type="button" data-prof-sec="card" aria-current="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h5M8 16h8"/></svg><span>Minha carta</span></button>
+            <button type="button" data-prof-sec="captures"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16v13H4zM8 4v6M16 4v6M4 12h16"/></svg><span>Minhas capturas</span><span class="count" id="cntMyCaptures"></span></button>
+            <button type="button" data-prof-sec="messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg><span>Mensagens</span><span class="count" id="cntMyMessages"></span></button>
+            <button type="button" data-prof-sec="request"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4M11 8v6M8 11h6"/></svg><span>Solicitar espécie</span><span class="count" id="cntMyReq"></span></button>
           </nav>
           <div data-prof-panel="card">
           <div class="profile-layout">
