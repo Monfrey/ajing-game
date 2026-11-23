@@ -1528,6 +1528,7 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
 </head>
 <body>
 
+<script>(function(){var hint=false;try{hint=localStorage.getItem("ajing-session-hint")==="1";}catch(e){}setTimeout(function(){var s=document.getElementById("startupLoading");if(s&&!s.classList.contains("is-done")){s.classList.add("is-done");setTimeout(function(){s.hidden=true;},240);}},hint?9000:4000);})();</script>
 <div class="startup-loading" id="startupLoading" role="status" aria-live="polite" aria-label="Carregando Ajing Game">
   <div class="startup-loading-content">
     <span class="logo-img startup-loading-logo" role="img" aria-label="Logo Ajing Game"></span>
@@ -2480,15 +2481,22 @@ const maybeMigrateSpecies = () => {
 let authUid = null, memberUnsubs = [], authSeq = Promise.resolve();
 const fbUser = () => authUid ? C.users[authUid] || null : null;
 const fbIsAdmin = () => { const u = fbUser(); return !!u && u.role === 'admin' && u.active !== false; };
+let memberGen = 0;
 const attachMember = async on => {
-  memberUnsubs.forEach(u => u()); memberUnsubs = [];
+  memberGen++; memberUnsubs.forEach(u => u()); memberUnsubs = [];
   if (!on) { MEMBER_COLS.forEach(n => { C[n] = {}; }); dropCol('postAudits'); dropCol('contactMessages'); dropCol('contactUnread'); C.memberMessages = {}; C.memberApplications = {}; return; }
   const username = fbUser().username;
   const refs = MEMBER_COLS.map(name => [name, fsCol(fdb, name)]);
   refs.push(['memberMessages', fsCol(fdb, 'memberMessages', username, 'messages')]);
   if (fbIsAdmin()) refs.push(['memberApplications', fsCol(fdb, 'memberApplications')]);
   else { dropCol('postAudits'); dropCol('contactMessages'); dropCol('contactUnread'); }
-  memberUnsubs = await Promise.all(refs.map(([name, ref]) => listen(name, ref)));
+  // Os dados de membro chegam em segundo plano: a tela não espera por eles (cada parte é redesenhada quando chega)
+  const gen = ++memberGen;
+  refs.forEach(([name, ref]) => listen(name, ref).then(unsub => {
+    if (gen !== memberGen) { unsub(); return; }
+    memberUnsubs.push(unsub);
+    if (fbHooks.refresh) fbHooks.refresh(name);
+  }));
   if (fbIsAdmin()) ensureCol('contactUnread', query(fsCol(fdb, 'contactMessages'), where('read', '==', false)));
 };
 
@@ -2800,6 +2808,7 @@ const fb = {
   setPrivateProfile: (uid, data) => setDoc(fsDoc(fdb, 'privateProfiles', uid), clean(data)),
   deletePrivate: uid => deleteDoc(fsDoc(fdb, 'private', uid)),
   postsLoaded: () => deferredLoaded,
+  authKnown: () => authKnown,
   // Reserva uma premiação em config/autoAwards dentro de uma transação: se outro aparelho já premiou, devolve false
   claimAward: (kind, id, data) => runTransaction(fdb, async tx => {
     const ref = fsDoc(fdb, 'config', 'autoAwards'), snap = await tx.get(ref), cur = snap.exists() ? snap.data() : {};
@@ -2821,12 +2830,18 @@ const fb = {
 
 // Inicialização: começa dados públicos, conteúdo adiado e sessão em paralelo
 // Array.map passa (item, índice, array); chame explicitamente para não confundir o índice com a referência Firestore.
-const firstReady = Promise.all(FIRST_COLS.map(name => listen(name)));
+// Só a configuração (textos e marca) segura a abertura; os slides esperam no máximo o limite abaixo;
+// o restante chega em segundo plano e cada parte é redesenhada quando chega.
+const BLOCKING_COLS = ['config'];
+const firstReady = Promise.all(BLOCKING_COLS.map(name => listen(name)));
+const slidesReady = FIRST_COLS.includes('slides') ? listen('slides').then(u => { if (fbHooks.refresh) fbHooks.refresh('slides'); return u; }) : Promise.resolve();
+FIRST_COLS.filter(name => !BLOCKING_COLS.includes(name) && name !== 'slides').forEach(name => listen(name).then(() => { if (fbHooks.refresh) fbHooks.refresh(name); }));
 firstReady.then(() => { if (!speciesFromList()) ensureCol('species').then(maybeMigrateSpecies); });
 const deferredReady = Promise.all(DEFERRED_COLS.map(name => listen(name))).then(() => {
   deferredLoaded = true;
   if (fbHooks.refresh) DEFERRED_COLS.forEach(name => fbHooks.refresh(name));
 });
+let startupDone = false, authKnown = false;
 const authReady = new Promise(resolve => {
   let first = true;
   onAuthStateChanged(fbAuth, user => {
@@ -2839,13 +2854,19 @@ const authReady = new Promise(resolve => {
       const u = fbUser();
       await attachMember(!!(u && u.active !== false));
       maybeMigrateSpecies();
-      if (first) { first = false; resolve(); } else if (fbHooks.refresh) fbHooks.refresh();
+      if (first) { first = false; authKnown = true; resolve(); if (startupDone && fbHooks.refresh) fbHooks.refresh(); }
+      else if (fbHooks.refresh) fbHooks.refresh();
     });
   });
 });
 // Antes, a validação da sessão só começava após todos os dados públicos. Esperar os dois
 // fluxos juntos mantém os dados prontos para a interface e encurta a espera inicial.
-await Promise.all([firstReady, authReady]);
+// A abertura espera a configuração, os slides e o login por no máximo 2 s; o que vier depois atualiza a tela sozinho.
+// Quem estava logado neste aparelho abre direto na área de membros, como um app: a tela de carregamento espera o
+// login (até 8 s) em vez de mostrar a página inicial. Visitantes esperam no máximo 2 s pelos slides e pelo login.
+let sessionHint = false; try { sessionHint = localStorage.getItem('ajing-session-hint') === '1'; } catch (_) {}
+await Promise.race([Promise.all(sessionHint ? [firstReady, authReady] : [firstReady, slidesReady, authReady]), new Promise(resolve => setTimeout(resolve, sessionHint ? 8000 : 2000))]);
+startupDone = true;
 
 (() => {
   const $ = id => document.getElementById(id);
@@ -3329,7 +3350,7 @@ await Promise.all([firstReady, authReady]);
       }
       if (u.active === false) { await fb.signOut(); loginError.textContent = 'Esta conta está desativada. Fale com um administrador.'; return; }
       await Promise.all([loadPosts(), loadReqPhotos()]);
-      loginForm.reset(); closeLogin(); showMembers('social');
+      store.set('ajing-session-hint', '1'); loginForm.reset(); closeLogin(); showMembers('social');
     } catch (err) { loginError.textContent = fb.errMsg(err); }
     finally { btn.disabled = false; }
   });
@@ -3372,6 +3393,7 @@ await Promise.all([firstReady, authReady]);
     catch (err) { loginError.textContent = fb.errMsg(err); }
   });
   const logout = async () => {
+    store.del('ajing-session-hint');
     try { await fb.signOut(); } catch(_) {}
     store.del('ajing-member-tab', true);
     $('membersBtnLabel').textContent = 'Login / Sign up'; $('membersBtn').setAttribute('aria-label', 'Login / Sign up');
@@ -6911,7 +6933,18 @@ await Promise.all([firstReady, authReady]);
     if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.id !== 'feedSearch' && a.closest('#membersPage, .modal.open')) return true;
     return !!document.querySelector('.modal.open, #slideForm:not([hidden]), #champForm:not([hidden]), #userForm:not([hidden]), #profileForm:not([hidden]), #passForm:not([hidden]), [data-review-form]:not([hidden]), .reject-box:not([hidden])');
   };
+  let awaitingLateAuth = false;
   const doRefresh = async () => {
+    // Login confirmado depois da abertura da página: ajusta o botão e abre a área de membros (se a pessoa ainda não navegou)
+    if (awaitingLateAuth && fb.authKnown()) {
+      awaitingLateAuth = false;
+      if (!currentUser()) store.del('ajing-session-hint');
+      if (currentUser()) {
+        store.set('ajing-session-hint', '1');
+        $('membersBtnLabel').textContent = 'Minha área'; $('membersBtn').setAttribute('aria-label', 'Minha área');
+        if (membersPage.hidden && !document.querySelector('.modal.open') && window.scrollY < 80) { await loadPosts(); renderAll(); showMembers('social'); }
+      }
+    }
     const changed = [...refreshCollections]; refreshCollections.clear();
     refreshTimer = null;
     if (!changed.length) return;
@@ -6998,8 +7031,8 @@ await Promise.all([firstReady, authReady]);
     renderChampion();
     if (fb.authUid() && !currentUser()) await fb.signOut().catch(() => {});
     // Uma sessão ativa abre direto no Social Fish.
-    if (currentUser()) { $('membersBtnLabel').textContent = 'Minha área'; $('membersBtn').setAttribute('aria-label', 'Minha área'); showMembers('social'); }
-    else showTab('social');
+    if (currentUser()) { store.set('ajing-session-hint', '1'); $('membersBtnLabel').textContent = 'Minha área'; $('membersBtn').setAttribute('aria-label', 'Minha área'); showMembers('social'); }
+    else { showTab('social'); if (!fb.authKnown()) awaitingLateAuth = true; else store.del('ajing-session-hint'); }
     finishStartupLoading();
   });
 })();
