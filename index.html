@@ -1477,6 +1477,14 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
 }
 /* Administração › Usuários: lista sem limite de altura (cresce com a página, sem barra de rolagem própria) */
 .admin-list.user-list{max-height:none;overflow:visible}
+.media-loading{background:var(--surface-2);animation:media-pulse 1.4s ease-in-out infinite}
+@keyframes media-pulse{50%{opacity:.55}}
+@media(prefers-reduced-motion:reduce){.media-loading{animation:none}}
+.media-migrate{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 16px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:var(--radius-sm);background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+.media-migrate[hidden]{display:none}
+.media-migrate b{display:block}
+.media-migrate small{display:block;color:var(--muted);font-size:.84rem;line-height:1.4}
+@media(max-width:640px){.media-migrate{flex-direction:column;align-items:stretch}}
 </style>
 <script>
 (() => {
@@ -1802,7 +1810,8 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
         </section>
         <section class="panel" role="tabpanel" data-panel="admin" hidden>
           <div class="panel-head"><div><h3>Administração</h3><p>Gerencie o conteúdo do site e o acesso da comunidade.</p></div></div>
-          <nav class="admin-subnav admin-main-nav" aria-label="Seções da administração">
+          <div class="media-migrate" id="mediaMigrateBox" hidden><div><b>Otimização das fotos</b><small id="mediaMigrateText"></small></div><button class="btn btn-primary" id="mediaMigrateBtn" type="button">Otimizar agora</button></div>
+            <nav class="admin-subnav admin-main-nav" aria-label="Seções da administração">
             <button type="button" data-admin-sec="requests"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M5 5h14l1 8v6H4v-6z"/></svg>Solicitações<span class="count" id="cntReq"></span></button>
             <button type="button" data-admin-sec="award"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 20h6"/></svg>Campeonatos</button>
             <button type="button" data-admin-sec="rank-award"><svg class="sub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>Temporada do ranking</button>
@@ -2366,7 +2375,7 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword, setPersistence, inMemoryPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection as fsCol, doc as fsDoc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, arrayUnion, arrayRemove, runTransaction, deleteField, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection as fsCol, doc as fsDoc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, arrayUnion, arrayRemove, runTransaction, deleteField, getDocFromCache, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 /* =====================================================================
    CONFIGURAÇÃO DO FIREBASE
@@ -2588,18 +2597,53 @@ const kvDB = {
     if (k === 'hero-slides') return syncCol('slides', (v || []).map((s, i) => [s.id, { ...s, order: i }]), fbIsAdmin());
   }
 };
+// Fotos das publicações em coleções próprias (o registro da publicação fica leve):
+// postThumbs/{id} = miniatura do feed · postPhotos/{id} = foto completa. 'v' acompanha photoV da publicação.
+const mediaResolved = new Map(), mediaPending = new Map();
+const mediaKey = (id, v, size) => `${size === 'full' ? 'postPhotos' : 'postThumbs'}/${id}/${v || 0}`;
+const postMedia = (id, v, size) => {
+  const key = mediaKey(id, v, size);
+  if (mediaResolved.has(key)) return Promise.resolve(mediaResolved.get(key));
+  if (!mediaPending.has(key)) mediaPending.set(key, (async () => {
+    const ref = fsDoc(fdb, size === 'full' ? 'postPhotos' : 'postThumbs', id);
+    let snap = null;
+    try { snap = await getDocFromCache(ref); if (!snap.exists() || (snap.data().v || 0) !== (v || 0)) snap = null; } catch (_) { snap = null; }
+    if (!snap) snap = await getDoc(ref);
+    const data = snap.exists() ? String(snap.data().data || '') : '';
+    if (data) mediaResolved.set(key, data);
+    return data;
+  })().catch(() => '').finally(() => mediaPending.delete(key)));
+  return mediaPending.get(key);
+};
+const mediaWrites = (batch, id, owner, v, media) => {
+  batch.set(fsDoc(fdb, 'postPhotos', id), { data: media.full, v, owner });
+  batch.set(fsDoc(fdb, 'postThumbs', id), { data: media.thumb, v, owner });
+  mediaResolved.set(mediaKey(id, v, 'full'), media.full); mediaResolved.set(mediaKey(id, v, 'thumb'), media.thumb);
+};
 const postsDB = {
   all: async () => Object.values(C.posts).map(p => ({ ...p })),
+  media: postMedia,
+  mediaCached: (id, v, size) => mediaResolved.get(mediaKey(id, v, size)) || '',
+  // Converte uma publicação antiga (foto dentro do registro) para o formato com fotos separadas
+  migrate: async (post, thumb) => {
+    const batch = writeBatch(fdb);
+    mediaWrites(batch, post.id, post.user, 1, { full: post.photo, thumb });
+    batch.update(fsDoc(fdb, 'posts', post.id), { photo: deleteField(), photoV: 1 });
+    await batch.commit();
+    const n = { ...C.posts[post.id] }; delete n.photo; n.photoV = 1; C.posts = { ...C.posts, [post.id]: n };
+  },
   put: p => { const d = clean(p); C.posts = { ...C.posts, [d.id]: d }; return setDoc(fsDoc(fdb, 'posts', d.id), d); },
-  create: async (post, audit) => {
+  create: async (post, audit, media = null) => {
     const batch = writeBatch(fdb), data = clean(post);
     batch.set(fsDoc(fdb, 'posts', data.id), data);
+    if (media) mediaWrites(batch, data.id, data.user, data.photoV || 1, media);
     batch.set(fsDoc(fdb, 'postAudits', data.id), { owner: data.user, ...clean(audit) });
     await batch.commit(); C.posts = { ...C.posts, [data.id]: data };
   },
-  putWithAudit: async (post, audit) => {
+  putWithAudit: async (post, audit, media = null) => {
     const batch = writeBatch(fdb), data = clean(post);
     batch.set(fsDoc(fdb, 'posts', data.id), data);
+    if (media) mediaWrites(batch, data.id, data.user, data.photoV || 1, media);
     batch.set(fsDoc(fdb, 'postAudits', data.id), { owner: data.user, ...clean(audit) }, { merge: true });
     await batch.commit(); C.posts = { ...C.posts, [data.id]: data };
   },
@@ -2617,6 +2661,7 @@ const postsDB = {
   del: async id => {
     const n = { ...C.posts }; delete n[id]; C.posts = n;
     const batch = writeBatch(fdb); batch.delete(fsDoc(fdb, 'posts', id)); batch.delete(fsDoc(fdb, 'postAudits', id));
+    batch.delete(fsDoc(fdb, 'postPhotos', id)); batch.delete(fsDoc(fdb, 'postThumbs', id));
     await batch.commit();
   }
 };
@@ -3660,8 +3705,8 @@ await Promise.all([firstReady, authReady]);
           ${canManage ? `<div class="post-owner-actions">${editBtn(p.id)}${delBtn(p.id)}</div>` : ''}
         </header>
         ${compact
-          ? `<div class="post-media-wrap"><button class="post-photo" type="button" data-open-post="${esc(p.id)}" aria-label="Abrir publicação de ${esc(name)}: ${esc(p.speciesName)}${isPostScored(p) ? ', ' + ptsLabel(postPoints(p)) : ''}"><img src="${esc(photo)}" alt="${alt}" loading="lazy">${isPostScored(p) ? `<span class="post-points-badge${catchNote(p) ? ' reduced' : ''}" aria-hidden="true">+${ptsLabel(postPoints(p))}${catchNote(p) ? ` · ${Math.round(catchInfo(p).factor * 100)}%` : ''}</span>` : ''}</button>${likeButton}</div>`
-          : `<div class="post-media-wrap"><div class="post-photo"><img src="${esc(photo)}" alt="${alt}"></div>${likeButton}</div>`}
+          ? `<div class="post-media-wrap"><button class="post-photo" type="button" data-open-post="${esc(p.id)}" aria-label="Abrir publicação de ${esc(name)}: ${esc(p.speciesName)}${isPostScored(p) ? ', ' + ptsLabel(postPoints(p)) : ''}"><img ${postImgAttrs(p, 'thumb')} alt="${alt}" loading="lazy">${isPostScored(p) ? `<span class="post-points-badge${catchNote(p) ? ' reduced' : ''}" aria-hidden="true">+${ptsLabel(postPoints(p))}${catchNote(p) ? ` · ${Math.round(catchInfo(p).factor * 100)}%` : ''}</span>` : ''}</button>${likeButton}</div>`
+          : `<div class="post-media-wrap"><div class="post-photo"><img ${postImgAttrs(p, 'full')} alt="${alt}"></div>${likeButton}</div>`}
         <div class="post-body">
           <div class="pb-row"><span class="species-tag has-score-fish">${esc(p.speciesName)}</span>${compact ? time : ''}</div>
           <div class="post-meta-row"><span class="score-fish ${scoreStatus}" role="img" aria-label="${scoreLabel}" title="${scoreLabel}">${fishIcon}</span>${p.captureDate ? `<small class="capture-date">${captureDateShort(p.captureDate)}</small>` : ''}</div>
@@ -3679,10 +3724,48 @@ await Promise.all([firstReady, authReady]);
   let feedQuery = '', feedShownCount = feedPageSize();
   const normalizeFeedSearch = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   const feedRenderCache = new Map();
+  /* ===== Fotos das publicações sob demanda =====
+     Publicações novas guardam a foto em coleções próprias: a miniatura carrega quando o cartão chega perto da tela
+     e a foto completa só quando a publicação é aberta. Publicações antigas (foto no próprio registro) continuam iguais. */
+  const BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+  const postImgAttrs = (p, size = 'thumb') => {
+    if (p.photo) return `src="${esc(safeImageSrc(p.photo))}"`;
+    const v = p.photoV || 1, cached = postsDB.mediaCached(p.id, v, size) || (size === 'full' ? postsDB.mediaCached(p.id, v, 'thumb') : '');
+    const done = !!postsDB.mediaCached(p.id, v, size);
+    return `src="${esc(cached || BLANK_IMG)}" data-post-media="${esc(p.id)}" data-media-v="${v}" data-media-size="${size}"${done ? ' data-media-loaded="1"' : ' class="media-loading"'}`;
+  };
+  const loadMediaImg = async img => {
+    if (img.dataset.mediaLoaded || img.dataset.mediaBusy) return;
+    img.dataset.mediaBusy = '1';
+    const data = await postsDB.media(img.dataset.postMedia, Number(img.dataset.mediaV) || 1, img.dataset.mediaSize);
+    delete img.dataset.mediaBusy;
+    if (data) { img.src = safeImageSrc(data); img.dataset.mediaLoaded = '1'; img.classList.remove('media-loading'); }
+  };
+  const mediaObserver = 'IntersectionObserver' in window ? new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) { mediaObserver.unobserve(e.target); loadMediaImg(e.target); } }), { rootMargin: '600px 0px' }) : null;
+  const hydrateMedia = root => (root || document).querySelectorAll('img[data-post-media]:not([data-media-loaded])').forEach(img => {
+    if (img.dataset.mediaSize === 'full' || !mediaObserver) loadMediaImg(img); else mediaObserver.observe(img);
+  });
+  let hydrateQueued = false;
+  new MutationObserver(() => { if (hydrateQueued) return; hydrateQueued = true; requestAnimationFrame(() => { hydrateQueued = false; hydrateMedia(document); }); })
+    .observe(document.body, { childList: true, subtree: true });
+  // Miniatura do feed a partir da foto completa (formato 4:5, 480 px de largura)
+  const makeThumb = src => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const w = Math.min(480, img.naturalWidth || 480), h = Math.round(w * (img.naturalHeight / img.naturalWidth || 1.25));
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      let out = c.toDataURL('image/webp', .62);
+      if (!out.startsWith('data:image/webp')) out = c.toDataURL('image/jpeg', .7);
+      resolve(out);
+    };
+    img.onerror = () => reject(new Error('thumb'));
+    img.src = src;
+  });
   const feedSignature = (p, pointsByUser) => {
     const profile = readProfileOf(p.user), account = getUsers().find(u => u.username === p.user), level = levelInfo(pointsByUser.get(p.user) || 0).cur;
     const likes = Array.isArray(p.likes) ? [...new Set(p.likes)].sort().join('\u001f') : '';
-    return [p.id, p.user, p.photo, p.speciesName, p.speciesId, p.place, p.created, p.captureDate, p.caption, p.status, postPoints(p), likes,
+    return [p.id, p.user, p.photo, p.photoV, p.speciesName, p.speciesId, p.place, p.created, p.captureDate, p.caption, p.status, postPoints(p), likes,
       currentUser(), displayName(p.user), profile.name, profile.fishingName, profile.photo, account?.seasonChampion, account?.goldHooks,
       level?.n, level?.name, level?.symbol, level?.image, timeAgo(p.created)];
   };
@@ -3755,11 +3838,19 @@ await Promise.all([firstReady, authReady]);
     $('postTitle').textContent = 'Editar publicação'; $('postSubmit').textContent = 'Salvar alterações';
     $('postNoScore').closest('.post-noscore').hidden = true;
     $('postNoScore').checked = post.status === 'unscored';
-    setPostImage(post.photo); postSpecies.value = post.speciesId || ''; spPickSync();
+    editOriginalPhoto = post.photo || '';
+    if (post.photo) setPostImage(post.photo);
+    else {
+      const v = post.photoV || 1, quick = postsDB.mediaCached(post.id, v, 'full') || postsDB.mediaCached(post.id, v, 'thumb');
+      if (quick) setPostImage(quick);
+      postsDB.media(post.id, v, 'full').then(full => { if (full && editingPostId === post.id) { editOriginalPhoto = full; if (!postImageAudit) setPostImage(full); } });
+    }
+    postSpecies.value = post.speciesId || ''; spPickSync();
     postPlace.value = post.place || ''; postFields.hidden = false;
     postCaption.value = post.caption || ''; updateCaptionCount();
     setTimeout(() => { spPickSync(); postCaption.focus(); }, 30);
   };
+  let editOriginalPhoto = '';
   const closePostView = () => {
     postView.classList.remove('open'); postView.setAttribute('aria-hidden', 'true'); document.body.style.overflow = '';
     postViewFocus && postViewFocus.focus && postViewFocus.focus();
@@ -3838,8 +3929,10 @@ await Promise.all([firstReady, authReady]);
       if (editingPostId) {
         const original = posts.find(p => p.id === editingPostId);
         if (!original || original.user !== currentUser()) throw new Error('Publicação não encontrada.');
-        const speciesChanged = original.speciesId !== sp.id, photoChanged = !!postImage && postImage !== original.photo;
-        const updated = { ...original, place, captureDate, caption: postCaption.value.trim().slice(0, 150), photo: postImage || original.photo };
+        const speciesChanged = original.speciesId !== sp.id, photoChanged = !!postImage && !!postImageAudit && postImage !== (original.photo || editOriginalPhoto);
+        const updated = { ...original, place, captureDate, caption: postCaption.value.trim().slice(0, 150) };
+        let media = null;
+        if (photoChanged) { media = { full: postImage, thumb: await makeThumb(postImage) }; delete updated.photo; updated.photoV = (original.photoV || 0) + 1; }
         if (speciesChanged) { updated.speciesId = sp.id; updated.speciesName = sp.name; updated.points = sp.points; }
         // Trocar a espécie ou a foto exige nova validação (a análise anterior valia para a foto e a espécie antigas)
         if (speciesChanged || photoChanged) {
@@ -3849,14 +3942,14 @@ await Promise.all([firstReady, authReady]);
           delete updated.pointsOverride;
           delete updated.reviewed; delete updated.reviewer;
         }
-        if (postImageAudit && postImage !== original.photo) await postsDB.putWithAudit(updated, postImageAudit);
+        if (photoChanged) await postsDB.putWithAudit(updated, postImageAudit, media);
         else await postsDB.put(updated);
       } else {
         const shotDate = postImageAudit && postImageAudit.imageTime > 0 && !postImageAudit.oldImageDate ? localDateValue(new Date(postImageAudit.imageTime)) : captureDate;
         autoRejectedReason = autoRejectReason(postImageAudit, shotDate);
         const autoOk = !noScore && !autoRejectedReason && auditEligible(postImageAudit), now = Date.now();
         autoApproved = autoOk;
-        await postsDB.create({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate: shotDate, caption: postCaption.value.trim().slice(0, 150), photo: postImage, created: now, status: noScore || autoRejectedReason ? 'unscored' : autoOk ? 'approved' : 'pending', ...(autoOk ? { reviewed: now, reviewer: 'auto' } : {}) }, postImageAudit || { fileType: '', fileSize: 0, imageDate: '', imageTime: 0, software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true });
+        await postsDB.create({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate: shotDate, caption: postCaption.value.trim().slice(0, 150), photoV: 1, created: now, status: noScore || autoRejectedReason ? 'unscored' : autoOk ? 'approved' : 'pending', ...(autoOk ? { reviewed: now, reviewer: 'auto' } : {}) }, postImageAudit || { fileType: '', fileSize: 0, imageDate: '', imageTime: 0, software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true }, { full: postImage, thumb: await makeThumb(postImage) });
       }
       const editedId = editingPostId;
       closePostModal(false);
@@ -6113,7 +6206,7 @@ await Promise.all([firstReady, authReady]);
       if (audit.dateUnverified || !audit.imageDate) flags.push('Data original não verificável (sem EXIF)');
       if (!audit.fileType) flags.push('Publicação antiga: verificação não registrada');
       return `<li data-post-review="${esc(p.id)}">
-      <button class="post-review-thumb" type="button" data-review-open="${esc(p.id)}" aria-label="Ampliar captura de ${esc(displayName(p.user))}"><img src="${esc(safeImageSrc(p.photo))}" alt="Captura de ${esc(p.speciesName)}"></button>
+      <button class="post-review-thumb" type="button" data-review-open="${esc(p.id)}" aria-label="Ampliar captura de ${esc(displayName(p.user))}"><img ${postImgAttrs(p, 'thumb')} alt="Captura de ${esc(p.speciesName)}"></button>
       <span class="grow"><b>${esc(displayName(p.user))} · ${esc(p.speciesName)}</b><small>Captura em ${captureDateLabel(p.captureDate)} · enviada em ${fmtShort(p.created)} · ${esc(p.place || 'Local não informado')}${p.caption ? ` · ${esc(p.caption)}` : ''}</small>${flags.length ? `<small class="post-audit-warning" role="note">⚠ Verificação da imagem: ${flags.map(esc).join(' · ')}${audit.imageDate ? ` · Data EXIF: ${fmtShort(new Date(audit.imageDate))}` : ''}${audit.software ? ` · Software: ${esc(audit.software)}` : ''}</small>` : '<small class="post-audit-ok">Imagem com data EXIF dentro do limite.</small>'}</span>
       <span class="post-review-actions"><button class="btn btn-ghost review-edit-btn" type="button" data-post-review-act="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Editar publicação</button><button class="btn btn-primary" type="button" data-post-review-act="approve">Validar pontos</button><button class="btn btn-danger" type="button" data-post-review-act="reject">Recusar pontos</button></span>
       <form class="review-edit-panel" data-review-form="reject-post" hidden novalidate><div class="field"><label>Motivo da recusa (visível ao membro)</label><textarea maxlength="500" rows="3" placeholder="Explique por que a pontuação foi recusada" required></textarea></div><div class="form-error" data-edit-error role="alert"></div><div class="form-actions"><button class="btn btn-danger" type="submit">Recusar e enviar mensagem</button><button class="btn btn-ghost" type="button" data-post-reject-cancel>Cancelar</button></div></form>
@@ -6786,7 +6879,28 @@ await Promise.all([firstReady, authReady]);
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
   $('miniAvatarProfile').addEventListener('click', () => { showTab('profile'); resetTabHome('profile'); });
-  function renderAll() { renderAward(); renderEvents(); updateUserChip(); renderProfile(); renderMembers(); renderMyCaptures(); renderMemberMessages(); renderRequests(); const profSubnav = document.getElementById('profSubnav'); profSubnav.hidden = false; profSubnav.querySelector('[data-prof-sec="request"]').hidden = isAdmin(); if (isAdmin() && store.get('ajing-prof-sec', true) === 'request') showProfSec('card'); renderSpeciesSelect(); renderFeed(); renderSpecies(); renderRanking(); renderAdmin(); renderSlideAdmin(); }
+  const renderMediaMigrate = () => {
+    const box = $('mediaMigrateBox'); if (!box) return;
+    const legacy = isAdmin() ? posts.filter(p => p.photo) : [];
+    if (box.dataset.running) return;
+    box.hidden = !legacy.length;
+    if (legacy.length) $('mediaMigrateText').textContent = `${legacy.length} ${legacy.length === 1 ? 'publicação antiga ainda guarda' : 'publicações antigas ainda guardam'} a foto no formato antigo, mais pesado. A conversão deixa o site mais rápido para todos e pode ser feita a qualquer momento.`;
+  };
+  $('mediaMigrateBtn').addEventListener('click', async () => {
+    if (!isAdmin()) return;
+    const box = $('mediaMigrateBox'), btn = $('mediaMigrateBtn'), legacy = posts.filter(p => p.photo);
+    if (!legacy.length) return renderMediaMigrate();
+    box.dataset.running = '1'; btn.disabled = true; let done = 0, failed = 0;
+    for (const post of legacy) {
+      try { await postsDB.migrate(post, await makeThumb(post.photo)); done++; } catch (_) { failed++; }
+      $('mediaMigrateText').textContent = `Convertendo… ${done + failed} de ${legacy.length}`;
+    }
+    delete box.dataset.running; btn.disabled = false;
+    await loadPosts(); renderAll();
+    if (!failed) { box.hidden = true; showToast(`<div><b>Fotos otimizadas</b><small>${done} ${done === 1 ? 'publicação convertida' : 'publicações convertidas'}.</small></div>`); }
+    else $('mediaMigrateText').textContent = `${done} convertidas, ${failed} com falha. Toque em Otimizar agora para tentar de novo.`;
+  });
+  function renderAll() { renderMediaMigrate(); renderAward(); renderEvents(); updateUserChip(); renderProfile(); renderMembers(); renderMyCaptures(); renderMemberMessages(); renderRequests(); const profSubnav = document.getElementById('profSubnav'); profSubnav.hidden = false; profSubnav.querySelector('[data-prof-sec="request"]').hidden = isAdmin(); if (isAdmin() && store.get('ajing-prof-sec', true) === 'request') showProfSec('card'); renderSpeciesSelect(); renderFeed(); renderSpecies(); renderRanking(); renderAdmin(); renderSlideAdmin(); }
 
   /* ===== Atualização em tempo real ===== */
   // Mudanças feitas por outros membros chegam pelo Firestore; a tela só é redesenhada quando ninguém está digitando.
@@ -6851,10 +6965,16 @@ await Promise.all([firstReady, authReady]);
       }
     }
   };
-  fb.hooks.refresh = name => {
-    refreshCollections.add(name || '*');
-    if (!refreshTimer) refreshTimer = setTimeout(doRefresh, 150);
+  // Com a aba em segundo plano, as mudanças só são acumuladas e a tela é redesenhada quando a pessoa volta.
+  // Em sequências rápidas de mudanças, os redesenhos ficam mais espaçados.
+  let lastRefreshAt = 0;
+  const scheduleRefresh = () => {
+    if (refreshTimer || document.hidden || !refreshCollections.size) return;
+    const delay = Date.now() - lastRefreshAt < 1200 ? 700 : 150;
+    refreshTimer = setTimeout(() => { lastRefreshAt = Date.now(); doRefresh(); }, delay);
   };
+  fb.hooks.refresh = name => { refreshCollections.add(name || '*'); scheduleRefresh(); };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleRefresh(); });
   let writeErrAt = 0;
   window.addEventListener('fb-write-error', e => {
     if (Date.now() - writeErrAt < 4000) return; writeErrAt = Date.now();
