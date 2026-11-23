@@ -1509,6 +1509,12 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
   .contact-foot{flex-direction:column-reverse;align-items:stretch}
   .contact-foot .btn{min-width:0;width:100%}
 }
+/* Caixa de mensagens: botão de excluir e, no celular, lista sem barra de rolagem própria */
+#memberMessagesList .member-message{display:flex;align-items:flex-start;gap:10px}
+#memberMessagesList .member-message>.grow{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+#memberMessagesList .msg-del{flex:none;color:var(--muted)}
+#memberMessagesList .msg-del:hover{color:var(--red)}
+@media (max-width:720px){ #memberMessagesList{max-height:none;overflow:visible} }
 </style>
 <script>
 (() => {
@@ -1739,7 +1745,7 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
   </div>
   <section class="contact-page" id="contato" hidden aria-labelledby="contactTitle">
     <div class="contact-card">
-      <div class="contact-head"><h1 id="contactTitle">Fale com a administração</h1><p>Envie sua mensagem. Nossa equipe recebe o contato na caixa de mensagens do perfil administrativo.</p></div>
+      <div class="contact-head"><h1 id="contactTitle">Fale conosco</h1><p>Envie sua dúvida, sugestão ou proposta. Responderemos pelo e-mail ou telefone informados.</p></div>
       <form id="contactForm" class="contact-form" novalidate>
         <div class="contact-row">
           <div class="field"><label for="ctName">Nome completo</label><input id="ctName" autocomplete="name" minlength="2" maxlength="100" required></div>
@@ -2716,8 +2722,8 @@ const postsDB = {
 };
 const memberMessagesDB = {
   all: () => [
-    ...Object.values(C.memberMessages).map(m => ({ ...m })),
-    ...(fbIsAdmin() ? Object.values(C.contactMessages || {}).map(m => ({ ...m, type: 'contact' })) : [])
+    ...Object.entries(C.memberMessages).map(([id, m]) => ({ id, ...m })),
+    ...(fbIsAdmin() ? Object.entries(C.contactMessages || {}).map(([id, m]) => ({ id, ...m, type: 'contact' })) : [])
   ].sort((a, b) => (b.created || 0) - (a.created || 0)),
   markRead: async message => {
     if (message.type === 'contact') {
@@ -2727,6 +2733,17 @@ const memberMessagesDB = {
     }
     await updateDoc(fsDoc(fdb, 'memberMessages', fbUser().username, 'messages', message.id), { read: true });
     if (C.memberMessages[message.id]) C.memberMessages = { ...C.memberMessages, [message.id]: { ...C.memberMessages[message.id], read: true } };
+  },
+  // Exclui uma mensagem da caixa (o membro apaga as suas; administradores também apagam as de contato)
+  del: async message => {
+    if (message.type === 'contact') {
+      await deleteDoc(fsDoc(fdb, 'contactMessages', message.id));
+      const { [message.id]: _c, ...restC } = C.contactMessages || {}; C.contactMessages = restC;
+      const { [message.id]: _u, ...restU } = C.contactUnread || {}; C.contactUnread = restU;
+      return;
+    }
+    await deleteDoc(fsDoc(fdb, 'memberMessages', fbUser().username, 'messages', message.id));
+    const { [message.id]: _m, ...rest } = C.memberMessages || {}; C.memberMessages = rest;
   },
   audit: id => C.postAudits[id] ? clean(C.postAudits[id]) : null
 };
@@ -6026,9 +6043,18 @@ startupDone = true;
     const tabBadge = $('cntProfileTab'); tabBadge.textContent = unread > 9 ? '9+' : String(unread); tabBadge.hidden = !unread;
     tabBadge.setAttribute('aria-label', `${unread} ${unread === 1 ? 'mensagem não lida' : 'mensagens não lidas'}`);
     $('memberMessagesList').innerHTML = messages.length ? messages.map(m => m.type === 'contact'
-      ? `<li class="member-message ${m.read ? '' : 'unread'}"><span class="grow"><b>Contato pelo site · ${esc(m.subject)}</b><small>${fmtShort(m.created)} · ${esc(m.fullName)} · ${esc(m.email)}${m.phone ? ' · ' + esc(m.phone) : ''}</small><span>${esc(m.message)}</span></span></li>`
-      : `<li class="member-message ${m.read ? '' : 'unread'}"><span class="grow"><b>Publicação recusada · ${esc(m.speciesName || 'Captura')}</b><small>${fmtShort(m.created)} · Avaliada por ${esc(m.reviewer === 'auto' ? 'Sistema' : displayName(m.reviewer || ''))}</small><span>${esc(m.reason)}</span></span></li>`).join('') : '<li class="empty-row">Você ainda não tem mensagens.</li>';
+      ? `<li class="member-message ${m.read ? '' : 'unread'}"><span class="grow"><b>Contato pelo site · ${esc(m.subject)}</b><small>${fmtShort(m.created)} · ${esc(m.fullName)} · ${esc(m.email)}${m.phone ? ' · ' + esc(m.phone) : ''}</small><span>${esc(m.message)}</span></span><button class="icon-btn msg-del" type="button" data-msg-del="${esc(m.id)}" data-msg-type="${m.type === 'contact' ? 'contact' : 'member'}" aria-label="Excluir mensagem" title="Excluir mensagem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></li>`
+      : `<li class="member-message ${m.read ? '' : 'unread'}"><span class="grow"><b>Publicação recusada · ${esc(m.speciesName || 'Captura')}</b><small>${fmtShort(m.created)} · Avaliada por ${esc(m.reviewer === 'auto' ? 'Sistema' : displayName(m.reviewer || ''))}</small><span>${esc(m.reason)}</span></span><button class="icon-btn msg-del" type="button" data-msg-del="${esc(m.id)}" data-msg-type="${m.type === 'contact' ? 'contact' : 'member'}" aria-label="Excluir mensagem" title="Excluir mensagem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></li>`).join('') : '<li class="empty-row">Você ainda não tem mensagens.</li>';
   };
+  $('memberMessagesList').addEventListener('click', async e => {
+    const button = e.target.closest('[data-msg-del]'); if (!button) return;
+    const message = fb.memberMessagesDB.all().find(m => m.id === button.dataset.msgDel && (m.type === 'contact') === (button.dataset.msgType === 'contact'));
+    if (!message) return;
+    if (!(await askConfirm('Excluir esta mensagem? Ela sai da sua caixa de mensagens.', { title: 'Excluir mensagem?', confirmText: 'Excluir' }))) return;
+    button.disabled = true;
+    try { await fb.memberMessagesDB.del(message); renderMemberMessages(); }
+    catch (err) { button.disabled = false; showNotice('Não foi possível excluir a mensagem. ' + fb.errMsg(err)); }
+  });
   $('myCaptureFeed').addEventListener('click', async e => {
     const button = e.target.closest('[data-portfolio-pick]'); if (!button) return;
     const post = posts.find(p => p.id === button.dataset.portfolioPick), member = currentUser();
