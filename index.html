@@ -1485,6 +1485,30 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
 .media-migrate b{display:block}
 .media-migrate small{display:block;color:var(--muted);font-size:.84rem;line-height:1.4}
 @media(max-width:640px){.media-migrate{flex-direction:column;align-items:stretch}}
+/* Página de contato dentro do site */
+.contact-page{width:min(1340px,calc(100% - 64px));margin:0 auto;padding:28px 0 32px}
+.contact-page[hidden]{display:none}
+.contact-card{max-width:860px;margin:0 auto;padding:24px 28px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm,0 6px 24px rgba(0,0,0,.06))}
+.contact-head{text-align:center;margin-bottom:16px}
+.contact-head h1{margin:0;font-size:clamp(1.4rem,3vw,1.9rem);line-height:1.15}
+.contact-head p{margin:6px 0 0;color:var(--muted);font-size:.92rem}
+.contact-form{display:grid;gap:12px}
+.contact-row{display:grid;grid-template-columns:1.3fr 1.2fr 1fr;gap:12px}
+.contact-form .field{min-width:0}
+.contact-form textarea{min-height:96px;resize:vertical}
+.contact-foot{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.contact-foot .btn{min-width:200px}
+.contact-status{margin:0;font-size:.9rem;font-weight:600}
+.contact-status.error{color:var(--red)}
+.contact-status.success{color:var(--green,#087443)}
+.contact-hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+@media (max-width:720px){
+  .contact-page{width:calc(100% - 24px);padding:14px 0 20px}
+  .contact-card{padding:18px 16px}
+  .contact-row{grid-template-columns:1fr}
+  .contact-foot{flex-direction:column-reverse;align-items:stretch}
+  .contact-foot .btn{min-width:0;width:100%}
+}
 </style>
 <script>
 (() => {
@@ -1546,6 +1570,7 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
     <nav class="nav-links" id="navLinks" aria-label="Navegação principal">
       <a href="#inicio" data-home>Home</a>
       <a href="#ajing-game" data-home>Ajing Game</a>
+      <a href="#contato" data-home>Contato</a>
     </nav>
     <div class="nav-actions">
       <button class="btn btn-members" id="membersBtn" type="button" aria-label="Login / Sign up">
@@ -1712,6 +1737,22 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
   </section>
 
   </div>
+  <section class="contact-page" id="contato" hidden aria-labelledby="contactTitle">
+    <div class="contact-card">
+      <div class="contact-head"><h1 id="contactTitle">Fale com a administração</h1><p>Envie sua mensagem. Nossa equipe recebe o contato na caixa de mensagens do perfil administrativo.</p></div>
+      <form id="contactForm" class="contact-form" novalidate>
+        <div class="contact-row">
+          <div class="field"><label for="ctName">Nome completo</label><input id="ctName" autocomplete="name" minlength="2" maxlength="100" required></div>
+          <div class="field"><label for="ctEmail">E-mail</label><input id="ctEmail" type="email" autocomplete="email" maxlength="160" required></div>
+          <div class="field"><label for="ctPhone">Telefone</label><input id="ctPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" placeholder="(27) 99999-9999" required></div>
+        </div>
+        <div class="field"><label for="ctSubject">Assunto</label><input id="ctSubject" maxlength="120" required></div>
+        <div class="field"><label for="ctMessage">Mensagem</label><textarea id="ctMessage" rows="4" minlength="10" maxlength="3000" required></textarea></div>
+        <div class="contact-hp" aria-hidden="true"><label for="ctWebsite">Não preencha este campo</label><input id="ctWebsite" tabindex="-1" autocomplete="off"></div>
+        <div class="contact-foot"><p class="contact-status" id="ctStatus" role="status" aria-live="polite"></p><button class="btn btn-primary" id="ctSend" type="submit">Enviar mensagem</button></div>
+      </form>
+    </div>
+  </section>
   <section class="block alt" id="parceiros">
     <div class="container">
       <div class="sec-head">
@@ -2808,7 +2849,14 @@ const fb = {
   setPrivateProfile: (uid, data) => setDoc(fsDoc(fdb, 'privateProfiles', uid), clean(data)),
   deletePrivate: uid => deleteDoc(fsDoc(fdb, 'private', uid)),
   postsLoaded: () => deferredLoaded,
+  // Formulário público de contato (qualquer visitante pode enviar; só administradores leem)
+  sendContact: async data => {
+    const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', rnd = crypto.getRandomValues(new Uint8Array(20));
+    const id = Array.from(rnd, n => abc[n % abc.length]).join('');
+    await setDoc(fsDoc(fdb, 'contactMessages', id), { id, ...data, created: Date.now(), read: false });
+  },
   authKnown: () => authKnown,
+  authEmail: () => (fbAuth.currentUser && fbAuth.currentUser.email) || '',
   // Reserva uma premiação em config/autoAwards dentro de uma transação: se outro aparelho já premiou, devolve false
   claimAward: (kind, id, data) => runTransaction(fdb, async tx => {
     const ref = fsDoc(fdb, 'config', 'autoAwards'), snap = await tx.get(ref), cur = snap.exists() ? snap.data() : {};
@@ -3196,23 +3244,28 @@ startupDone = true;
   };
   document.querySelectorAll('[data-home]').forEach(a => a.addEventListener('click', e => {
     e.preventDefault(); e.stopPropagation();
-    showPublicContentPage(a.getAttribute('href') === '#ajing-game' ? 'ajing-game' : 'home');
+    showPublicContentPage(pageFromHref(a.getAttribute('href')));
   }));
+  const pageFromHref = href => href === '#ajing-game' ? 'ajing-game' : href === '#contato' ? 'contact' : 'home';
   const showPublicContentPage = page => {
     const endSpacer = document.getElementById('ajingEndSpacer'); if (endSpacer) endSpacer.style.height = '0px';
-    const ajing = $('ajing-game'), hero = $('inicio'), partners = $('parceiros'), homeEntries = $('homeContentEntries');
+    const ajing = $('ajing-game'), hero = $('inicio'), partners = $('parceiros'), homeEntries = $('homeContentEntries'), contact = $('contato');
     if (!ajing || !hero || !partners) return;
-    ajing.hidden = page !== 'ajing-game'; hero.hidden = page === 'ajing-game'; partners.hidden = page === 'ajing-game';
-    homeEntries.hidden = page === 'ajing-game'; closeMenu();
+    const isHome = page !== 'ajing-game' && page !== 'contact';
+    ajing.hidden = page !== 'ajing-game'; contact.hidden = page !== 'contact';
+    hero.hidden = !isHome; partners.hidden = !isHome; homeEntries.hidden = !isHome; closeMenu();
+    document.body.classList.toggle('contact-open', page === 'contact');
+    if (page === 'contact') prefillContact();
     if (home.hidden) showHome();
     requestAnimationFrame(() => {
       const target = page === 'ajing-game' ? ajing : $('home');
+      if (page === 'contact') { window.scrollTo({ top: 0 }); return; }
       window.scrollTo({ top: target === ajing ? ajing.offsetTop : 0, behavior: 'smooth' });
     });
   };
   $('navLinks').addEventListener('click', e => {
-    const link = e.target.closest('a[href="#inicio"],a[href="#ajing-game"]'); if (!link) return;
-    e.preventDefault(); showPublicContentPage(link.getAttribute('href') === '#ajing-game' ? 'ajing-game' : 'home');
+    const link = e.target.closest('a[href="#inicio"],a[href="#ajing-game"],a[href="#contato"]'); if (!link) return;
+    e.preventDefault(); showPublicContentPage(pageFromHref(link.getAttribute('href')));
   });
   // Rola até o assunto clicado deixando o título logo abaixo do cabeçalho e do menu da página
   // (a distância é medida na hora, porque as barras fixas mudam de altura entre computador e celular)
@@ -3327,8 +3380,36 @@ startupDone = true;
     if (currentUser()) { showMembers(); return; }
     openLogin(); $('showSignup').click();
   };
-  window.addEventListener('hashchange', () => { if (location.hash === '#cadastro') openSignup(); });
+  window.addEventListener('hashchange', () => { if (location.hash === '#cadastro') openSignup(); if (location.hash === '#contato') showPublicContentPage('contact'); });
   if (location.hash === '#cadastro') setTimeout(openSignup, 400);
+  if (location.hash === '#contato') setTimeout(() => showPublicContentPage('contact'), 400);
+  document.addEventListener('click', e => { if (e.target.closest('[data-open-contact]')) { e.preventDefault(); showPublicContentPage('contact'); } });
+  // Formulário de contato dentro do site
+  const prefillContact = () => {
+    const u = currentUser(); if (!u) return;
+    if (!$('ctName').value) $('ctName').value = fullName(u) || '';
+    const email = fb.authEmail ? fb.authEmail() : '';
+    if (!$('ctEmail').value && email) $('ctEmail').value = email;
+  };
+  $('contactForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const status = $('ctStatus'), btn = $('ctSend');
+    if ($('ctWebsite').value) return;
+    const data = { fullName: $('ctName').value.trim(), email: $('ctEmail').value.trim(), phone: $('ctPhone').value.trim(), subject: $('ctSubject').value.trim(), message: $('ctMessage').value.trim() };
+    const fail = (msg, el) => { status.className = 'contact-status error'; status.textContent = msg; if (el) el.focus(); };
+    if (data.fullName.length < 2) return fail('Informe seu nome completo.', $('ctName'));
+    if (!/^[^ @]+@[^ @]+\.[^ @]+$/.test(data.email)) return fail('Informe um e-mail válido.', $('ctEmail'));
+    if (!/^[0-9+() .-]{8,24}$/.test(data.phone)) return fail('Informe um telefone válido, com DDD.', $('ctPhone'));
+    if (!data.subject) return fail('Informe o assunto.', $('ctSubject'));
+    if (data.message.length < 10) return fail('A mensagem precisa ter pelo menos 10 caracteres.', $('ctMessage'));
+    btn.disabled = true; status.className = 'contact-status'; status.textContent = 'Enviando…';
+    try {
+      await fb.sendContact(data);
+      $('contactForm').reset(); status.className = 'contact-status success'; status.textContent = 'Mensagem enviada com sucesso! A administração vai responder pelo e-mail ou telefone informados.';
+    } catch (err) {
+      fail(err && err.code === 'permission-denied' ? 'Não foi possível enviar. Confira os campos e tente novamente.' : 'Não foi possível enviar agora. Verifique sua conexão e tente novamente.');
+    } finally { btn.disabled = false; }
+  });
   $('showSignup').addEventListener('click', () => { signupSuccess.hidden = true; loginForm.hidden = true; signupForm.hidden = false; $('signupError').textContent = ''; setTimeout(() => softFocus($('signupName')), 0); });
   $('backToLogin').addEventListener('click', () => { signupForm.hidden = true; loginForm.hidden = false; $('loginError').textContent = ''; setTimeout(() => softFocus($('loginUser')), 0); });
   modal.addEventListener('click', e => { if (e.target === modal && !showingSignupSuccess) closeLogin(); });
@@ -5402,7 +5483,7 @@ startupDone = true;
     if (!b || !b.label) return '';
     if (b.target === 'members') return `<button class="btn ${cls}" type="button" data-open-members>${esc(b.label)}</button>`;
     if (b.target === 'signup') return currentUser() ? '' : `<button class="btn ${cls}" type="button" data-open-signup>${esc(b.label)}</button>`;
-    if (b.target === 'contact') return `<a class="btn ${cls}" href="contato.html">${esc(b.label)}</a>`;
+    if (b.target === 'contact') return `<button class="btn ${cls}" type="button" data-open-contact>${esc(b.label)}</button>`;
     if (b.target === 'url') return /^https?:\/\//i.test(b.url || '') ? `<a class="btn ${cls}" href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.label)}</a>` : '';
     return `<a class="btn ${cls}" href="${esc(b.target)}">${esc(b.label)}</a>`;
   };
