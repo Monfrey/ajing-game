@@ -1515,6 +1515,10 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
 #memberMessagesList .msg-del{flex:none;color:var(--muted)}
 #memberMessagesList .msg-del:hover{color:var(--red)}
 @media (max-width:720px){ #memberMessagesList{max-height:none;overflow:visible} }
+.post-view .post-photo{position:relative}
+.post-view .post-photo:has(> img.media-loading:not(.media-preview))::after{content:"";position:absolute;inset:0;margin:auto;width:34px;height:34px;border-radius:50%;border:3px solid color-mix(in srgb,var(--accent) 25%,transparent);border-top-color:var(--accent);animation:media-spin .8s linear infinite}
+@keyframes media-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.post-view .post-photo:has(> img.media-loading)::after{animation-duration:2.4s}}
 </style>
 <script>
 (() => {
@@ -3857,9 +3861,15 @@ startupDone = true;
   const loadMediaImg = async img => {
     if (img.dataset.mediaLoaded || img.dataset.mediaBusy) return;
     img.dataset.mediaBusy = '1';
+    // Foto completa: mostra a miniatura assim que ela chegar (é menor e chega antes) e depois troca pela completa
+    if (img.dataset.mediaSize === 'full' && img.src.startsWith('data:image/gif')) {
+      postsDB.media(img.dataset.postMedia, Number(img.dataset.mediaV) || 1, 'thumb').then(th => {
+        if (th && !img.dataset.mediaLoaded && img.src.startsWith('data:image/gif')) { img.src = safeImageSrc(th); img.classList.add('media-preview'); }
+      });
+    }
     const data = await postsDB.media(img.dataset.postMedia, Number(img.dataset.mediaV) || 1, img.dataset.mediaSize);
     delete img.dataset.mediaBusy;
-    if (data) { img.src = safeImageSrc(data); img.dataset.mediaLoaded = '1'; img.classList.remove('media-loading'); }
+    if (data) { img.src = safeImageSrc(data); img.dataset.mediaLoaded = '1'; img.classList.remove('media-loading', 'media-preview'); }
   };
   const mediaObserver = 'IntersectionObserver' in window ? new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) { mediaObserver.unobserve(e.target); loadMediaImg(e.target); } }), { rootMargin: '600px 0px' }) : null;
   const hydrateMedia = root => (root || document).querySelectorAll('img[data-post-media]:not([data-media-loaded])').forEach(img => {
@@ -3975,6 +3985,11 @@ startupDone = true;
     postView.classList.remove('open'); postView.setAttribute('aria-hidden', 'true'); document.body.style.overflow = '';
     postViewFocus && postViewFocus.focus && postViewFocus.focus();
   };
+  document.addEventListener('pointerdown', e => {
+    const open = e.target.closest && e.target.closest('[data-open-post]'); if (!open) return;
+    const p = posts.find(x => x.id === open.dataset.openPost);
+    if (p && !p.photo) postsDB.media(p.id, p.photoV || 1, 'full');
+  }, { passive: true, capture: true });
   const handlePostListClick = async e => {
     const open = e.target.closest('[data-open-post]'); if (open) { openPostView(open.dataset.openPost); return; }
   };
