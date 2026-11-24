@@ -1587,6 +1587,7 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
   #postModal .post-form,#postForm .post-fields{gap:8px}
   #postForm .post-noscore{padding:6px 10px}
 }
+.post.is-removing{display:none}
 </style>
 <script>
 (() => {
@@ -2308,6 +2309,7 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
           <div data-prof-panel="captures" hidden>
             <div class="panel-head"><div><h4>Minhas capturas</h4><p class="muted">Escolha a publicação exata que deseja mostrar no portfólio. Ao incluir outra captura da mesma espécie, ela substitui a anterior.</p></div></div>
             <p class="saved" id="portfolioCaptureStatus" aria-live="polite"></p>
+            <div class="top-progress" aria-hidden="true"><span></span></div>
             <div class="feed" id="myCaptureFeed"></div>
             <div class="empty" id="myCapturesEmpty" hidden><h4>Nenhuma captura ainda</h4><p>Suas publicações do Social Fish aparecerão aqui.</p><button class="btn btn-primary" type="button" id="captureFromProfile">Publicar captura</button></div>
           </div>
@@ -4155,9 +4157,21 @@ startupDone = true;
     if (!post || post.user !== currentUser()) return;
     if (action.dataset.postAction === 'edit') { openPostEdit(post.id); return; }
     if (!(await askConfirm('Excluir esta publicação?', { danger: true, confirmText: 'Excluir' }))) return;
-    try { await postsDB.del(post.id); }
-    catch(_) { await showNotice('Não foi possível excluir a publicação. Verifique a conexão e tente novamente.'); return; }
-    closePostView(); await loadPosts(); renderChampion(); renderAll();
+    // Como no Instagram: fecha na hora, o cartão sai do feed e a linha fina mostra a exclusão em andamento
+    closePostView();
+    const cards = [...document.querySelectorAll(`[data-open-post="${CSS.escape(post.id)}"]`)].map(b => b.closest('.post')).filter(Boolean);
+    cards.forEach(c => c.classList.add('is-removing'));
+    topProgress.start();
+    try {
+      await postsDB.del(post.id);
+      await loadPosts(); renderChampion(); renderAll();
+      topProgress.done();
+      showToast('<div><b>Publicação excluída</b><small>Os pontos dela saíram do seu total e dos rankings.</small></div>');
+    } catch (_) {
+      topProgress.fail();
+      cards.forEach(c => c.classList.remove('is-removing'));
+      showToast('<div><b>Não foi possível excluir</b><small>Verifique a conexão e tente novamente.</small></div>');
+    }
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && postView.classList.contains('open')) closePostView(); });
   const pendingLikePosts = new Set();
@@ -4201,13 +4215,14 @@ startupDone = true;
   });
   // Linha fina de carregamento no topo (cores do site), como no Instagram
   const topProgress = (() => {
-    const el = $('topProgress'), bar = el.querySelector('span'); let timer = null, value = 0, runs = 0;
-    const set = v => { value = v; bar.style.transform = `scaleX(${v})`; };
+    const els = () => [...document.querySelectorAll('.top-progress')]; let timer = null, value = 0, runs = 0;
+    const cls = (add, remove) => els().forEach(el => { if (remove) el.classList.remove(...remove); if (add) el.classList.add(...add); });
+    const set = v => { value = v; els().forEach(el => { el.querySelector('span').style.transform = `scaleX(${v})`; }); };
     return {
-      start() { runs++; clearInterval(timer); el.classList.remove('is-done', 'is-fail'); el.classList.add('is-on'); set(.08);
+      start() { runs++; clearInterval(timer); cls(['is-on'], ['is-done', 'is-fail']); set(.08);
         timer = setInterval(() => set(value + (0.9 - value) * .08), 160); },
-      done() { if (--runs > 0) return; clearInterval(timer); set(1); setTimeout(() => { el.classList.add('is-done'); el.classList.remove('is-on'); setTimeout(() => { el.classList.remove('is-done'); set(0); }, 400); }, 220); },
-      fail() { runs = Math.max(0, runs - 1); clearInterval(timer); el.classList.add('is-fail'); setTimeout(() => { el.classList.remove('is-on', 'is-fail'); set(0); }, 600); }
+      done() { if (--runs > 0) return; clearInterval(timer); set(1); setTimeout(() => { cls(['is-done'], ['is-on']); setTimeout(() => { cls(null, ['is-done']); set(0); }, 400); }, 220); },
+      fail() { runs = Math.max(0, runs - 1); clearInterval(timer); cls(['is-fail']); setTimeout(() => { cls(null, ['is-on', 'is-fail']); set(0); }, 600); }
     };
   })();
   postForm.addEventListener('submit', async e => {
