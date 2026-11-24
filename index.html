@@ -1588,6 +1588,16 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
   #postForm .post-noscore{padding:6px 10px}
 }
 .post.is-removing{display:none}
+/* Compartilhar carta: no celular substitui a impressão; no computador fica a impressão */
+.share-card-btn,.share-card-hint{display:none}
+.share-card-btn{gap:8px}
+.share-card-holder{position:fixed;left:-10000px;top:0;width:340px;padding:22px 26px 14px 14px;background:transparent;pointer-events:none}
+.share-card-holder .tcard{transform:none!important;margin:0;width:100%}
+@media (max-width:720px),(hover:none) and (pointer:coarse){
+  .share-card-btn{display:inline-flex}
+  .share-card-hint{display:block}
+  #printCardBtn,#printCardBtn+.hint{display:none}
+}
 </style>
 <script>
 (() => {
@@ -2255,6 +2265,8 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
                 <p class="muted">Os pontos e níveis consideram as capturas aprovadas. Veja todas as publicações, inclusive as que aguardam validação, em Minhas capturas. A foto, o nome, o local e a descrição vêm do seu perfil.</p>
                 <div class="form-actions"><button type="button" class="btn btn-primary" id="editProfileBtn">Editar perfil</button><button type="button" class="btn btn-ghost" id="changePassBtn">Alterar senha</button></div>
                 <div class="print-box">
+                  <button type="button" class="btn btn-primary share-card-btn" id="shareCardBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg><span id="shareCardLabel">Compartilhar carta</span></button>
+                  <p class="hint share-card-hint">Gera uma imagem da sua carta para salvar na galeria ou enviar pelo WhatsApp, Instagram e outros apps.</p>
                   <button type="button" class="btn btn-ghost" id="printCardBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2M6 14h12v7H6z"/></svg>Imprimir ou salvar PDF</button>
                   <p class="hint">Tamanho padrão de carta colecionável: 63 × 88 mm (cartas com coroa ganham 6 mm de margem em cima e à direita para a coroa sair inteira). Para PDF, escolha “Salvar como PDF” como impressora. Para imprimir, use escala 100% (tamanho real) e papel com gramatura alta.</p>
                 </div>
@@ -6868,6 +6880,120 @@ startupDone = true;
   });
 
   /* ===== Impressão / PDF da carta ===== */
+  /* ===== Compartilhar a carta (celular) =====
+     Gera uma imagem PNG da carta e abre o menu de compartilhamento do aparelho (salvar na galeria, WhatsApp, Instagram…).
+     Onde não houver esse menu, a imagem é baixada. */
+  const H2C_URL = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+  let h2cLoading = null, sharedCardFile = null, sharedCardKey = '';
+  const loadH2C = () => window.html2canvas ? Promise.resolve(window.html2canvas) : (h2cLoading = h2cLoading || new Promise((resolve, reject) => {
+    const s = document.createElement('script'); s.src = H2C_URL; s.async = true;
+    s.onload = () => window.html2canvas ? resolve(window.html2canvas) : reject(new Error('h2c'));
+    s.onerror = () => { h2cLoading = null; s.remove(); reject(new Error('h2c')); };
+    document.head.appendChild(s);
+  }));
+  // converte cores modernas (color-mix, color(), oklch…) para rgb lendo o pixel que elas produzem
+  const pxCtx = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  const toRGB = c => { try { pxCtx.clearRect(0, 0, 1, 1); pxCtx.fillStyle = '#000'; pxCtx.fillStyle = c; pxCtx.fillRect(0, 0, 1, 1); const [r, g, b, a] = pxCtx.getImageData(0, 0, 1, 1).data; return a === 255 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${(a / 255).toFixed(3)})`; } catch (_) { return c; } };
+  const MODERN_COLOR = /(?:color-mix|color|oklch|oklab|lab|lch)\((?:[^()]|\([^()]*\))*\)/g;
+  const fixColors = root => {
+    const props = ['color', 'background-color', 'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color', 'outline-color', 'text-decoration-color', 'fill', 'stroke', 'background-image', 'box-shadow', 'text-shadow'];
+    [root, ...root.querySelectorAll('*')].forEach(el => {
+      const cs = getComputedStyle(el);
+      props.forEach(pr => { const v = cs.getPropertyValue(pr); if (v && /(color\(|color-mix|oklch|oklab|lab\(|lch\()/.test(v)) el.style.setProperty(pr, v.replace(MODERN_COLOR, m => toRGB(m)), 'important'); });
+    });
+  };
+  // Fonte do site embutida no desenho (Archivo, do Google Fonts), para a imagem sair igual à tela
+  let embeddedFontCSS = null;
+  const getFontCSS = () => embeddedFontCSS || (embeddedFontCSS = (async () => {
+    const link = [...document.querySelectorAll('link[rel="stylesheet"]')].find(l => /fonts\.googleapis\.com/.test(l.href));
+    if (!link) return '';
+    const css = await (await fetch(link.href)).text();
+    const blocks = css.split(/(?=\/\*)/).filter(b => /\/\* (latin|latin-ext) \*\//.test(b));
+    const out = [];
+    for (const blk of blocks) {
+      const m = blk.match(/url\((https:[^)]+)\)/); if (!m) continue;
+      const buf = await (await fetch(m[1])).arrayBuffer();
+      let bin = ''; const bytes = new Uint8Array(buf); for (let i = 0; i < bytes.length; i += 32768) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 32768));
+      out.push(blk.replace(m[1], `data:font/woff2;base64,${btoa(bin)}`));
+    }
+    return out.join('\n');
+  })().catch(() => ''));
+  // Desenha um elemento (já posicionado na página) numa imagem: copia os estilos calculados e usa SVG + foreignObject
+  const drawCardNative = async (el, scale) => {
+    const fontCSS = await Promise.race([getFontCSS(), new Promise(r => setTimeout(() => r(''), 3000))]);
+    const clone = el.cloneNode(true);
+    const copy = (src, dst) => {
+      if (src.nodeType !== 1) return;
+      const cs = getComputedStyle(src); let s = '';
+      for (let i = 0; i < cs.length; i++) { const p = cs[i]; s += `${p}:${cs.getPropertyValue(p)};`; }
+      dst.setAttribute('style', s);
+      for (let i = 0; i < src.childNodes.length; i++) copy(src.childNodes[i], dst.childNodes[i]);
+    };
+    copy(el, clone);
+    clone.style.position = 'static'; clone.style.left = '0'; clone.style.top = '0'; clone.style.margin = '0';
+    const r = el.getBoundingClientRect(), w = Math.ceil(r.width), h = Math.ceil(r.height);
+    const xml = new XMLSerializer().serializeToString(clone);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><style>${fontCSS}</style><foreignObject x="0" y="0" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml">${xml}</div></foreignObject></svg>`;
+    const img = new Image(); img.decoding = 'sync';
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+    const canvas = document.createElement('canvas'); canvas.width = Math.round(w * scale); canvas.height = Math.round(h * scale);
+    const ctx = canvas.getContext('2d'); ctx.scale(scale, scale);
+    // alguns navegadores (Safari) só desenham as imagens internas na segunda passada
+    ctx.drawImage(img, 0, 0, w, h); await new Promise(res => setTimeout(res, 120)); ctx.clearRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
+    // confere se a imagem pode ser lida e não está vazia
+    const probe = ctx.getImageData(Math.round(canvas.width / 2), Math.round(canvas.height / 2), 1, 1).data;
+    if (!probe[3]) throw new Error('vazia');
+    return canvas;
+  };
+  const cardShareKey = () => { const c = $('tcard'); return `${currentUser()}|${c.textContent.length}|${c.textContent.slice(0, 120)}|${(c.querySelector('[data-k=photo]')?.src || '').length}`; };
+  const makeCardImage = async () => {
+    const key = cardShareKey();
+    if (sharedCardFile && sharedCardKey === key) return sharedCardFile;
+    const holder = document.createElement('div'); holder.className = 'share-card-holder';
+    const card = $('tcard').cloneNode(true);
+    card.removeAttribute('id'); card.removeAttribute('style'); card.classList.remove('cropping');
+    card.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+    card.querySelectorAll('.cropping').forEach(el => el.classList.remove('cropping'));
+    holder.appendChild(card); document.body.appendChild(holder);
+    try {
+      await Promise.all([...holder.querySelectorAll('img')].filter(i => !i.hidden && i.getAttribute('src')).map(i => i.decode ? i.decode().catch(() => {}) : null));
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      // 1º: o próprio navegador desenha a carta (fiel à tela); se não for possível ler a imagem, usa a biblioteca no modo comum
+      const toBlob = c => new Promise((res, rej) => { try { c.toBlob(res, 'image/png'); } catch (e) { rej(e); } });
+      let blob = null;
+      try { blob = await toBlob(await drawCardNative(holder, 3)); } catch (_) { blob = null; }
+      if (!blob) { const h2c = await loadH2C(); fixColors(holder); blob = await toBlob(await h2c(holder, { backgroundColor: null, scale: 3, useCORS: true, logging: false })); }
+      if (!blob) throw new Error('blob');
+      const name = (displayName(currentUser()) || 'pescador').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+      sharedCardFile = new File([blob], `carta-ajing-game-${name || 'pescador'}.png`, { type: 'image/png' }); sharedCardKey = key;
+      return sharedCardFile;
+    } finally { holder.remove(); }
+  };
+  const downloadFile = file => { const url = URL.createObjectURL(file); const a = document.createElement('a'); a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); };
+  const shareFile = async file => {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Minha carta · Ajing Game', text: 'Minha carta de pescador no Ajing Game · ajinggame.com.br' });
+      return 'shared';
+    }
+    downloadFile(file); return 'downloaded';
+  };
+  $('shareCardBtn').addEventListener('click', async () => {
+    const btn = $('shareCardBtn'), label = $('shareCardLabel');
+    if (btn.disabled) return;
+    const ready = sharedCardFile && sharedCardKey === cardShareKey();
+    btn.disabled = true; if (!ready) label.textContent = 'Gerando imagem…';
+    try {
+      const file = await makeCardImage();
+      const how = await shareFile(file);
+      if (how === 'downloaded') showToast('<div><b>Imagem da carta salva</b><small>Procure em Downloads ou na galeria do aparelho.</small></div>');
+      label.textContent = 'Compartilhar carta';
+    } catch (err) {
+      if (err && err.name === 'AbortError') label.textContent = 'Compartilhar carta';
+      // o iPhone só abre o menu logo após um toque: com a imagem pronta, o próximo toque compartilha na hora
+      else if (err && err.name === 'NotAllowedError' && sharedCardFile) label.textContent = 'Toque para compartilhar';
+      else { label.textContent = 'Compartilhar carta'; showToast('<div><b>Não foi possível gerar a imagem</b><small>Verifique a conexão e tente novamente.</small></div>'); }
+    } finally { btn.disabled = false; }
+  });
   $('printCardBtn').addEventListener('click', async () => {
     const area = $('printArea'), src = $('tcard');
     const clone = src.cloneNode(true);
