@@ -1591,8 +1591,10 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
 /* Compartilhar carta: no celular substitui a impressão; no computador fica a impressão */
 .share-card-btn,.share-card-hint{display:none}
 .share-card-btn{gap:8px}
-.share-card-holder{position:fixed;left:-10000px;top:0;width:340px;padding:22px 26px 14px 14px;background:transparent;pointer-events:none}
-.share-card-holder .tcard{transform:none!important;margin:0;width:100%}
+.share-card-holder{position:fixed;left:-10000px;top:0;width:320px;padding:0;background:transparent!important;pointer-events:none}
+.share-card-holder.has-crown{width:344px;padding:22px 24px 0 0}
+.share-card-holder .tcard{transform:none!important;margin:0;width:100%;box-shadow:none!important}
+.share-card-holder .tcard *{text-shadow:none}
 @media (max-width:720px),(hover:none) and (pointer:coarse){
   .share-card-btn{display:inline-flex}
   .share-card-hint{display:block}
@@ -6954,6 +6956,7 @@ startupDone = true;
     card.removeAttribute('id'); card.removeAttribute('style'); card.classList.remove('cropping');
     card.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
     card.querySelectorAll('.cropping').forEach(el => el.classList.remove('cropping'));
+    holder.classList.toggle('has-crown', !!card.querySelector('.tc-crown:not([hidden])'));
     holder.appendChild(card); document.body.appendChild(holder);
     try {
       await Promise.all([...holder.querySelectorAll('img')].filter(i => !i.hidden && i.getAttribute('src')).map(i => i.decode ? i.decode().catch(() => {}) : null));
