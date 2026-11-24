@@ -2522,6 +2522,7 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAnalytics, isSupported } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword, setPersistence, inMemoryPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection as fsCol, doc as fsDoc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, arrayUnion, arrayRemove, runTransaction, deleteField, getDocFromCache, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
@@ -2536,7 +2537,8 @@ const FIREBASE_CONFIG = {
   projectId: "ajing-game",
   storageBucket: "ajing-game.firebasestorage.app",
   messagingSenderId: "11754429364",
-  appId: "1:11754429364:web:a44f811e148ef6e25970e1"
+  appId: "1:11754429364:web:a44f811e148ef6e25970e1",
+  measurementId: "G-95LZRD0V5C"
 };
 /* ===================================================================== */
 
@@ -2550,6 +2552,22 @@ if (!FIREBASE_CONFIG.apiKey || /COLE_AQUI/.test(FIREBASE_CONFIG.apiKey)) {
 }
 
 const fbApp = initializeApp(FIREBASE_CONFIG), fbAuth = getAuth(fbApp);
+
+// Google Analytics: inicializa somente em navegadores compatíveis.
+// Não altera Authentication nem Firestore e evita falha em ambientes sem suporte.
+let fbAnalytics = null;
+isSupported()
+  .then(supported => {
+    if (!supported) {
+      console.info('[Analytics] Este navegador não oferece suporte à coleta.');
+      return;
+    }
+    fbAnalytics = getAnalytics(fbApp);
+    console.info('[Analytics] Inicializado para o Ajing Game.');
+  })
+  .catch(error => {
+    console.warn('[Analytics] Não foi possível inicializar:', error);
+  });
 // Cache no aparelho: ao voltar ao site, o Firestore baixa só o que mudou desde a última visita
 let fdb;
 try { fdb = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
