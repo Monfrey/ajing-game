@@ -2952,6 +2952,8 @@ const fb = {
   setPrivateProfile: (uid, data) => setDoc(fsDoc(fdb, 'privateProfiles', uid), clean(data)),
   deletePrivate: uid => deleteDoc(fsDoc(fdb, 'private', uid)),
   postsLoaded: () => deferredLoaded,
+  // Referência direta (sem cópia) da lista de espécies: muda de identidade sempre que a lista é atualizada
+  speciesSource: () => speciesFromList() ? C.config.speciesList.list : C.species,
   // Formulário público de contato (qualquer visitante pode enviar; só administradores leem)
   sendContact: async data => {
     const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', rnd = crypto.getRandomValues(new Uint8Array(20));
@@ -3588,6 +3590,15 @@ startupDone = true;
   $('logoutBtn').addEventListener('click', logout);
 
   /* ===== Abas ===== */
+  // Abas pesadas escondidas não são redesenhadas agora: ficam marcadas e são desenhadas quando a aba é aberta
+  const lazyPanels = { members: [], species: [], admin: [] };
+  const staleRenders = new Set();
+  const lazyRender = (panel, fn) => {
+    const el = document.querySelector(`[data-panel="${panel}"]`);
+    if (membersPage.hidden || !el || el.hidden) { staleRenders.add(fn); if (!lazyPanels[panel].includes(fn)) lazyPanels[panel].push(fn); return; }
+    staleRenders.delete(fn); fn();
+  };
+  const flushLazy = panel => (lazyPanels[panel] || []).forEach(fn => { if (staleRenders.has(fn)) { staleRenders.delete(fn); fn(); } });
   const tabs = document.querySelectorAll('[data-tab]'), panels = document.querySelectorAll('[data-panel]');
   const showTab = name => {
     if (name === 'admin' && !isAdmin()) name = 'social';
@@ -3596,8 +3607,10 @@ startupDone = true;
     document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
     tabs.forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
     panels.forEach(p => p.hidden = p.dataset.panel !== name);
+    if (!membersPage.hidden && lazyPanels[name]) flushLazy(name);
     store.set('ajing-member-tab', name, true);
     $('newPostBtn').hidden = name !== 'social' || membersPage.hidden || !currentUser();
+    if (name === 'admin' && isAdmin() && requestsStale && (store.get('ajing-admin-sec', true) || 'carousel') === 'requests') requestAnimationFrame(() => renderRequests());
   };
   tabs.forEach(t => t.addEventListener('click', () => {
     const name = t.dataset.tab;
@@ -4308,7 +4321,17 @@ startupDone = true;
     return map;
   };
   const catchInfo = p => (p && isPostScored(p) && !(p.pointsOverride != null && Number.isFinite(Number(p.pointsOverride)))) ? (catchOrder().get(p.id) || null) : null;
-  const basePoints = p => { const s = readJSON('ajing-species', []).find(x => x.id === p.speciesId); return s ? s.points : (p.points || 0); };
+  // Índice de pontos por espécie, refeito só quando a lista de espécies muda (antes, cada cálculo copiava a lista inteira)
+  let speciesPtsCache = { src: undefined, map: new Map() };
+  const speciesPointsMap = () => {
+    const src = fb.speciesSource();
+    if (src !== speciesPtsCache.src) {
+      const list = Array.isArray(src) ? src : Object.values(src || {});
+      speciesPtsCache = { src, map: new Map(list.map(s => [s.id, Number(s.points) || 0])) };
+    }
+    return speciesPtsCache.map;
+  };
+  const basePoints = p => { const m = speciesPointsMap(); return m.has(p.speciesId) ? m.get(p.speciesId) : (p.points || 0); };
   const postPoints = p => {
     if (p.pointsOverride != null && Number.isFinite(Number(p.pointsOverride))) return Number(p.pointsOverride);
     const base = basePoints(p), info = catchInfo(p);
@@ -4678,7 +4701,8 @@ startupDone = true;
   $('rankSelView').addEventListener('change', e => document.querySelector(`[data-rank-view="${e.target.value}"]`)?.click());
   $('rankSelScope').addEventListener('change', e => document.querySelector(`[data-rank-scope="${e.target.value}"]`)?.click());
   $('rankSelMode').addEventListener('change', e => document.querySelector(`[data-rank="${e.target.value}"]`)?.click());
-  new MutationObserver(syncRankSelects).observe(document.querySelector('.rank-filter-row'), { attributes: true, subtree: true, attributeFilter: ['aria-pressed', 'hidden', 'style', 'class'] });
+  let rankSyncQueued = false;
+  new MutationObserver(() => { if (rankSyncQueued) return; rankSyncQueued = true; requestAnimationFrame(() => { rankSyncQueued = false; syncRankSelects(); }); }).observe(document.querySelector('.rank-filter-row'), { attributes: true, subtree: true, attributeFilter: ['aria-pressed', 'hidden', 'style', 'class'] });
   syncRankSelects();
   document.querySelectorAll('[data-rank-scope]').forEach(b => b.addEventListener('click', () => { rankScope = b.dataset.rankScope; renderRanking(); }));
 
@@ -5187,7 +5211,7 @@ startupDone = true;
     document.querySelectorAll('[data-admin-sec]').forEach(b => b.setAttribute('aria-current', String(b.dataset.adminSec === sec)));
     document.querySelectorAll('[data-admin-panel]').forEach(p => p.hidden = p.dataset.adminPanel !== sec);
     store.set('ajing-admin-sec', sec, true);
-    if (sec === 'requests' && isAdmin() && !membersPage.hidden) fb.ensure('postAudits');
+    if (sec === 'requests' && isAdmin() && !membersPage.hidden) { fb.ensure('postAudits'); if (requestsStale) renderRequests(); }
   };
   document.querySelectorAll('[data-admin-sec]').forEach(b => b.addEventListener('click', () => showAdminSec(b.dataset.adminSec)));
   const delIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
@@ -6483,6 +6507,7 @@ startupDone = true;
     } catch (error) { console.warn('Não foi possível atualizar recusas automáticas:', error); }
     finally { autoRejectSweepRunning = false; }
   };
+  let requestsStale = true;
   const renderRequests = () => {
     autoRejectInvalidPendingPosts();
     const all = getRequests(), me = currentUser();
@@ -6512,6 +6537,10 @@ startupDone = true;
     const badge = $('adminBadge'); badge.hidden = !isAdmin() || !pendingTotal; badge.textContent = pendingTotal;
     const cnt = $('cntReq'); cnt.textContent = pendingTotal || ''; cnt.classList.toggle('alert', pendingTotal > 0);
     if (!isAdmin()) return;
+    // Com a seção fechada, só os contadores são atualizados; as listas são montadas quando ela é aberta
+    const reqPanel = document.querySelector('[data-admin-panel="requests"]'), adminPanel = document.querySelector('[data-panel="admin"]');
+    if (membersPage.hidden || !adminPanel || adminPanel.hidden || !reqPanel || reqPanel.hidden) { requestsStale = true; return; }
+    requestsStale = false;
     $('memberApplicationList').innerHTML = memberApplications.length ? memberApplications.map(app => `<li class="review-history-row" data-member-application="${esc(app.uid)}"><span class="grow"><b>${esc(app.username || 'Novo membro')}</b><small>${esc(app.fullName || 'Nome completo não informado')} · ${esc(app.city || 'Cidade não informada')} ${app.state ? ` · ${esc(app.state)}` : ''} · CPF ${app.cpf ? esc(formatCPF(app.cpf)) : 'não informado'} · Tel. ${app.phone ? esc(formatPhone(app.phone)) : 'não informado'}</small>${anglerSummary(app) ? `<small>${esc(anglerSummary(app))}</small>` : ''}<small>${esc(app.email || '')} · Solicitação em ${fmtShort(app.created)}</small></span><button class="btn btn-primary" type="button" data-member-application-act="approve">Aprovar acesso</button><button class="btn btn-danger" type="button" data-member-application-act="reject">Recusar acesso</button></li>`).join('') : '<li class="empty-row">Nenhum novo cadastro aguardando aprovação.</li>';
     $('memberApplicationHistory').innerHTML = rejectedMemberApplications.length ? rejectedMemberApplications.map(app => `<li class="review-history-row" data-member-application="${esc(app.uid)}"><span class="grow"><b>${esc(app.username || 'Novo membro')}</b><small>${esc(app.email || '')} · Recusado em ${fmtShort(app.reviewed)}</small></span><button class="btn btn-ghost" type="button" data-member-application-act="reopen">Reabrir solicitação</button></li>`).join('') : '<li class="empty-row">Nenhum acesso recusado.</li>';
     $('reqAdminList').innerHTML = pending.length ? pending.map(r => `<li class="req-card" data-req="${esc(r.id)}">
@@ -7228,7 +7257,7 @@ startupDone = true;
     if (!failed) { box.hidden = true; showToast(`<div><b>Fotos otimizadas</b><small>${done} ${done === 1 ? 'publicação convertida' : 'publicações convertidas'}.</small></div>`); }
     else $('mediaMigrateText').textContent = `${done} convertidas, ${failed} com falha. Toque em Otimizar agora para tentar de novo.`;
   });
-  function renderAll() { renderMediaMigrate(); renderAward(); renderEvents(); updateUserChip(); renderProfile(); renderMembers(); renderMyCaptures(); renderMemberMessages(); renderRequests(); const profSubnav = document.getElementById('profSubnav'); profSubnav.hidden = false; profSubnav.querySelector('[data-prof-sec="request"]').hidden = isAdmin(); if (isAdmin() && store.get('ajing-prof-sec', true) === 'request') showProfSec('card'); renderSpeciesSelect(); renderFeed(); renderSpecies(); renderRanking(); renderAdmin(); renderSlideAdmin(); }
+  function renderAll() { renderMediaMigrate(); renderAward(); renderEvents(); updateUserChip(); renderProfile(); lazyRender('members', renderMembers); renderMyCaptures(); renderMemberMessages(); renderRequests(); const profSubnav = document.getElementById('profSubnav'); profSubnav.hidden = false; profSubnav.querySelector('[data-prof-sec="request"]').hidden = isAdmin(); if (isAdmin() && store.get('ajing-prof-sec', true) === 'request') showProfSec('card'); renderSpeciesSelect(); renderFeed(); lazyRender('species', renderSpecies); renderRanking(); lazyRender('admin', renderAdmin); lazyRender('admin', renderSlideAdmin); }
 
   /* ===== Atualização em tempo real ===== */
   // Mudanças feitas por outros membros chegam pelo Firestore; a tela só é redesenhada quando ninguém está digitando.
