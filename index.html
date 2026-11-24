@@ -1519,6 +1519,34 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
 .post-view .post-photo:has(> img.media-loading:not(.media-preview))::after{content:"";position:absolute;inset:0;margin:auto;width:34px;height:34px;border-radius:50%;border:3px solid color-mix(in srgb,var(--accent) 25%,transparent);border-top-color:var(--accent);animation:media-spin .8s linear infinite}
 @keyframes media-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.post-view .post-photo:has(> img.media-loading)::after{animation-duration:2.4s}}
+/* Fotos no padrão do Instagram: no feed a miniatura preenche o quadro; aberta, aparece inteira na proporção escolhida */
+.post.compact .post-photo img{object-fit:cover}
+.post-view .post-photo{aspect-ratio:auto;max-height:min(70dvh,720px)}
+.post-view .post-photo img{height:auto;max-height:min(70dvh,720px);object-fit:contain}
+.post-view .post-photo img.media-loading{aspect-ratio:4/5;height:auto}
+/* Editor de recorte */
+.crop-modal{z-index:70}
+.crop-card{width:min(640px,100%);padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:calc(100dvh - 24px)}
+.crop-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.crop-top strong{font-size:1rem}
+.crop-top .link-btn{font-weight:600;padding:4px 2px}
+.crop-next{color:var(--accent)!important}
+.crop-body{display:grid;place-items:center;padding:14px;background:#000;min-height:220px}
+.crop-stage{position:relative;overflow:hidden;touch-action:none;cursor:grab;background:#111;user-select:none}
+.crop-modal.is-moving .crop-stage{cursor:grabbing}
+.crop-stage img{position:absolute;left:0;top:0;max-width:none;transform-origin:0 0;will-change:transform;pointer-events:none;-webkit-user-drag:none}
+.crop-grid{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .15s;background:linear-gradient(to right,transparent calc(33.333% - .5px),rgba(255,255,255,.55) calc(33.333% - .5px),rgba(255,255,255,.55) calc(33.333% + .5px),transparent calc(33.333% + .5px),transparent calc(66.666% - .5px),rgba(255,255,255,.55) calc(66.666% - .5px),rgba(255,255,255,.55) calc(66.666% + .5px),transparent calc(66.666% + .5px)),linear-gradient(to bottom,transparent calc(33.333% - .5px),rgba(255,255,255,.55) calc(33.333% - .5px),rgba(255,255,255,.55) calc(33.333% + .5px),transparent calc(33.333% + .5px),transparent calc(66.666% - .5px),rgba(255,255,255,.55) calc(66.666% - .5px),rgba(255,255,255,.55) calc(66.666% + .5px),transparent calc(66.666% + .5px))}
+.crop-modal.is-moving .crop-grid{opacity:1}
+.crop-tools{display:grid;gap:10px;padding:12px 16px 14px}
+.crop-ratios{display:flex;justify-content:center;gap:8px}
+.crop-ratios button{display:inline-flex;flex-direction:column;align-items:center;gap:3px;min-width:64px;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--muted);font-size:.78rem;font-weight:600;cursor:pointer}
+.crop-ratios button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+.crop-ratios button[aria-checked="true"]{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+.crop-zoom{display:flex;align-items:center;gap:10px;max-width:420px;width:100%;margin:0 auto}
+.crop-zoom svg{width:18px;height:18px;flex:none;fill:none;stroke:var(--muted);stroke-width:1.8;stroke-linecap:round}
+.crop-zoom input{flex:1;accent-color:var(--accent)}
+.crop-tip{margin:0;text-align:center;font-size:.78rem;color:var(--muted)}
+@media(max-width:640px){.crop-modal{padding:0;align-items:stretch}.crop-card{width:100%;max-height:100dvh;border-radius:0}.crop-body{flex:1}.crop-ratios button{min-width:0;flex:1}}
 </style>
 <script>
 (() => {
@@ -2284,7 +2312,7 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
         </div>
         <button class="link-btn" id="changePhoto" type="button" hidden>Trocar foto</button>
         <div class="post-meta-note" id="postMetaNote" role="status" hidden></div>
-        <span class="hint" id="postImageHint">Tamanho recomendado: 1080 × 1350 px (vertical 4:5). A imagem inteira será mantida no formato vertical do feed (4:5); o espaço restante será preenchido com a própria foto desfocada.</span>
+        <span class="hint" id="postImageHint">Depois de escolher a foto, ajuste o enquadramento como no Instagram: arraste, dê zoom e escolha o formato (Original, 1:1, 4:5 ou 16:9). Tamanho recomendado: 1080 × 1350 px (4:5).</span>
         <div class="form-error" id="postError" role="alert"></div>
       </div>
       <div class="post-fields" id="postFields" hidden>
@@ -2361,6 +2389,17 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
     </div>
     <div class="modal-body"><div class="regulation-text managed-rich" id="termsBody"></div>
       <div class="form-actions terms-actions"><button class="btn btn-primary" id="termsAccept" type="button">Li e aceito</button><button class="btn btn-ghost" id="termsBack" type="button">Fechar</button></div>
+    </div>
+  </div>
+</div>
+<div class="modal crop-modal" id="pcropModal" aria-hidden="true">
+  <div class="modal-card crop-card" role="dialog" aria-modal="true" aria-labelledby="pcropTitle">
+    <div class="crop-top"><button class="link-btn" id="pcropCancel" type="button">Cancelar</button><strong id="pcropTitle">Recortar</strong><button class="link-btn crop-next" id="pcropNext" type="button">Avançar</button></div>
+    <div class="crop-body" id="pcropBody"><div class="crop-stage" id="pcropStage"><img id="pcropImg" alt="Foto a recortar" draggable="false"><div class="crop-grid" aria-hidden="true"></div></div></div>
+    <div class="crop-tools">
+      <div class="crop-ratios" role="radiogroup" aria-label="Formato da foto"><button type="button" role="radio" aria-checked="false" data-crop-ratio="original"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M8 10l3 3 2-2 3 3"/></svg><span>Original</span></button><button type="button" role="radio" aria-checked="false" data-crop-ratio="1:1"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg><span>1:1</span></button><button type="button" role="radio" aria-checked="false" data-crop-ratio="4:5"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="4" width="11" height="16" rx="2"/></svg><span>4:5</span></button><button type="button" role="radio" aria-checked="false" data-crop-ratio="16:9"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="10" rx="2"/></svg><span>16:9</span></button></div>
+      <label class="crop-zoom"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.3-4.3M8.5 11h5"/></svg><input type="range" id="pcropZoom" min="1" max="4" step="0.01" value="1" aria-label="Zoom"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.3-4.3M8.5 11h5M11 8.5v5"/></svg></label>
+      <p class="crop-tip">Arraste para posicionar · use dois dedos ou a barra para o zoom</p>
     </div>
   </div>
 </div>
@@ -3626,29 +3665,99 @@ startupDone = true;
     } catch (_) { audit.dateUnverified = true; }
     return audit;
   };
-  const preparePostImage = file => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const iw = img.naturalWidth, ih = img.naturalHeight, scale = Math.min(POST_W / iw, POST_H / ih);
-        const dw = Math.round(iw * scale), dh = Math.round(ih * scale);
-        const c = document.createElement('canvas'); c.width = POST_W; c.height = POST_H;
-        const ctx = c.getContext('2d'), target = POST_W / POST_H;
-        if (Math.abs(iw / ih - target) > .01) {
-          const bgScale = Math.max(POST_W / iw, POST_H / ih), overscan = 1.12;
-          const bw = iw * bgScale * overscan, bh = ih * bgScale * overscan;
-          ctx.save(); ctx.filter = 'blur(32px)';
-          ctx.drawImage(img, (POST_W - bw) / 2, (POST_H - bh) / 2, bw, bh);
-          ctx.restore();
-        } else { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height); }
-        ctx.drawImage(img, Math.round((POST_W - dw) / 2), Math.round((POST_H - dh) / 2), dw, dh);
-        resolve(encodeImage(c, .74));
-      };
-      img.onerror = reject; img.src = String(reader.result || '');
+  /* ===== Recorte da foto no padrão do Instagram =====
+     A foto preenche a moldura; a pessoa arrasta, dá zoom (dois dedos, roda do mouse ou barra) e escolhe o formato:
+     Original (entre 4:5 e 1,91:1), 1:1, 4:5 ou 16:9. Só o recorte é salvo, sem faixas nem desfoque. */
+  const PC_RATIOS = { original: null, '1:1': 1, '4:5': 4 / 5, '16:9': 16 / 9 };
+  const PC_MIN = 4 / 5, PC_MAX = 1.91, PC_OUT_W = 1080, PC_MAX_CHARS = 760000;
+  const pcropModal = $('pcropModal'), pcropStage = $('pcropStage'), pcropImg = $('pcropImg'), pcropZoom = $('pcropZoom');
+  let pcrop = null;
+  const pcRatio = () => pcrop.mode === 'original' ? Math.min(PC_MAX, Math.max(PC_MIN, pcrop.iw / pcrop.ih)) : PC_RATIOS[pcrop.mode];
+  const pcClamp = () => {
+    const w = pcrop.iw * pcrop.scale, h = pcrop.ih * pcrop.scale;
+    pcrop.x = Math.min(0, Math.max(pcrop.fw - w, pcrop.x)); pcrop.y = Math.min(0, Math.max(pcrop.fh - h, pcrop.y));
+  };
+  const pcPaint = () => {
+    pcropImg.style.width = `${pcrop.iw * pcrop.scale}px`; pcropImg.style.height = `${pcrop.ih * pcrop.scale}px`;
+    pcropImg.style.transform = `translate3d(${pcrop.x}px, ${pcrop.y}px, 0)`;
+  };
+  const pcLayout = () => {
+    const r = pcRatio(), body = $('pcropBody');
+    const cs = getComputedStyle(body), inner = (body.clientWidth || 360) - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const maxW = Math.min(inner, 600), maxH = Math.max(220, Math.min(window.innerHeight - 230, 640));
+    let w = maxW, h = w / r; if (h > maxH) { h = maxH; w = h * r; }
+    w = Math.round(w); h = Math.round(h);
+    const prev = pcrop.fw ? { cx: (pcrop.fw / 2 - pcrop.x) / pcrop.scale, cy: (pcrop.fh / 2 - pcrop.y) / pcrop.scale, z: pcrop.scale / pcrop.minScale } : null;
+    pcropStage.style.width = `${w}px`; pcropStage.style.height = `${h}px`;
+    pcrop.fw = w; pcrop.fh = h; pcrop.minScale = Math.max(w / pcrop.iw, h / pcrop.ih);
+    const z = prev ? prev.z : 1; pcrop.scale = pcrop.minScale * z;
+    const cx = prev ? prev.cx : pcrop.iw / 2, cy = prev ? prev.cy : pcrop.ih / 2;
+    pcrop.x = w / 2 - cx * pcrop.scale; pcrop.y = h / 2 - cy * pcrop.scale;
+    pcClamp(); pcPaint(); pcropZoom.value = String(z);
+    pcropModal.querySelectorAll('[data-crop-ratio]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.cropRatio === pcrop.mode)));
+  };
+  const pcZoomTo = (z, fx = pcrop.fw / 2, fy = pcrop.fh / 2) => {
+    z = Math.min(4, Math.max(1, z));
+    const ns = pcrop.minScale * z, ix = (fx - pcrop.x) / pcrop.scale, iy = (fy - pcrop.y) / pcrop.scale;
+    pcrop.scale = ns; pcrop.x = fx - ix * ns; pcrop.y = fy - iy * ns;
+    pcClamp(); pcPaint(); pcropZoom.value = String(z);
+  };
+  const pcClose = result => {
+    if (!pcrop) return;
+    const done = pcrop.resolve; pcrop = null;
+    pcropModal.classList.remove('open', 'is-moving'); pcropModal.setAttribute('aria-hidden', 'true'); pcropImg.removeAttribute('src');
+    done(result);
+  };
+  const pcOpen = src => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      pcrop = { img, iw: img.naturalWidth, ih: img.naturalHeight, mode: '4:5', fw: 0, fh: 0, scale: 1, minScale: 1, x: 0, y: 0, resolve, pointers: new Map() };
+      pcropImg.src = src;
+      pcropModal.classList.add('open'); pcropModal.setAttribute('aria-hidden', 'false');
+      requestAnimationFrame(() => { if (pcrop) pcLayout(); setTimeout(() => $('pcropNext').focus(), 30); });
     };
-    reader.onerror = reject; reader.readAsDataURL(file);
+    img.onerror = reject; img.src = src;
   });
+  const pcRender = () => {
+    const r = pcRatio(), sx = -pcrop.x / pcrop.scale, sy = -pcrop.y / pcrop.scale, sw = pcrop.fw / pcrop.scale, sh = pcrop.fh / pcrop.scale;
+    const outW = Math.min(PC_OUT_W, Math.round(sw)), outH = Math.round(outW / r);
+    const c = document.createElement('canvas'); c.width = outW; c.height = outH;
+    const ctx = c.getContext('2d'); ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(pcrop.img, sx, sy, sw, sh, 0, 0, outW, outH);
+    // garante que a foto caiba no limite do banco (no iPhone o navegador gera JPG, mais pesado que WebP)
+    let q = .78, out = encodeImage(c, q);
+    while (out.length > PC_MAX_CHARS && q > .4) { q -= .08; out = encodeImage(c, q); }
+    return out;
+  };
+  pcropModal.querySelectorAll('[data-crop-ratio]').forEach(b => b.addEventListener('click', () => { if (!pcrop) return; pcrop.mode = b.dataset.cropRatio; pcrop.fw = 0; pcLayout(); }));
+  pcropZoom.addEventListener('input', () => { if (pcrop) pcZoomTo(Number(pcropZoom.value)); });
+  $('pcropCancel').addEventListener('click', () => pcClose(null));
+  $('pcropNext').addEventListener('click', () => { if (pcrop) pcClose(pcRender()); });
+  pcropModal.addEventListener('keydown', e => { if (e.key === 'Escape' && pcrop) { e.stopPropagation(); pcClose(null); } });
+  window.addEventListener('resize', () => { if (pcrop) pcLayout(); });
+  // arrastar e pinçar (dois dedos)
+  const pcPoint = e => { const r = pcropStage.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  pcropStage.addEventListener('pointerdown', e => {
+    if (!pcrop) return; e.preventDefault(); pcropStage.setPointerCapture(e.pointerId);
+    pcrop.pointers.set(e.pointerId, pcPoint(e)); pcropModal.classList.add('is-moving');
+    if (pcrop.pointers.size === 2) { const [a, b] = [...crop.pointers.values()]; pcrop.pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: pcrop.scale / pcrop.minScale }; }
+  });
+  pcropStage.addEventListener('pointermove', e => {
+    if (!pcrop || !pcrop.pointers.has(e.pointerId)) return;
+    const prev = pcrop.pointers.get(e.pointerId), cur = pcPoint(e); pcrop.pointers.set(e.pointerId, cur);
+    if (pcrop.pointers.size >= 2 && pcrop.pinch) {
+      const [a, b] = [...crop.pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+      pcZoomTo(pcrop.pinch.z * (d / (pcrop.pinch.d || d)), (a.x + b.x) / 2, (a.y + b.y) / 2);
+    } else { pcrop.x += cur.x - prev.x; pcrop.y += cur.y - prev.y; pcClamp(); pcPaint(); }
+  });
+  const pcEnd = e => {
+    if (!pcrop) return; pcrop.pointers.delete(e.pointerId);
+    if (pcrop.pointers.size < 2) pcrop.pinch = null;
+    if (!pcrop.pointers.size) pcropModal.classList.remove('is-moving');
+  };
+  pcropStage.addEventListener('pointerup', pcEnd); pcropStage.addEventListener('pointercancel', pcEnd);
+  pcropStage.addEventListener('wheel', e => { if (!pcrop) return; e.preventDefault(); const pt = pcPoint(e); pcZoomTo((pcrop.scale / pcrop.minScale) * Math.exp(-e.deltaY * .0015), pt.x, pt.y); }, { passive: false });
+  const readFileURL = file => new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result || '')); r.onerror = reject; r.readAsDataURL(file); });
   const setPostImage = src => {
     postImage = src || '';
     postPreview.hidden = !postImage; dropEmpty.hidden = !!postImage; $('changePhoto').hidden = !postImage;
@@ -3659,7 +3768,8 @@ startupDone = true;
     if (!file.type.startsWith('image/')) { postError.textContent = 'Escolha um arquivo de imagem (JPG, PNG ou WebP).'; if (!editingPostId) showPostModal(); return; }
     postError.textContent = '';
     postImageAudit = null; renderAuditNote();
-    postImagePending = Promise.all([preparePostImage(file), inspectPostImage(file)]).then(([src, audit]) => {
+    postImagePending = Promise.all([readFileURL(file).then(pcOpen), inspectPostImage(file)]).then(([src, audit]) => {
+      if (!src) return; // recorte cancelado: mantém a foto anterior (ou nenhuma)
       setPostImage(src); postImageAudit = audit;
       const original = editingPostId && posts.find(p => p.id === editingPostId);
       const detectedCaptureDate = audit.imageTime > 0 && !audit.oldImageDate ? localDateValue(new Date(audit.imageTime)) : localDateValue(new Date());
