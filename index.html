@@ -1547,6 +1547,12 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
 .crop-zoom input{flex:1;accent-color:var(--accent)}
 .crop-tip{margin:0;text-align:center;font-size:.78rem;color:var(--muted)}
 @media(max-width:640px){.crop-modal{padding:0;align-items:stretch}.crop-card{width:100%;max-height:100dvh;border-radius:0}.crop-body{flex:1}.crop-ratios button{min-width:0;flex:1}}
+.top-progress{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);height:2px;z-index:80;pointer-events:none;opacity:0;transition:opacity .25s ease}
+.top-progress.is-on{opacity:1}
+.top-progress.is-done{opacity:0;transition-delay:.05s}
+.top-progress span{display:block;height:100%;transform-origin:0 50%;transform:scaleX(0);transition:transform .25s ease-out;background:var(--spectrum,linear-gradient(90deg,#f2101e,#f57c01,#f7c81e,#00b4d8,#08799b));opacity:.85;border-radius:0 2px 2px 0}
+.top-progress.is-fail span{background:var(--red);opacity:.7}
+@media(prefers-reduced-motion:reduce){.top-progress span{transition:none}}
 </style>
 <script>
 (() => {
@@ -1599,6 +1605,7 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
   </div>
 </div>
 
+<div class="top-progress" id="topProgress" aria-hidden="true"><span></span></div>
 <header class="site-header">
   <div class="container nav">
     <a class="brand" href="#inicio" data-home aria-label="Ajing Game, início">
@@ -4158,6 +4165,17 @@ startupDone = true;
     pendingLikePosts.delete(post.id);
     updateLikeButtons(post.id, liked, nextLikes.length);
   });
+  // Linha fina de carregamento no topo (cores do site), como no Instagram
+  const topProgress = (() => {
+    const el = $('topProgress'), bar = el.querySelector('span'); let timer = null, value = 0, runs = 0;
+    const set = v => { value = v; bar.style.transform = `scaleX(${v})`; };
+    return {
+      start() { runs++; clearInterval(timer); el.classList.remove('is-done', 'is-fail'); el.classList.add('is-on'); set(.08);
+        timer = setInterval(() => set(value + (0.9 - value) * .08), 160); },
+      done() { if (--runs > 0) return; clearInterval(timer); set(1); setTimeout(() => { el.classList.add('is-done'); el.classList.remove('is-on'); setTimeout(() => { el.classList.remove('is-done'); set(0); }, 400); }, 220); },
+      fail() { runs = Math.max(0, runs - 1); clearInterval(timer); el.classList.add('is-fail'); setTimeout(() => { el.classList.remove('is-on', 'is-fail'); set(0); }, 600); }
+    };
+  })();
   postForm.addEventListener('submit', async e => {
     e.preventDefault();
     if (!currentUser()) { closePostModal(); openLogin(); return; }
@@ -4168,46 +4186,53 @@ startupDone = true;
     const place = postPlace.value.trim();
     if (!place) { postError.textContent = 'Informe o local da captura.'; postPlace.focus(); return; }
     const today = new Date(), captureDate = editingPostId ? (posts.find(p => p.id === editingPostId)?.captureDate || localDateValue(today)) : localDateValue(today);
-    const btn = $('postSubmit'), noScore = $('postNoScore').checked; btn.disabled = true;
+    // Como no Instagram: a janela fecha na hora, o feed volta e uma linha fina no topo mostra o envio em segundo plano
+    const noScore = $('postNoScore').checked;
+    const job = { editId: editingPostId, image: postImage, audit: postImageAudit, origPhoto: editOriginalPhoto, caption: postCaption.value.trim().slice(0, 150) };
+    closePostModal(false);
+    if (!job.editId) { showTab('social'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    topProgress.start();
     let revalidate = false, autoApproved = false, autoRejectedReason = '';
     try {
-      if (editingPostId) {
-        const original = posts.find(p => p.id === editingPostId);
+      if (job.editId) {
+        const original = posts.find(p => p.id === job.editId);
         if (!original || original.user !== currentUser()) throw new Error('Publicação não encontrada.');
-        const speciesChanged = original.speciesId !== sp.id, photoChanged = !!postImage && !!postImageAudit && postImage !== (original.photo || editOriginalPhoto);
-        const updated = { ...original, place, captureDate, caption: postCaption.value.trim().slice(0, 150) };
+        const speciesChanged = original.speciesId !== sp.id, photoChanged = !!job.image && !!job.audit && job.image !== (original.photo || job.origPhoto);
+        const updated = { ...original, place, captureDate, caption: job.caption };
         let media = null;
-        if (photoChanged) { media = { full: postImage, thumb: await makeThumb(postImage) }; delete updated.photo; updated.photoV = (original.photoV || 0) + 1; }
+        if (photoChanged) { media = { full: job.image, thumb: await makeThumb(job.image) }; delete updated.photo; updated.photoV = (original.photoV || 0) + 1; }
         if (speciesChanged) { updated.speciesId = sp.id; updated.speciesName = sp.name; updated.points = sp.points; }
         // Trocar a espécie ou a foto exige nova validação (a análise anterior valia para a foto e a espécie antigas)
         if (speciesChanged || photoChanged) {
           revalidate = !noScore && original.status !== 'pending';
-          autoRejectedReason = photoChanged ? autoRejectReason(postImageAudit, updated.captureDate) : '';
+          autoRejectedReason = photoChanged ? autoRejectReason(job.audit, updated.captureDate) : '';
           updated.status = noScore || autoRejectedReason ? 'unscored' : 'pending';
           delete updated.pointsOverride;
           delete updated.reviewed; delete updated.reviewer;
         }
-        if (photoChanged) await postsDB.putWithAudit(updated, postImageAudit, media);
+        if (photoChanged) await postsDB.putWithAudit(updated, job.audit, media);
         else await postsDB.put(updated);
       } else {
-        const shotDate = postImageAudit && postImageAudit.imageTime > 0 && !postImageAudit.oldImageDate ? localDateValue(new Date(postImageAudit.imageTime)) : captureDate;
-        autoRejectedReason = autoRejectReason(postImageAudit, shotDate);
-        const autoOk = !noScore && !autoRejectedReason && auditEligible(postImageAudit), now = Date.now();
+        const shotDate = job.audit && job.audit.imageTime > 0 && !job.audit.oldImageDate ? localDateValue(new Date(job.audit.imageTime)) : captureDate;
+        autoRejectedReason = autoRejectReason(job.audit, shotDate);
+        const autoOk = !noScore && !autoRejectedReason && auditEligible(job.audit), now = Date.now();
         autoApproved = autoOk;
-        await postsDB.create({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate: shotDate, caption: postCaption.value.trim().slice(0, 150), photoV: 1, created: now, status: noScore || autoRejectedReason ? 'unscored' : autoOk ? 'approved' : 'pending', ...(autoOk ? { reviewed: now, reviewer: 'auto' } : {}) }, postImageAudit || { fileType: '', fileSize: 0, imageDate: '', imageTime: 0, software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true }, { full: postImage, thumb: await makeThumb(postImage) });
+        await postsDB.create({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate: shotDate, caption: job.caption, photoV: 1, created: now, status: noScore || autoRejectedReason ? 'unscored' : autoOk ? 'approved' : 'pending', ...(autoOk ? { reviewed: now, reviewer: 'auto' } : {}) }, job.audit || { fileType: '', fileSize: 0, imageDate: '', imageTime: 0, software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true }, { full: job.image, thumb: await makeThumb(job.image) });
       }
-      const editedId = editingPostId;
-      closePostModal(false);
+      const editedId = job.editId;
       await loadPosts(); renderChampion(); renderAll();
-      if (editedId) openPostView(editedId);
+      topProgress.done();
       showToast(autoRejectedReason
         ? `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>${esc(autoRejectedReason)}</small></div>`
         : noScore ? `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>Publicada sem pontuar: não entra no ranking nem na carta.</small></div>`
         : `<div><b>${editedId ? 'Publicação atualizada' : 'Publicação enviada ao feed'}</b><small>${editedId ? (revalidate ? 'A foto ou a espécie mudou: a captura voltou para a validação de um administrador.' : 'Alterações salvas.') : autoApproved ? 'Foto dentro do prazo: a pontuação foi aprovada automaticamente.' : 'A pontuação será adicionada após a validação de um administrador.'}</small></div>`);
-      if (!editedId) window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch(_) {
-      postError.textContent = `Não foi possível ${editingPostId ? 'salvar as alterações' : 'publicar'}. Verifique a conexão e tente de novo; se persistir, use uma foto menor.`;
-    } finally { btn.disabled = false; }
+      topProgress.fail();
+      const msg = `Não foi possível ${job.editId ? 'salvar as alterações' : 'publicar'}. Verifique a conexão e tente de novo; se persistir, use uma foto menor.`;
+      // reabre a janela com tudo preenchido (se a pessoa não estiver fazendo outra publicação)
+      if (!postModal.classList.contains('open')) { editingPostId = job.editId; showPostModal(); postError.textContent = msg; }
+      else showToast(`<div><b>Falha no envio</b><small>${esc(msg)}</small></div>`);
+    }
   });
 
   /* ===== Ranking (pontuação e quantidade) ===== */
