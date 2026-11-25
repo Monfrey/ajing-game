@@ -15,7 +15,7 @@ export function createSpeciesMap({ root, mun, getSpecies, getPosts, isCounted, e
         <label class="spm-label" for="spmInput">Espécie</label>
         <div class="spm-combo">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input id="spmInput" type="search" autocomplete="off" placeholder="Digite o nome popular ou científico" role="combobox" aria-expanded="false" aria-controls="spmList" aria-autocomplete="list">
+          <input id="spmInput" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite o nome popular ou científico" role="combobox" aria-expanded="false" aria-controls="spmList" aria-autocomplete="list">
           <button type="button" class="spm-clear" hidden aria-label="Mostrar todas as espécies">Todas</button>
           <div class="spm-list" id="spmList" role="listbox" hidden></div>
         </div>
