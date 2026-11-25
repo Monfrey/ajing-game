@@ -1600,6 +1600,76 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
   .share-card-hint{display:block}
   #printCardBtn,#printCardBtn+.hint{display:none}
 }
+/* Campo Local: busca de municípios */
+.place-combo{position:relative}
+.place-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;max-height:240px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:0 10px 28px rgba(8,30,45,.16);padding:4px}
+.place-list[hidden]{display:none}
+.place-list button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:8px;background:none;color:var(--ink);text-align:left;cursor:pointer;font:inherit}
+.place-list button:hover,.place-list button.is-act{background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+.place-list button span{font-size:.78rem;font-weight:700;color:var(--muted)}
+.place-none{margin:0;padding:10px;color:var(--muted);font-size:.86rem}
+/* Mapa de capturas por espécie */
+.spmap-root{min-height:200px}
+.spm-loading,.spm-empty{color:var(--muted);font-size:.9rem;margin:6px 0}
+.spm-search{max-width:520px;margin-bottom:10px}
+.spm-label{display:block;font-weight:600;font-size:.88rem;margin-bottom:6px}
+.spm-combo{position:relative;display:flex;align-items:center}
+.spm-combo>svg{position:absolute;left:12px;width:18px;height:18px;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;pointer-events:none}
+.spm-combo input{width:100%;padding-left:38px;padding-right:76px}
+.spm-clear{position:absolute;right:6px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--accent);font-size:.78rem;font-weight:700;cursor:pointer}
+.spm-clear[hidden]{display:none}
+.spm-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;max-height:300px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:0 10px 28px rgba(8,30,45,.16);padding:4px}
+.spm-list[hidden]{display:none}
+.spm-list button{display:block;width:100%;padding:8px 10px;border:0;border-radius:8px;background:none;color:var(--ink);text-align:left;cursor:pointer;font:inherit}
+.spm-list button b{display:block;font-size:.9rem;font-weight:600}
+.spm-list button i{display:block;font-size:.78rem;color:var(--muted)}
+.spm-list button:hover,.spm-list button.is-act{background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+.spm-list button.is-cur b{color:var(--accent)}
+.spm-intro{margin:6px 0 14px;color:var(--muted);font-size:.9rem;line-height:1.55;max-width:900px}
+.spm-intro b{color:var(--ink)}
+.spm-body{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,1fr);gap:22px;align-items:start}
+.spm-mapwrap{position:relative;display:grid;gap:8px}
+.spm-map{width:100%;height:auto;max-height:min(66vh,600px);display:block;touch-action:manipulation}
+.spm-state,.spm-pt{vector-effect:non-scaling-stroke}
+.spm-state{fill:color-mix(in srgb,var(--ink) 6%,var(--surface));stroke:var(--surface);stroke-width:1;stroke-linejoin:round;cursor:pointer;transition:fill .2s,opacity .2s}
+.spm-state.lvl-1{fill:color-mix(in srgb,var(--accent) 16%,var(--surface))}
+.spm-state.lvl-2{fill:color-mix(in srgb,var(--accent) 30%,var(--surface))}
+.spm-state.lvl-3{fill:color-mix(in srgb,var(--accent) 46%,var(--surface))}
+.spm-state.lvl-4{fill:color-mix(in srgb,var(--accent) 64%,var(--surface))}
+.spm-state:hover,.spm-state:focus-visible{stroke:var(--accent);stroke-width:1.6;outline:none}
+.spm-state.is-sel{stroke:var(--accent);stroke-width:2}
+.spm-state.is-dim{opacity:.45}
+.spm-pt{fill:#f2101e;stroke:#fff;stroke-width:1.2;fill-opacity:.88;cursor:pointer;transition:opacity .2s}
+.spm-pt.is-dim{opacity:.25}
+.spm-pt.is-hl{fill:#f7c81e;stroke:#0e1e2a;stroke-width:1.6;fill-opacity:1}
+.spm-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:.76rem;color:var(--muted)}
+.spm-legend span{display:inline-flex;align-items:center;gap:6px}
+.spm-dot-ico{width:10px;height:10px;border-radius:50%;background:#f2101e;box-shadow:0 0 0 1.5px #fff,0 0 0 2.5px color-mix(in srgb,var(--ink) 14%,transparent)}
+.spm-scale{gap:2px!important}
+.spm-scale b{width:16px;height:8px;border-radius:2px;background:color-mix(in srgb,var(--accent) 16%,var(--surface))}
+.spm-scale b:nth-child(2){background:color-mix(in srgb,var(--accent) 30%,var(--surface))}
+.spm-scale b:nth-child(3){background:color-mix(in srgb,var(--accent) 46%,var(--surface))}
+.spm-scale b:nth-child(4){background:color-mix(in srgb,var(--accent) 64%,var(--surface))}
+.spm-reset{justify-self:start;padding:6px 12px;font-size:.84rem}
+.spm-reset[hidden]{display:none}
+.spm-panel{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:14px 16px;display:grid;gap:8px}
+.spm-ph{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.spm-ph h4{margin:0;font-size:1.05rem;color:var(--accent)}
+.spm-ph span{font-size:.8rem;color:var(--muted)}
+.spm-th{display:flex;justify-content:space-between;padding:6px 4px;border-bottom:1px solid var(--line);font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.spm-rows{list-style:none;margin:0;padding:0;max-height:min(60vh,520px);overflow:auto}
+.spm-rows button{display:grid;grid-template-columns:minmax(0,1fr) 70px 34px;align-items:center;gap:10px;width:100%;padding:8px 4px;border:0;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);background:none;color:var(--ink);text-align:left;cursor:pointer;font:inherit}
+.spm-rows button:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.spm-rows button.is-hl{background:color-mix(in srgb,#f7c81e 22%,transparent)}
+.spm-mn{font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spm-bar{height:5px;border-radius:3px;background:color-mix(in srgb,var(--ink) 8%,transparent);overflow:hidden}
+.spm-bar i{display:block;height:100%;border-radius:3px;background:var(--spectrum,linear-gradient(90deg,#f2101e,#f57c01,#f7c81e,#00b4d8))}
+.spm-rows b{text-align:right;font-size:.9rem;color:var(--accent)}
+.spm-back{justify-self:start;font-size:.84rem}
+@media (max-width:760px){
+  .spm-body{grid-template-columns:minmax(0,1fr);gap:14px}
+  .spm-rows{max-height:none}
+}
 </style>
 <script>
 (() => {
@@ -1922,12 +1992,8 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
           <div id="rankHistoryView" hidden><div class="panel-head"><div><h4>Campeões</h4><p>Campeões de cada temporada e campeonato. Toque na carta para ver o portfólio.</p></div></div><ul class="admin-list req-list" id="rankChampionHistory"></ul></div>
         </section>
         <section class="panel" role="tabpanel" data-panel="species" hidden>
-          <div class="panel-head"><div><h3>Espécies</h3><p>Espécies válidas para o Social Fish, com a pontuação no ranking e o total de capturas.</p></div><button class="btn btn-ghost admin-only" type="button" data-goto="admin" data-goto-sec="species" hidden>Gerenciar espécies</button><button class="btn btn-primary member-only" type="button" data-open-req hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Solicitar nova espécie</button></div>
-          <div class="seg hab-filter" role="group" aria-label="Filtrar espécies por habitat"><button type="button" data-hab-filter="all" aria-pressed="true">Todas</button><button type="button" data-hab-filter="salt" aria-pressed="false">Água salgada</button><button type="button" data-hab-filter="fresh" aria-pressed="false">Água doce</button></div>
-          <div class="field species-search"><label for="speciesSearch">Pesquisar espécies</label><input id="speciesSearch" type="search" autocomplete="off" placeholder="Nome popular ou científico" aria-describedby="speciesSearchHint"><small class="hint" id="speciesSearchHint">A pesquisa funciona junto com o filtro de habitat.</small></div>
-          <div class="species-grid" id="speciesGrid"></div>
-          <p class="empty-row" id="speciesFilterEmpty" hidden></p>
-          <div class="empty" id="speciesEmpty" hidden><h4>Nenhuma espécie cadastrada</h4><p>A lista de espécies é mantida pelos administradores.</p></div>
+          <div class="panel-head"><div><h3>Mapa de capturas</h3><p>Escolha uma espécie para ver em quais estados e municípios ela foi capturada pelos membros.</p></div><button class="btn btn-ghost admin-only" type="button" data-goto="admin" data-goto-sec="species" hidden>Gerenciar espécies</button><button class="btn btn-primary member-only" type="button" data-open-req hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Solicitar nova espécie</button></div>
+          <div class="spmap-root" id="spMapRoot"><p class="spm-loading">Carregando o mapa…</p></div>
           <div class="sp-pending" id="spPendingBox" hidden>
             <h4 class="req-title">Suas solicitações</h4>
             <p class="box-desc">Espécies enviadas por você. Elas só aparecem na lista e na hora de publicar depois de aprovadas por um administrador.</p>
@@ -2381,7 +2447,7 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
             <ul class="sp-pick-list" id="spPickList" role="listbox" aria-label="Espécies" hidden></ul>
           </div>
           <select id="postSpecies" required hidden tabindex="-1" aria-hidden="true"></select><span class="hint" id="speciesHint"></span></div>
-        <div class="field"><label for="postPlace">Local</label><input id="postPlace" maxlength="80" placeholder="Ex.: Píer de Itapoã, Vila Velha - ES" required></div>
+        <div class="field place-field"><label for="postPlace">Local <span class="muted">(município)</span></label><div class="place-combo"><input id="postPlace" maxlength="80" placeholder="Digite o município" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="placeList" aria-expanded="false" required><div class="place-list" id="placeList" role="listbox" hidden></div></div></div>
         <div class="field"><label for="postCaption">Descrição <span class="muted">(opcional)</span><span class="caption-count-inline" aria-hidden="true"></span></label><textarea id="postCaption" rows="3" maxlength="150" placeholder="Isca, trabalho, condições do dia..."></textarea><span class="hint" id="captionCount">0 / 150</span></div>
         <label class="post-noscore"><input id="postNoScore" type="checkbox"><span><b>Publicar sem pontuar</b><small>Vai direto para o feed e não conta pontos no ranking nem na carta.</small></span></label>
         <div class="form-actions"><button class="btn btn-primary" id="postSubmit" type="submit">Publicar</button><button class="btn btn-ghost" id="postCancel" type="button">Cancelar</button></div>
@@ -2522,7 +2588,6 @@ svg.gold-fish .gf-eye{fill:#5a3b00;stroke:none}
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getAnalytics, isSupported } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword, setPersistence, inMemoryPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection as fsCol, doc as fsDoc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, arrayUnion, arrayRemove, runTransaction, deleteField, getDocFromCache, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
@@ -2537,8 +2602,7 @@ const FIREBASE_CONFIG = {
   projectId: "ajing-game",
   storageBucket: "ajing-game.firebasestorage.app",
   messagingSenderId: "11754429364",
-  appId: "1:11754429364:web:a44f811e148ef6e25970e1",
-  measurementId: "G-95LZRD0V5C"
+  appId: "1:11754429364:web:a44f811e148ef6e25970e1"
 };
 /* ===================================================================== */
 
@@ -2552,22 +2616,6 @@ if (!FIREBASE_CONFIG.apiKey || /COLE_AQUI/.test(FIREBASE_CONFIG.apiKey)) {
 }
 
 const fbApp = initializeApp(FIREBASE_CONFIG), fbAuth = getAuth(fbApp);
-
-// Google Analytics: inicializa somente em navegadores compatíveis.
-// Não altera Authentication nem Firestore e evita falha em ambientes sem suporte.
-let fbAnalytics = null;
-isSupported()
-  .then(supported => {
-    if (!supported) {
-      console.info('[Analytics] Este navegador não oferece suporte à coleta.');
-      return;
-    }
-    fbAnalytics = getAnalytics(fbApp);
-    console.info('[Analytics] Inicializado para o Ajing Game.');
-  })
-  .catch(error => {
-    console.warn('[Analytics] Não foi possível inicializar:', error);
-  });
 // Cache no aparelho: ao voltar ao site, o Firestore baixa só o que mudou desde a última visita
 let fdb;
 try { fdb = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
@@ -3875,6 +3923,34 @@ startupDone = true;
   dropZone.addEventListener('drop', e => takeFile(e.dataTransfer.files && e.dataTransfer.files[0]));
   $('changePhoto').addEventListener('click', () => postPhoto.click());
   dropZone.addEventListener('click', () => postPhoto.click());
+  // Local da captura: município escolhido na lista (código do IBGE guardado na publicação)
+  let postMunCode = 0, placeOpts = [], placeActive = -1;
+  const placeList = $('placeList');
+  const hidePlaceList = () => { placeList.hidden = true; postPlace.setAttribute('aria-expanded', 'false'); };
+  const choosePlace = code => { if (!MUN) return; postMunCode = code; postPlace.value = MUN.label(code); hidePlaceList(); };
+  const showPlaceList = async () => {
+    let M; try { M = await loadMunicipios(); } catch (_) { return; }
+    placeOpts = M.search(postPlace.value, 12); placeActive = -1;
+    if (!placeOpts.length) { placeList.innerHTML = postPlace.value.trim() ? '<p class="place-none">Nenhum município encontrado.</p>' : ''; placeList.hidden = !postPlace.value.trim(); return; }
+    placeList.innerHTML = placeOpts.map((r, i) => `<button type="button" role="option" data-i="${i}"><b>${esc(r[1])}</b><span>${esc(M.uf[r[2]])}</span></button>`).join('');
+    placeList.hidden = false; postPlace.setAttribute('aria-expanded', 'true');
+  };
+  const prefillPlace = async (text, code = 0) => {
+    postMunCode = code || 0; postPlace.value = code && MUN ? MUN.label(code) : (text || '');
+    try { const M = await loadMunicipios(); const c = code || M.resolve(text); if (c) { postMunCode = c; if (!code || !text) postPlace.value = M.label(c); } } catch (_) {}
+  };
+  postPlace.addEventListener('input', () => { postMunCode = 0; showPlaceList(); });
+  postPlace.addEventListener('focus', () => { if (postPlace.value && !postMunCode) showPlaceList(); });
+  postPlace.addEventListener('blur', () => setTimeout(hidePlaceList, 140));
+  postPlace.addEventListener('keydown', e => {
+    if (placeList.hidden) return;
+    const btns = [...placeList.querySelectorAll('button')];
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); placeActive = (placeActive + (e.key === 'ArrowDown' ? 1 : -1) + btns.length) % btns.length; btns.forEach((b, i) => b.classList.toggle('is-act', i === placeActive)); }
+    else if (e.key === 'Enter') { e.preventDefault(); const r = placeOpts[placeActive >= 0 ? placeActive : 0]; if (r) choosePlace(r[0]); }
+    else if (e.key === 'Escape') hidePlaceList();
+  });
+  placeList.addEventListener('mousedown', e => e.preventDefault());
+  placeList.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b) choosePlace(placeOpts[Number(b.dataset.i)][0]); });
   const updateCaptionCount = () => { const txt = `${postCaption.value.length} / 150`; $('captionCount').textContent = txt; const inl = document.querySelector('.caption-count-inline'); if (inl) inl.textContent = txt; };
   postCaption.addEventListener('input', updateCaptionCount);
 
@@ -3892,7 +3968,7 @@ startupDone = true;
     postLastFocus = document.activeElement;
     postForm.reset(); setPostImage(''); postError.textContent = '';
     postFields.hidden = choosePhotoFirst; postForm.classList.toggle('photo-first', choosePhotoFirst);
-    postPlace.value = readProfile().location || ''; updateCaptionCount(); renderSpeciesSelect();
+    prefillPlace(readProfile().location || ''); hidePlaceList(); updateCaptionCount(); renderSpeciesSelect();
     postModal.classList.remove('open'); postModal.setAttribute('aria-hidden', 'true'); document.body.style.overflow = '';
     if (choosePhotoFirst) postPhoto.click();
     else { showPostModal(); setTimeout(() => dropZone.focus(), 30); }
@@ -4174,7 +4250,7 @@ startupDone = true;
       postsDB.media(post.id, v, 'full').then(full => { if (full && editingPostId === post.id) { editOriginalPhoto = full; if (!postImageAudit) setPostImage(full); } });
     }
     postSpecies.value = post.speciesId || ''; spPickSync();
-    postPlace.value = post.place || ''; postFields.hidden = false;
+    prefillPlace(post.place || '', post.mun || 0); hidePlaceList(); postFields.hidden = false;
     postCaption.value = post.caption || ''; updateCaptionCount();
     setTimeout(() => { spPickSync(); postCaption.focus(); }, 30);
   };
@@ -4277,8 +4353,12 @@ startupDone = true;
     if (!editingPostId && !postImage) { postError.textContent = 'Adicione a foto da captura.'; dropZone.focus(); return; }
     const sp = getSpecies().find(s => s.id === postSpecies.value);
     if (!sp) { postError.textContent = 'Busque e escolha a espécie na lista.'; spPickInput.focus(); return; }
-    const place = postPlace.value.trim();
-    if (!place) { postError.textContent = 'Informe o local da captura.'; postPlace.focus(); return; }
+    // município: o escolhido na lista ou, se possível, o reconhecido no texto digitado
+    let munCode = postMunCode;
+    if (!munCode && postPlace.value.trim()) { try { const M = await loadMunicipios(); munCode = M.resolve(postPlace.value); } catch (_) {} }
+    if (!munCode && MUN) { postError.textContent = 'Escolha o município na lista de sugestões.'; postPlace.focus(); showPlaceList(); return; }
+    const place = munCode && MUN ? MUN.label(munCode) : postPlace.value.trim();
+    if (!place) { postError.textContent = 'Informe o município da captura.'; postPlace.focus(); return; }
     const today = new Date(), captureDate = editingPostId ? (posts.find(p => p.id === editingPostId)?.captureDate || localDateValue(today)) : localDateValue(today);
     // Como no Instagram: a janela fecha na hora, o feed volta e uma linha fina no topo mostra o envio em segundo plano
     const noScore = $('postNoScore').checked;
@@ -4293,6 +4373,7 @@ startupDone = true;
         if (!original || original.user !== currentUser()) throw new Error('Publicação não encontrada.');
         const speciesChanged = original.speciesId !== sp.id, photoChanged = !!job.image && !!job.audit && job.image !== (original.photo || job.origPhoto);
         const updated = { ...original, place, captureDate, caption: job.caption };
+        if (munCode) updated.mun = munCode; else delete updated.mun;
         let media = null;
         if (photoChanged) { media = { full: job.image, thumb: await makeThumb(job.image) }; delete updated.photo; updated.photoV = (original.photoV || 0) + 1; }
         if (speciesChanged) { updated.speciesId = sp.id; updated.speciesName = sp.name; updated.points = sp.points; }
@@ -4311,7 +4392,7 @@ startupDone = true;
         autoRejectedReason = autoRejectReason(job.audit, shotDate);
         const autoOk = !noScore && !autoRejectedReason && auditEligible(job.audit), now = Date.now();
         autoApproved = autoOk;
-        await postsDB.create({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, captureDate: shotDate, caption: job.caption, photoV: 1, created: now, status: noScore || autoRejectedReason ? 'unscored' : autoOk ? 'approved' : 'pending', ...(autoOk ? { reviewed: now, reviewer: 'auto' } : {}) }, job.audit || { fileType: '', fileSize: 0, imageDate: '', imageTime: 0, software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true }, { full: job.image, thumb: await makeThumb(job.image) });
+        await postsDB.create({ id: uid(), user: currentUser(), speciesId: sp.id, speciesName: sp.name, points: sp.points, place, ...(munCode ? { mun: munCode } : {}), captureDate: shotDate, caption: job.caption, photoV: 1, created: now, status: noScore || autoRejectedReason ? 'unscored' : autoOk ? 'approved' : 'pending', ...(autoOk ? { reviewed: now, reviewer: 'auto' } : {}) }, job.audit || { fileType: '', fileSize: 0, imageDate: '', imageTime: 0, software: '', possibleScreenshot: false, oldImageDate: false, dateUnverified: true }, { full: job.image, thumb: await makeThumb(job.image) });
       }
       const editedId = job.editId;
       await loadPosts(); renderChampion(); renderAll();
@@ -4746,7 +4827,6 @@ startupDone = true;
   // "Água salgada" inclui as espécies dos dois ambientes; o mesmo vale para "Água doce"
   const habitatMatch = (h, filter) => filter === 'all' || h === filter || h === 'both';
   let habFilter = 'all';
-  document.querySelectorAll('[data-hab-filter]').forEach(b => b.addEventListener('click', () => { habFilter = b.dataset.habFilter; renderSpecies(); }));
 
   /* ===== Solicitações: submenus e históricos ===== */
   const REQ_SECS = ['posts', 'events', 'species', 'members'];
@@ -4777,19 +4857,59 @@ startupDone = true;
   document.addEventListener('click', e => { const b = e.target.closest('[data-hist-more]'); if (!b) return; histState[b.dataset.histMore].limit += HIST_PAGE; renderRequests(); });
 
   /* ===== Espécies (visão do membro) ===== */
+  /* ===== Municípios do Brasil (municipios.json: 5.570 municípios do IBGE, carregado sob demanda e guardado pelo navegador) ===== */
+  const munNorm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  let munPromise = null, MUN = null;
+  const loadMunicipios = () => munPromise || (munPromise = fetch('./municipios.json', { cache: 'force-cache' })
+    .then(r => { if (!r.ok) throw new Error('municipios'); return r.json(); })
+    .then(d => {
+      const byCode = new Map(), byKey = new Map(), byName = new Map(), ufs = d.uf.map(u => u.toLowerCase());
+      d.m.forEach(r => { byCode.set(r[0], r); r.n = munNorm(r[1]); byKey.set(`${r.n}|${ufs[r[2]]}`, r[0]); if (!byName.has(r.n)) byName.set(r.n, []); byName.get(r.n).push(r[0]); });
+      const cache = new Map();
+      // reconhece o município num local escrito à mão ("Píer de Itapoã, Vila Velha - ES", "VITORIA ES", "Cariacica")
+      const resolve = place => {
+        const txt = munNorm(place); if (!txt) return 0;
+        if (cache.has(txt)) return cache.get(txt);
+        const toks = txt.split(' '); let uf = '', body = txt;
+        if (toks.length > 1 && ufs.includes(toks[toks.length - 1])) { uf = toks[toks.length - 1]; body = toks.slice(0, -1).join(' '); }
+        // com estado informado, só vale município desse estado; sem estado, só nomes que existem em um único estado
+        const unique = n => { const l = byName.get(n); return l && l.length === 1 ? l[0] : 0; };
+        const pick = (n, u) => u ? (byKey.get(`${n}|${u}`) || 0) : unique(n);
+        let code = pick(body, uf);
+        if (!code) {
+          const segs = String(place).split(/[,;\/\-–(]/).map(munNorm).filter(Boolean).reverse();
+          for (const sgm of segs) { const st = sgm.split(' '); const u2 = st.length > 1 && ufs.includes(st[st.length - 1]) ? st.pop() : uf; code = pick(st.join(' '), u2); if (code) break; }
+        }
+        if (!code) {
+          let best = null; const padded = ` ${body} `;
+          for (const r of d.m) { if (r.n.length < 4 || !padded.includes(` ${r.n} `)) continue; if (uf ? ufs[r[2]] !== uf : byName.get(r.n).length > 1) continue; if (!best || r.n.length > best.len) best = { code: r[0], len: r.n.length }; }
+          if (best) code = best.code;
+        }
+        cache.set(txt, code || 0); return code || 0;
+      };
+      const search = (q, limit = 12) => {
+        const qn = munNorm(q); if (!qn) return [];
+        const toks = qn.split(' '); let uf = ''; let name = qn;
+        if (toks.length > 1 && ufs.includes(toks[toks.length - 1])) { uf = toks[toks.length - 1]; name = toks.slice(0, -1).join(' '); }
+        const pre = [], mid = [];
+        for (const r of d.m) { if (uf && ufs[r[2]] !== uf) continue; if (r.n.startsWith(name)) pre.push(r); else if (r.n.includes(name)) mid.push(r); if (pre.length >= limit) break; }
+        return [...pre, ...mid].slice(0, limit);
+      };
+      MUN = { uf: d.uf, ufName: d.ufName, m: d.m, byCode, resolve, search, label: code => { const r = byCode.get(code); return r ? `${r[1]} - ${d.uf[r[2]]}` : ''; } };
+      return MUN;
+    })
+    .catch(err => { munPromise = null; throw err; }));
+  // Aba Espécies: mapa de capturas (arquivo mapa-especies.js, carregado só quando a aba é aberta)
+  let speciesMap = null, speciesMapLoading = null;
   const renderSpecies = () => {
-    document.querySelectorAll('[data-hab-filter]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.habFilter === habFilter)));
-    const all = getSpecies(), query = histNorm($('speciesSearch').value);
-    const list = all.filter(s => habitatMatch(s.habitat, habFilter) && (!query || histNorm(`${s.name} ${s.sci || ''}`).includes(query)));
-    const filterEmpty = $('speciesFilterEmpty');
-    filterEmpty.textContent = query ? 'Nenhuma espécie corresponde à pesquisa e ao habitat selecionados.' : 'Nenhuma espécie cadastrada para esse habitat.';
-    filterEmpty.hidden = !all.length || list.length > 0;
-    const count = id => posts.filter(p => p.speciesId === id && isPostScored(p)).length;
-    $('speciesGrid').innerHTML = list.map(s => { const n = count(s.id);
-      return `<article class="species-card sp-nophoto"><div class="sp-info"><div><b>${esc(s.name)}</b>${s.sci ? `<i>${esc(s.sci)}</i>` : ''}${habitatChip(s.habitat)}</div><div class="sc-right"><strong>${ptsLabel(s.points)}</strong><span>${n} ${n === 1 ? 'captura' : 'capturas'}</span></div></div></article>`; }).join('');
-    $('speciesEmpty').hidden = all.length > 0;
+    if (speciesMap) { speciesMap.update(); return; }
+    if (speciesMapLoading) return;
+    const root = $('spMapRoot');
+    speciesMapLoading = Promise.all([import('./mapa-especies.js'), loadMunicipios()])
+      .then(([mod, M]) => { speciesMap = mod.createSpeciesMap({ root, mun: M, getSpecies, getPosts: () => posts, isCounted: isPostScored, esc }); })
+      .catch(() => { root.innerHTML = '<p class="spm-empty">Não foi possível carregar o mapa. Verifique a conexão e tente novamente.</p>'; })
+      .finally(() => { speciesMapLoading = null; });
   };
-  $('speciesSearch').addEventListener('input', renderSpecies);
 
   /* ===== Administração ===== */
   const siteCopyNodes = [...document.querySelectorAll('[data-site-copy]')];
