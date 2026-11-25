@@ -1709,6 +1709,13 @@ input[type="search"]::-webkit-search-decoration,input[type="search"]::-webkit-se
   .post-view.pv-feed{padding:0;align-items:stretch}
   .post-view.pv-feed .post-view-box{width:100%;height:100dvh;max-height:100dvh;border-radius:0}
 }
+/* Voltar: seta que acompanha o dedo na borda esquerda (app instalado) e publicação que desliza ao fechar */
+.nav-back-hint{position:fixed;left:0;top:50%;z-index:90;width:40px;height:40px;border-radius:50%;display:none;place-items:center;color:var(--ink);background:color-mix(in srgb,var(--surface) 80%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 4px 14px rgba(8,40,55,.18);transform:translate(-44px,-50%);opacity:0;pointer-events:none;transition:opacity .15s}
+.nav-back-hint svg{width:20px;height:20px}
+.nav-back-hint.on{display:grid;opacity:.9}
+.nav-back-hint.ready{color:#fff;background:var(--accent)}
+.post-view{transition:transform .18s ease-out}
+.post-view.is-swiping{transition:none}
 </style>
 <script>
 (() => {
@@ -3473,7 +3480,7 @@ startupDone = true;
 
   /* ===== Navegação entre site e área de membros ===== */
   const home = $('home'), membersPage = $('membersPage');
-  const showHome = () => { membersPage.hidden = true; home.hidden = false; $('newPostBtn').hidden = true; $('feedSearchToggle').hidden = true; };
+  const showHome = () => { navReset(); membersPage.hidden = true; home.hidden = false; $('newPostBtn').hidden = true; $('feedSearchToggle').hidden = true; };
   const showMembers = (initialTab = null) => {
     home.hidden = true; membersPage.hidden = false;
     document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
@@ -3738,6 +3745,66 @@ startupDone = true;
   };
   const flushLazy = panel => (lazyPanels[panel] || []).forEach(fn => { if (staleRenders.has(fn)) { staleRenders.delete(fn); fn(); } });
   const tabs = document.querySelectorAll('[data-tab]'), panels = document.querySelectorAll('[data-panel]');
+  /* ===== Voltar (como num app): gesto de voltar do aparelho/navegador ou deslize da borda esquerda =====
+     Cada tela aberta pelo usuário entra no histórico; "voltar" fecha a última (publicação, carta, portfólio)
+     ou retorna à aba anterior, parando no Social Fish. */
+  const nav = { stack: [], ignore: 0, restoring: false };
+  const navPush = entry => { if (nav.restoring) return; nav.stack.push(entry); try { history.pushState({ ajingNav: nav.stack.length }, '', location.href); } catch (_) {} };
+  // fechada pela própria tela (✕, Esc, fundo): tira a entrada correspondente do histórico
+  const navConsume = kind => { if (nav.restoring) return; const i = nav.stack.map(e => e.kind).lastIndexOf(kind); if (i < 0) return; nav.stack.splice(i, 1); nav.ignore++; try { history.back(); } catch (_) { nav.ignore--; } };
+  const navReset = () => { nav.stack = []; };
+  const navCanGoBack = () => nav.stack.length > 0;
+  window.addEventListener('popstate', () => {
+    if (nav.ignore) { nav.ignore--; return; }
+    const top = nav.stack.pop(); if (!top) return;
+    nav.restoring = true; try { top.back(); } finally { nav.restoring = false; }
+  });
+  const currentTabName = () => store.get('ajing-member-tab', true) || 'social';
+  // App instalado na tela inicial: o iPhone não tem gesto de voltar, então o site cria o seu (deslizar da borda esquerda).
+  // No navegador, o gesto nativo já faz o mesmo e o do site fica desligado para não duplicar.
+  const isStandalone = () => window.navigator.standalone === true || matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches;
+  const isPhone = () => matchMedia('(max-width:720px), (hover:none) and (pointer:coarse)').matches;
+  const backHint = document.createElement('div'); backHint.className = 'nav-back-hint'; backHint.setAttribute('aria-hidden', 'true');
+  backHint.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
+  document.body.appendChild(backHint);
+  const swipe = { on: false, mode: '', x0: 0, y0: 0, t0: 0, dx: 0, locked: false };
+  document.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1 || !isPhone()) return;
+    const x = e.touches[0].clientX, y = e.touches[0].clientY;
+    const viewer = postView.classList.contains('open') && e.target.closest && e.target.closest('#postView');
+    if (viewer && !(x < 24 && !isStandalone())) swipe.mode = 'post';            // deslizar para a direita fecha a publicação
+    else if (x < 24 && isStandalone() && navCanGoBack()) swipe.mode = 'edge';     // borda esquerda: voltar (app instalado)
+    else return;
+    Object.assign(swipe, { on: true, x0: x, y0: y, t0: performance.now(), dx: 0, locked: false });
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!swipe.on) return;
+    const dx = e.touches[0].clientX - swipe.x0, dy = e.touches[0].clientY - swipe.y0;
+    if (!swipe.locked) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      if (Math.abs(dy) > Math.abs(dx) * 0.8 || dx < 0) { swipe.on = false; return; }   // rolagem vertical: não é voltar
+      swipe.locked = true;
+    }
+    if (e.cancelable) e.preventDefault();
+    swipe.dx = Math.max(0, dx);
+    if (swipe.mode === 'post') { postView.classList.add('is-swiping'); postView.style.transform = `translateX(${swipe.dx}px)`; }
+    else { backHint.classList.add('on'); backHint.style.transform = `translate(${Math.min(swipe.dx, 110) - 44}px, -50%)`; backHint.classList.toggle('ready', swipe.dx > 70); }
+  }, { passive: false });
+  const endSwipe = () => {
+    if (!swipe.on) return; swipe.on = false;
+    const v = swipe.dx / Math.max(1, performance.now() - swipe.t0);
+    if (swipe.mode === 'post') {
+      const go = swipe.locked && (swipe.dx > innerWidth * 0.28 || v > 0.6);
+      postView.classList.remove('is-swiping');
+      if (go) { postView.style.transform = `translateX(${innerWidth}px)`; setTimeout(() => { if (navCanGoBack()) history.back(); else closePostViewRaw(); }, 180); }
+      else postView.style.transform = '';
+    } else {
+      backHint.classList.remove('on', 'ready'); backHint.style.transform = '';
+      if (swipe.locked && (swipe.dx > 70 || v > 0.6) && navCanGoBack()) history.back();
+    }
+  };
+  document.addEventListener('touchend', endSwipe, { passive: true });
+  document.addEventListener('touchcancel', endSwipe, { passive: true });
   const showTab = name => {
     if (name === 'admin' && !isAdmin()) name = 'social';
     if (name === 'members') requestAnimationFrame(() => { try { fitMemberCards(); } catch (_) {} });
@@ -3752,11 +3819,12 @@ startupDone = true;
     if (name === 'admin' && isAdmin() && requestsStale && (store.get('ajing-admin-sec', true) || 'carousel') === 'requests') requestAnimationFrame(() => renderRequests());
   };
   tabs.forEach(t => t.addEventListener('click', () => {
-    const name = t.dataset.tab;
+    const name = t.dataset.tab, from = currentTabName();
+    if (from !== name && !membersPage.hidden) navPush({ kind: 'tab', back: () => showTab(from) });
     showTab(name);
     resetTabHome(name);
   }));
-  document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => { showTab(b.dataset.goto); if (b.dataset.gotoSec) showAdminSec(b.dataset.gotoSec); if (b.dataset.gotoProf) showProfSec(b.dataset.gotoProf); }));
+  document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => { const from = currentTabName(); if (from !== b.dataset.goto && !membersPage.hidden) navPush({ kind: 'tab', back: () => showTab(from) }); showTab(b.dataset.goto); if (b.dataset.gotoSec) showAdminSec(b.dataset.gotoSec); if (b.dataset.gotoProf) showProfSec(b.dataset.gotoProf); }));
 
   /* ===== Chip do usuário ===== */
   const avatarHTML = (u, cls) => {
@@ -4321,6 +4389,7 @@ startupDone = true;
     $('postViewBody').innerHTML = list.map(q => `<article class="pv-item${q.id === id ? ' pv-first' : ''}" data-pv="${esc(q.id)}">${postHTML(q, false)}</article>`).join('');
     postView.classList.toggle('pv-feed', list.length > 1);
     postViewFocus = document.activeElement;
+    if (!postView.classList.contains('open')) navPush({ kind: 'post', back: closePostViewRaw });
     postView.classList.add('open'); postView.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden';
     const box = postView.querySelector('.post-view-box'), first = $('postViewBody').querySelector('.pv-first'), bar = postView.querySelector('.pv-bar');
     box.scrollTop = 0;
@@ -4348,7 +4417,9 @@ startupDone = true;
     setTimeout(() => { spPickSync(); postCaption.focus(); }, 30);
   };
   let editOriginalPhoto = '';
-  const closePostView = () => {
+  const closePostView = () => { const was = postView.classList.contains('open'); closePostViewRaw(); if (was) navConsume('post'); };
+  const closePostViewRaw = () => {
+    postView.style.transform = ''; postView.classList.remove('is-swiping');
     postView.classList.remove('open'); postView.setAttribute('aria-hidden', 'true'); document.body.style.overflow = '';
     postViewFocus && postViewFocus.focus && postViewFocus.focus();
   };
@@ -6426,10 +6497,12 @@ startupDone = true;
     fillCard(clone, u, readProfileOf(u), false);
     $('cardModalBody').innerHTML = ''; $('cardModalBody').appendChild(clone);
     cardLastFocus = document.activeElement;
+    if (!cardModal.classList.contains('open')) navPush({ kind: 'card', back: closeCardModalRaw });
     cardModal.classList.add('open'); cardModal.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden';
     setTimeout(() => $('cardClose').focus(), 30);
   };
-  const closeCardModal = () => {
+  const closeCardModal = () => { const was = cardModal.classList.contains('open'); closeCardModalRaw(); if (was) navConsume('card'); };
+  const closeCardModalRaw = () => {
     cardModal.classList.remove('open'); cardModal.setAttribute('aria-hidden', 'true'); document.body.style.overflow = '';
     cardLastFocus && cardLastFocus.focus && cardLastFocus.focus();
   };
@@ -6474,8 +6547,10 @@ startupDone = true;
   };
   let fitMembersTimer = null;
   window.addEventListener('resize', () => { clearTimeout(fitMembersTimer); fitMembersTimer = setTimeout(fitMemberCards, 120); });
+  const closePortfolioRaw = () => { portfolioUser = null; $('memberPortfolio').hidden = true; $('membersDirectory').hidden = false; };
   const openPortfolio = (u, scrollToTop = true) => {
     if (!getUsers().some(x => x.username === u && x.active !== false)) return;
+    if (scrollToTop && $('memberPortfolio').hidden) navPush({ kind: 'portfolio', back: closePortfolioRaw });
     portfolioUser = u;
     if (scrollToTop) window.scrollTo({ top: 0, behavior: 'smooth' });
     const p = readProfileOf(u), clone = freshCard();
@@ -6488,7 +6563,7 @@ startupDone = true;
       <div class="panel-head"><div><h3>Espécies capturadas (${catches.length})</h3><p>Uma publicação para cada espécie selecionada pelo pescador.</p></div></div>
       <div class="portfolio-species">${catches.map(post => postHTML(post, true)).join('')}</div>${catches.length ? '' : '<div class="empty"><h4>Portfólio vazio</h4><p>Este pescador ainda não selecionou espécies para exibir.</p></div>'}`;
     $('memberPortfolio').querySelector('.tcard-stage').appendChild(clone);
-    $('memberPortfolio').querySelector('#portfolioBack').addEventListener('click', () => { portfolioUser = null; $('memberPortfolio').hidden = true; $('membersDirectory').hidden = false; });
+    $('memberPortfolio').querySelector('#portfolioBack').addEventListener('click', () => { closePortfolioRaw(); navConsume('portfolio'); });
     const edit = $('memberPortfolio').querySelector('[data-edit-portfolio-profile]'); if (edit) edit.addEventListener('click', () => { showTab('profile'); showProfSec('card'); $('editProfileBtn').click(); });
   };
   document.addEventListener('click', e => { const b = e.target.closest('[data-card-user]'); if (b) { showTab('members'); openPortfolio(b.dataset.cardUser); } });
