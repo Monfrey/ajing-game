@@ -75,8 +75,8 @@ export function createSpeciesMap({ root, mun, getSpecies, getPosts, isCounted, e
     const sp = speciesId ? getSpecies().find(s => s.id === speciesId) : null;
     const spLabel = sp ? `<b>${esc(sp.name)}</b>${sp.sci ? ` (<i>${esc(sp.sci)}</i>)` : ''}` : '<b>todas as espécies</b>';
     intro.innerHTML = total
-      ? `Municípios onde os membros registraram capturas aprovadas de ${spLabel}: ${plural(total, 'captura', 'capturas')} em ${plural(byMun.size, 'município', 'municípios')} de ${plural(byUf.size, 'estado', 'estados')}. A concentração de pontos também reflete onde há mais membros pescando.`
-      : `Ainda não há capturas aprovadas de ${spLabel} com município identificado.`;
+      ? `Municípios onde os membros registraram ${spLabel}: ${plural(total, 'captura', 'capturas')} em ${plural(byMun.size, 'município', 'municípios')} de ${plural(byUf.size, 'estado', 'estados')}. A concentração de pontos também reflete onde há mais membros pescando.`
+      : `Ainda não há capturas de ${spLabel} com município identificado.`;
     // intensidade dos estados (4 faixas)
     const maxUf = Math.max(1, ...byUf.values());
     Object.entries(statePaths).forEach(([uf, p]) => {

@@ -4950,7 +4950,8 @@ startupDone = true;
     if (speciesMapLoading) return;
     const root = $('spMapRoot');
     speciesMapLoading = Promise.all([import('./mapa-especies.js'), loadMunicipios()])
-      .then(([mod, M]) => { speciesMap = mod.createSpeciesMap({ root, mun: M, getSpecies, getPosts: () => posts, isCounted: isPostScored, esc }); })
+      .then(([mod, M]) => { // mapa de avistamentos: toda publicação com espécie entra (a recusa vale só para a pontuação)
+        speciesMap = mod.createSpeciesMap({ root, mun: M, getSpecies, getPosts: () => posts, isCounted: p => !!(p.speciesId || p.speciesName), esc }); })
       .catch(() => { root.innerHTML = '<p class="spm-empty">Não foi possível carregar o mapa. Verifique a conexão e tente novamente.</p>'; })
       .finally(() => { speciesMapLoading = null; });
   };
