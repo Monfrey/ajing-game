@@ -89,7 +89,8 @@ export function createSpeciesMap({ root, mun, getSpecies, getPosts, isCounted, e
     const zoomK = zoomBox ? zoomBox[2] / GEO.w : 1;
     gDots.innerHTML = [...byMun.entries()].sort((a, b) => a[1] - b[1]).map(([code, n]) => {
       const row = mun.byCode.get(code), [x, y] = proj(row[3] / 100, row[4] / 100);
-      const r = (5.2 + Math.min(7, Math.sqrt(n) * 1.7)) * Math.max(.22, zoomK);
+      // tamanho: 1 captura ≈ 8 px; cresce aos poucos até no máximo ≈ 11 px (14 ou mais capturas), no mapa do Brasil inteiro
+      const r = (6.9 + Math.min(2.27, Math.log2(n) * 0.6)) * Math.max(.22, zoomK);
       const uf = mun.uf[row[2]];
       return `<circle class="spm-pt${code === highlightMun ? ' is-hl' : ''}${selectedUf && uf !== selectedUf ? ' is-dim' : ''}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(2)}" data-mun="${code}"><title>${esc(row[1])} – ${uf}: ${plural(n, 'captura', 'capturas')}</title></circle>`;
     }).join('');
