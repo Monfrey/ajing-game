@@ -3480,7 +3480,7 @@ startupDone = true;
   const home = $('home'), membersPage = $('membersPage');
   const showHome = () => { navReset(); membersPage.hidden = true; home.hidden = false; $('newPostBtn').hidden = true; $('feedSearchToggle').hidden = true; };
   const showMembers = (initialTab = null) => {
-    home.hidden = true; membersPage.hidden = false; navEnsureGuard();
+    home.hidden = true; membersPage.hidden = false;
     document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
     document.querySelectorAll('.member-only').forEach(el => el.hidden = isAdmin());
     updateUserChip(); renderAll();
@@ -3748,19 +3748,18 @@ startupDone = true;
      ou retorna à aba anterior, parando no Social Fish. */
   const nav = { stack: [], ignore: 0, restoring: false };
   const navPush = entry => { if (nav.restoring) return; nav.stack.push(entry); try { history.pushState({ ajingNav: nav.stack.length }, '', location.href); } catch (_) {} };
+  // volta ao ponto de partida (Social Fish) sem deixar passos antigos no histórico
+  const navToFloor = () => { const n = nav.stack.length; if (!n) return; nav.stack = []; nav.ignore++; try { history.go(-n); } catch (_) { nav.ignore--; } };
   // fechada pela própria tela (✕, Esc, fundo): tira a entrada correspondente do histórico
   const navConsume = kind => { if (nav.restoring) return; const i = nav.stack.map(e => e.kind).lastIndexOf(kind); if (i < 0) return; nav.stack.splice(i, 1); nav.ignore++; try { history.back(); } catch (_) { nav.ignore--; } };
-  const navReset = () => { nav.stack = []; };
+  const navReset = () => navToFloor();
   const navCanGoBack = () => nav.stack.length > 0;
-  // "Piso" no Social Fish: na área de membros fica sempre uma entrada extra no histórico; voltar a partir dela
-  // não sai nem recarrega o site (sem tela branca), apenas permanece onde está.
-  let navGuard = false;
-  const navEnsureGuard = () => { if (navGuard) return; navGuard = true; try { history.pushState({ ajingGuard: true }, '', location.href); } catch (_) { navGuard = false; } };
-  window.addEventListener('popstate', () => {
+  // Nada fica atrás do Social Fish no histórico: lá, o gesto de voltar do aparelho não tem para onde ir e a tela não se move.
+  window.addEventListener('popstate', e => {
     if (nav.ignore) { nav.ignore--; return; }
-    const top = nav.stack.pop();
-    if (!top) { if (navGuard && !membersPage.hidden) { try { history.pushState({ ajingGuard: true }, '', location.href); } catch (_) {} } return; }
-    nav.restoring = true; try { top.back(); } finally { nav.restoring = false; }
+    const depth = (e.state && e.state.ajingNav) || 0;
+    if (depth > nav.stack.length) { nav.ignore++; try { history.go(nav.stack.length - depth); } catch (_) { nav.ignore--; } return; }  // "avançar" não é usado
+    while (nav.stack.length > depth) { const top = nav.stack.pop(); nav.restoring = true; try { top.back(); } finally { nav.restoring = false; } }
   });
   const currentTabName = () => store.get('ajing-member-tab', true) || 'social';
   // App instalado na tela inicial: o iPhone não tem gesto de voltar, então o site cria o seu (deslizar da borda esquerda).
@@ -3776,8 +3775,9 @@ startupDone = true;
     if (e.touches.length !== 1 || !isPhone()) return;
     const x = e.touches[0].clientX, y = e.touches[0].clientY, nearEdge = x < EDGE || x > innerWidth - EDGE;
     const viewer = postView.classList.contains('open') && e.target.closest && e.target.closest('#postView');
-    if (viewer && !(nearEdge && !isStandalone())) Object.assign(swipe, { mode: 'post', dir: 0 });              // publicação: qualquer lado
-    else if (!viewer && nearEdge && isStandalone() && navCanGoBack() && !document.querySelector('.modal.open')) Object.assign(swipe, { mode: 'edge', dir: x < EDGE ? 1 : -1 }); // bordas (app instalado)
+    // a borda esquerda é do gesto nativo do aparelho (iPhone/Android); o site não duplica para não voltar duas vezes
+    if (viewer && x >= EDGE) Object.assign(swipe, { mode: 'post', dir: 0 });                                       // publicação: qualquer lado
+    else if (!viewer && x > innerWidth - EDGE && navCanGoBack() && !document.querySelector('.modal.open')) Object.assign(swipe, { mode: 'edge', dir: -1 }); // borda direita → esquerda
     else return;
     Object.assign(swipe, { on: true, x0: x, y0: y, t0: performance.now(), dx: 0, locked: false });
   }, { passive: true });
@@ -3828,7 +3828,8 @@ startupDone = true;
   };
   tabs.forEach(t => t.addEventListener('click', () => {
     const name = t.dataset.tab, from = currentTabName();
-    if (from !== name && !membersPage.hidden) navPush({ kind: 'tab', back: () => showTab(from) });
+    if (name === 'social') navToFloor();
+    else if (from !== name && !membersPage.hidden) navPush({ kind: 'tab', back: () => showTab(from) });
     showTab(name);
     resetTabHome(name);
   }));
