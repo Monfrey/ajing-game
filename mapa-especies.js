@@ -94,6 +94,23 @@ export function createSpeciesMap({ root, mun, getSpecies, getPosts, isCounted, e
       const uf = mun.uf[row[2]];
       return `<circle class="spm-pt${code === highlightMun ? ' is-hl' : ''}${selectedUf && uf !== selectedUf ? ' is-dim' : ''}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(2)}" data-mun="${code}"><title>${esc(row[1])} – ${uf}: ${plural(n, 'captura', 'capturas')}</title></circle>`;
     }).join('');
+    // painel: espécies capturadas no município escolhido
+    if (selectedUf && highlightMun) {
+      const row = mun.byCode.get(highlightMun), bySp = new Map();
+      for (const p of getPosts()) {
+        if (!isCounted(p) || (speciesId && p.speciesId !== speciesId)) continue;
+        if ((p.mun || mun.resolve(p.place)) !== highlightMun) continue;
+        const k = p.speciesId || p.speciesName; const cur = bySp.get(k) || { id: p.speciesId, name: p.speciesName, n: 0 }; cur.n++; bySp.set(k, cur);
+      }
+      const all = getSpecies(), list = [...bySp.values()].map(s => ({ ...s, sp: all.find(x => x.id === s.id) })).sort((a, b) => b.n - a.n || String(a.name).localeCompare(String(b.name), 'pt-BR'));
+      const max = Math.max(1, ...list.map(s => s.n)), totalMun = list.reduce((a, s) => a + s.n, 0);
+      panel.innerHTML = `<div class="spm-ph"><h4>${esc(row[1])} <small>${esc(selectedUf)}</small></h4><span>${plural(totalMun, 'captura', 'capturas')}</span></div>`
+        + (list.length ? `<div class="spm-th"><span>Espécie</span><span>Capturas</span></div><ul class="spm-rows spm-sp">${list.map(s => `<li><button type="button" data-sp="${esc(s.id || '')}" title="Ver ${esc(s.name)} no mapa"><span class="spm-mn"><b>${esc(s.sp ? s.sp.name : s.name)}</b>${s.sp && s.sp.sci ? `<i>${esc(s.sp.sci)}</i>` : ''}</span><span class="spm-bar"><i style="width:${Math.max(6, Math.round(s.n / max * 100))}%"></i></span><b>${s.n}</b></button></li>`).join('')}</ul>`
+          : '<p class="spm-empty">Nenhuma captura neste município.</p>')
+        + `<button type="button" class="link-btn spm-back-mun">← Municípios de ${esc(ufName(selectedUf))}</button>`;
+      resetBtn.hidden = false;
+      return;
+    }
     // painel
     if (selectedUf) {
       const rows = [...byMun.entries()].filter(([code]) => mun.uf[mun.byCode.get(code)[2]] === selectedUf)
@@ -159,12 +176,14 @@ export function createSpeciesMap({ root, mun, getSpecies, getPosts, isCounted, e
     const code = Number(c.dataset.mun), uf = mun.uf[mun.byCode.get(code)[2]];
     if (uf !== selectedUf) selectUf(uf);
     highlightMun = code; render();
-    panel.querySelector(`[data-mun="${code}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
   panel.addEventListener('click', e => {
     if (e.target.closest('.spm-back')) return selectUf('');
     const u = e.target.closest('[data-uf]'); if (u) return selectUf(u.dataset.uf);
-    const m = e.target.closest('[data-mun]'); if (m) { highlightMun = highlightMun === Number(m.dataset.mun) ? 0 : Number(m.dataset.mun); render(); }
+    if (e.target.closest('.spm-back-mun')) { highlightMun = 0; return render(); }
+    const sp = e.target.closest('[data-sp]'); if (sp && sp.dataset.sp) { const s = getSpecies().find(x => x.id === sp.dataset.sp); if (s) { const keep = highlightMun; choose(s); highlightMun = keep; render(); } return; }
+    const m = e.target.closest('[data-mun]'); if (m) { highlightMun = Number(m.dataset.mun); render(); panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
   });
   resetBtn.addEventListener('click', () => selectUf(''));
   render();
