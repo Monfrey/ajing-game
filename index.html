@@ -3760,6 +3760,8 @@ startupDone = true;
     if (depth > nav.stack.length) { nav.ignore++; try { history.go(nav.stack.length - depth); } catch (_) { nav.ignore--; } return; }  // "avançar": volta à posição atual
     while (nav.stack.length > depth) { const top = nav.stack.pop(); nav.restoring = true; try { top.back(); } finally { nav.restoring = false; } }
   });
+  // Toda tela aberta pelo usuário começa no topo (sem rolagem animada)
+  const toTop = () => { try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); } catch (_) { window.scrollTo(0, 0); } };
   const currentTabName = () => store.get('ajing-member-tab', true) || 'social';
   // Voltar: só o gesto/botão nativo do aparelho (o site não tem gesto próprio).
 
@@ -3780,10 +3782,10 @@ startupDone = true;
     const name = t.dataset.tab, from = currentTabName();
     if (name === 'social') navToFloor();
     else if (from !== name && !membersPage.hidden) navPush({ kind: 'tab', back: () => showTab(from) });
-    showTab(name);
+    showTab(name); toTop();
     resetTabHome(name);
   }));
-  document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => { const from = currentTabName(); if (from !== b.dataset.goto && !membersPage.hidden) navPush({ kind: 'tab', back: () => showTab(from) }); showTab(b.dataset.goto); if (b.dataset.gotoSec) showAdminSec(b.dataset.gotoSec); if (b.dataset.gotoProf) showProfSec(b.dataset.gotoProf); }));
+  document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => { const from = currentTabName(); if (from !== b.dataset.goto && !membersPage.hidden) navPush({ kind: 'tab', back: () => showTab(from) }); showTab(b.dataset.goto); toTop(); if (b.dataset.gotoSec) showAdminSec(b.dataset.gotoSec); if (b.dataset.gotoProf) showProfSec(b.dataset.gotoProf); }));
 
   /* ===== Chip do usuário ===== */
   const avatarHTML = (u, cls) => {
@@ -4958,7 +4960,7 @@ startupDone = true;
     document.querySelectorAll('[data-req-panel]').forEach(p => { p.hidden = p.dataset.reqPanel !== sec; });
     store.set('ajing-req-sec', sec, true);
   };
-  document.querySelectorAll('[data-req-sec]').forEach(b => b.addEventListener('click', () => { $('reqAdminSaved').textContent = ''; $('reqAdminError').textContent = ''; showReqSec(b.dataset.reqSec); }));
+  document.querySelectorAll('[data-req-sec]').forEach(b => b.addEventListener('click', () => { $('reqAdminSaved').textContent = ''; $('reqAdminError').textContent = ''; toTop(); showReqSec(b.dataset.reqSec); }));
   const HIST_PAGE = 50;
   const histState = { posts: { q: '', st: 'all', limit: HIST_PAGE }, events: { q: '', st: 'all', limit: HIST_PAGE }, species: { q: '', st: 'all', limit: HIST_PAGE } };
   const histNorm = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -5309,7 +5311,7 @@ startupDone = true;
     document.querySelectorAll('[data-sc-panel]').forEach(p => { p.hidden = p.dataset.scPanel !== view; });
     store.set('ajing-sc-view', view, true);
   };
-  document.querySelectorAll('[data-sc-view]').forEach(b => b.addEventListener('click', () => showScView(b.dataset.scView)));
+  document.querySelectorAll('[data-sc-view]').forEach(b => b.addEventListener('click', () => { showScView(b.dataset.scView); toTop(); }));
   const updateManagedCount = () => { const el = $('cntManagedContent'); if (el) el.textContent = managedAll().length || ''; };
   const renderManagedContent = () => {
     updateManagedCount();
@@ -5488,7 +5490,7 @@ startupDone = true;
     store.set('ajing-admin-sec', sec, true);
     if (sec === 'requests' && isAdmin() && !membersPage.hidden) { fb.ensure('postAudits'); if (requestsStale) renderRequests(); }
   };
-  document.querySelectorAll('[data-admin-sec]').forEach(b => b.addEventListener('click', () => showAdminSec(b.dataset.adminSec)));
+  document.querySelectorAll('[data-admin-sec]').forEach(b => b.addEventListener('click', () => { showAdminSec(b.dataset.adminSec); toTop(); }));
   const delIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
   const renderAdmin = () => {
     if (!isAdmin()) return;
@@ -6505,12 +6507,13 @@ startupDone = true;
   };
   let fitMembersTimer = null;
   window.addEventListener('resize', () => { clearTimeout(fitMembersTimer); fitMembersTimer = setTimeout(fitMemberCards, 120); });
-  const closePortfolioRaw = () => { portfolioUser = null; $('memberPortfolio').hidden = true; $('membersDirectory').hidden = false; };
+  let directoryScrollY = 0;
+  const closePortfolioRaw = () => { portfolioUser = null; $('memberPortfolio').hidden = true; $('membersDirectory').hidden = false; const y = directoryScrollY; requestAnimationFrame(() => { try { window.scrollTo({ top: y, behavior: 'instant' }); } catch (_) { window.scrollTo(0, y); } }); };
   const openPortfolio = (u, scrollToTop = true) => {
     if (!getUsers().some(x => x.username === u && x.active !== false)) return;
-    if (scrollToTop && $('memberPortfolio').hidden) navPush({ kind: 'portfolio', back: closePortfolioRaw });
+    if (scrollToTop && $('memberPortfolio').hidden) { directoryScrollY = window.scrollY; navPush({ kind: 'portfolio', back: closePortfolioRaw }); }
     portfolioUser = u;
-    if (scrollToTop) window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (scrollToTop) toTop();
     const p = readProfileOf(u), clone = freshCard();
     clone.removeAttribute('id'); clone.removeAttribute('style'); clone.classList.remove('cropping'); clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
     fillCard(clone, u, p, false);
@@ -6704,6 +6707,7 @@ startupDone = true;
     store.set('ajing-prof-sec', sec, true);
   };
   document.querySelectorAll('[data-prof-sec]').forEach(b => b.addEventListener('click', () => {
+    toTop();
     showProfSec(b.dataset.profSec);
     if (b.dataset.profSec === 'messages') {
       const markUnread = () => fb.memberMessagesDB.all().filter(m => !m.read).forEach(m => fb.memberMessagesDB.markRead(m).then(renderMemberMessages).catch(() => {}));
