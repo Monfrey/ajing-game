@@ -1815,6 +1815,21 @@ html.boot-member #membersPage [data-panel="social"][hidden]{display:block!import
   linear-gradient(var(--ds-line),var(--ds-line)) 50% 0/1px 100% no-repeat,
   repeating-linear-gradient(to bottom,transparent 0 14px,var(--ds-soft) 14px 46px,transparent 46px 58px,color-mix(in srgb,var(--ink) 7%,var(--surface)) 58px 330px,transparent 330px 344px,var(--ds-soft) 344px 366px,transparent 366px 389px,var(--ds-line) 389px 390px)}
 @media (prefers-reduced-motion:reduce){.members #feed.is-loading{animation:none}}
+
+/* Transição suave entre telas: só opacidade + leve deslocamento (0,18 s), sem atrasar dados nem carregamento.
+   A animação recomeça sozinha sempre que uma tela/seção passa de oculta para visível. */
+@keyframes ds-screen-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.members [data-panel]:not([hidden]),
+.members [data-prof-panel]:not([hidden]),
+.members [data-admin-panel]:not([hidden]),
+.members [data-req-panel]:not([hidden]),
+.members [data-sc-panel]:not([hidden]),
+#memberPortfolio:not([hidden]),#membersDirectory:not([hidden]),
+#inicio:not([hidden]),#ajing-game:not([hidden]),#contato:not([hidden]){animation:ds-screen-in .18s ease-out}
+@media (prefers-reduced-motion:reduce){
+  .members [data-panel],.members [data-prof-panel],.members [data-admin-panel],.members [data-req-panel],.members [data-sc-panel],
+  #memberPortfolio,#membersDirectory,#inicio,#ajing-game,#contato{animation:none!important}
+}
 </style>
 <script>
 (() => {
