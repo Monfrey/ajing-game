@@ -1709,11 +1709,7 @@ input[type="search"]::-webkit-search-decoration,input[type="search"]::-webkit-se
   .post-view.pv-feed{padding:0;align-items:stretch}
   .post-view.pv-feed .post-view-box{width:100%;height:100dvh;max-height:100dvh;border-radius:0}
 }
-/* Voltar: a tela acompanha o dedo e desliza para o lado */
-#membersPage{transition:transform .18s ease-out,opacity .18s ease-out}
-#membersPage.is-swiping{transition:none}
-.post-view{transition:transform .18s ease-out}
-.post-view.is-swiping{transition:none}
+
 </style>
 <script>
 (() => {
@@ -3747,7 +3743,10 @@ startupDone = true;
      Cada tela aberta pelo usuário entra no histórico; "voltar" fecha a última (publicação, carta, portfólio)
      ou retorna à aba anterior, parando no Social Fish. */
   const nav = { stack: [], ignore: 0, restoring: false };
-  const navPush = entry => { if (nav.restoring) return; nav.stack.push(entry); try { history.pushState({ ajingNav: nav.stack.length }, '', location.href); } catch (_) {} };
+  // iPhone/iPad: o site não cria passos no histórico (o gesto nativo do iOS animaria a tela indo e voltando);
+  // nos demais aparelhos, o voltar do sistema percorre as telas do site.
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const navPush = entry => { if (nav.restoring || isIOS) return; nav.stack.push(entry); try { history.pushState({ ajingNav: nav.stack.length }, '', location.href); } catch (_) {} };
   // volta ao ponto de partida (Social Fish) sem deixar passos antigos no histórico
   const navToFloor = () => { const n = nav.stack.length; if (!n) return; nav.stack = []; nav.ignore++; try { history.go(-n); } catch (_) { nav.ignore--; } };
   // fechada pela própria tela (✕, Esc, fundo): tira a entrada correspondente do histórico
@@ -3758,61 +3757,12 @@ startupDone = true;
   window.addEventListener('popstate', e => {
     if (nav.ignore) { nav.ignore--; return; }
     const depth = (e.state && e.state.ajingNav) || 0;
-    if (depth > nav.stack.length) { nav.ignore++; try { history.go(nav.stack.length - depth); } catch (_) { nav.ignore--; } return; }  // "avançar" não é usado
+    if (depth > nav.stack.length) { nav.ignore++; try { history.go(nav.stack.length - depth); } catch (_) { nav.ignore--; } return; }  // "avançar": volta à posição atual
     while (nav.stack.length > depth) { const top = nav.stack.pop(); nav.restoring = true; try { top.back(); } finally { nav.restoring = false; } }
   });
   const currentTabName = () => store.get('ajing-member-tab', true) || 'social';
-  // App instalado na tela inicial: o iPhone não tem gesto de voltar, então o site cria o seu (deslizar da borda esquerda).
-  // No navegador, o gesto nativo já faz o mesmo e o do site fica desligado para não duplicar.
-  const isStandalone = () => window.navigator.standalone === true || matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches;
-  const isPhone = () => matchMedia('(max-width:720px), (hover:none) and (pointer:coarse)').matches;
-  // Deslizar para voltar, nos dois sentidos, só com o movimento da tela (sem seta):
-  // publicação aberta: arrastar para qualquer lado em qualquer ponto; demais telas (app instalado): a partir das bordas.
-  const EDGE = 24;
-  const swipe = { on: false, mode: '', dir: 0, x0: 0, y0: 0, t0: 0, dx: 0, locked: false, el: null };
-  const swipeTarget = () => swipe.mode === 'post' ? postView : membersPage;
-  document.addEventListener('touchstart', e => {
-    if (e.touches.length !== 1 || !isPhone()) return;
-    const x = e.touches[0].clientX, y = e.touches[0].clientY, nearEdge = x < EDGE || x > innerWidth - EDGE;
-    const viewer = postView.classList.contains('open') && e.target.closest && e.target.closest('#postView');
-    // a borda esquerda é do gesto nativo do aparelho (iPhone/Android); o site não duplica para não voltar duas vezes
-    if (viewer && x >= EDGE) Object.assign(swipe, { mode: 'post', dir: 0 });                                       // publicação: qualquer lado
-    else if (!viewer && x > innerWidth - EDGE && navCanGoBack() && !document.querySelector('.modal.open')) Object.assign(swipe, { mode: 'edge', dir: -1 }); // borda direita → esquerda
-    else return;
-    Object.assign(swipe, { on: true, x0: x, y0: y, t0: performance.now(), dx: 0, locked: false });
-  }, { passive: true });
-  document.addEventListener('touchmove', e => {
-    if (!swipe.on) return;
-    const dx = e.touches[0].clientX - swipe.x0, dy = e.touches[0].clientY - swipe.y0;
-    if (!swipe.locked) {
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-      if (Math.abs(dy) > Math.abs(dx) * 0.8) { swipe.on = false; return; }   // rolagem vertical: não é voltar
-      if (swipe.mode === 'edge' && Math.sign(dx) !== swipe.dir) { swipe.on = false; return; }
-      swipe.locked = true; if (!swipe.dir) swipe.dir = Math.sign(dx) || 1;
-    }
-    if (e.cancelable) e.preventDefault();
-    swipe.dx = swipe.dir > 0 ? Math.max(0, dx) : Math.min(0, dx);
-    const el = swipeTarget(); el.classList.add('is-swiping');
-    el.style.transform = `translateX(${swipe.dx}px)`;
-    if (swipe.mode === 'edge') el.style.opacity = String(1 - Math.min(.35, Math.abs(swipe.dx) / innerWidth * .5));
-  }, { passive: false });
-  const endSwipe = () => {
-    if (!swipe.on) return; swipe.on = false;
-    const el = swipeTarget(), dist = Math.abs(swipe.dx), v = dist / Math.max(1, performance.now() - swipe.t0);
-    const go = swipe.locked && (dist > innerWidth * (swipe.mode === 'post' ? 0.28 : 0.22) || v > 0.6);
-    el.classList.remove('is-swiping');
-    if (!go) { el.style.transform = ''; el.style.opacity = ''; return; }
-    el.style.transform = `translateX(${swipe.dir * innerWidth}px)`;
-    if (swipe.mode === 'edge') el.style.opacity = '0';
-    setTimeout(() => {
-      if (navCanGoBack()) history.back(); else if (swipe.mode === 'post') closePostViewRaw();
-      // a tela seguinte aparece no lugar, sem a animação de volta
-      el.classList.add('is-swiping'); el.style.transform = ''; el.style.opacity = '';
-      requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove('is-swiping')));
-    }, 180);
-  };
-  document.addEventListener('touchend', endSwipe, { passive: true });
-  document.addEventListener('touchcancel', endSwipe, { passive: true });
+  // Voltar: só o gesto/botão nativo do aparelho (o site não tem gesto próprio).
+
   const showTab = name => {
     if (name === 'admin' && !isAdmin()) name = 'social';
     if (name === 'members') requestAnimationFrame(() => { try { fitMemberCards(); } catch (_) {} });
@@ -4428,7 +4378,6 @@ startupDone = true;
   let editOriginalPhoto = '';
   const closePostView = () => { const was = postView.classList.contains('open'); closePostViewRaw(); if (was) navConsume('post'); };
   const closePostViewRaw = () => {
-    postView.style.transform = ''; postView.classList.remove('is-swiping');
     postView.classList.remove('open'); postView.setAttribute('aria-hidden', 'true'); document.body.style.overflow = '';
     postViewFocus && postViewFocus.focus && postViewFocus.focus();
   };
