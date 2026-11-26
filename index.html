@@ -4190,7 +4190,8 @@ startupDone = true;
     postLastFocus = document.activeElement;
     postForm.reset(); setPostImage(''); postError.textContent = '';
     postFields.hidden = choosePhotoFirst; postForm.classList.toggle('photo-first', choosePhotoFirst);
-    prefillPlace(readProfile().location || ''); hidePlaceList(); updateCaptionCount(); renderSpeciesSelect();
+    // nova publicação: o campo Local começa vazio (a pessoa digita o município da captura)
+    postPlace.value = ''; postMunCode = 0; hidePlaceList(); updateCaptionCount(); renderSpeciesSelect();
     postModal.classList.remove('open'); postModal.setAttribute('aria-hidden', 'true'); document.body.style.overflow = '';
     if (choosePhotoFirst) postPhoto.click();
     else { showPostModal(); setTimeout(() => dropZone.focus(), 30); }
