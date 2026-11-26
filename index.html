@@ -1710,6 +1710,80 @@ input[type="search"]::-webkit-search-decoration,input[type="search"]::-webkit-se
   .post-view.pv-feed .post-view-box{width:100%;height:100dvh;max-height:100dvh;border-radius:0}
 }
 
+
+/* =====================================================================
+   DESIGN SYSTEM AJING GAME — camada global de identidade visual
+   Visual limpo e integrado: conteúdo direto na página, divisórias finas,
+   poucos contornos, sombras mínimas e cantos discretos.
+   Só estilo: nenhuma funcionalidade, consulta ou regra é alterada.
+   ===================================================================== */
+:root{
+  /* divisórias */
+  --ds-line:color-mix(in srgb,var(--line) 80%,transparent);
+  --ds-line-strong:var(--line);
+  /* cantos */
+  --ds-radius:6px;--ds-radius-sm:4px;--ds-radius-pill:999px;
+  --radius:6px;--radius-sm:4px;
+  /* espaçamentos */
+  --ds-s1:4px;--ds-s2:8px;--ds-s3:12px;--ds-s4:16px;--ds-s5:24px;--ds-s6:32px;
+  /* sombras (mínimas) */
+  --ds-shadow:none;--ds-shadow-pop:0 12px 32px rgba(8,30,45,.18);
+  /* tipografia */
+  --ds-fs-title:1.3rem;--ds-fs-section:1.02rem;--ds-fs-body:.94rem;--ds-fs-meta:.8rem;
+  /* superfícies */
+  --ds-page:var(--surface);--ds-soft:color-mix(in srgb,var(--ink) 3.5%,var(--surface));
+}
+/* ---------- página da área de membros: conteúdo integrado, sem moldura ---------- */
+.members{background:var(--ds-page)}
+.members .panel{background:transparent;border:0;border-radius:0;box-shadow:none;padding:var(--ds-s5) 0}
+.members .panel+.panel{border-top:1px solid var(--ds-line)}
+.members .panel-head{padding-bottom:var(--ds-s3);margin-bottom:var(--ds-s4);border-bottom:1px solid var(--ds-line)}
+.members .panel-head.social-head{padding:0;border:0}
+.members .panel-head h3{font-size:var(--ds-fs-title);font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.members .panel-head p{font-size:var(--ds-fs-meta);color:var(--muted)}
+.members h4{font-size:var(--ds-fs-section)}
+/* barra de abas e submenus: linha fina, sem caixas */
+.m-bar{border-bottom:1px solid var(--ds-line);box-shadow:none}
+.admin-subnav{border-bottom:1px solid var(--ds-line)}
+/* ---------- blocos internos: sem caixa, separados por divisória fina ---------- */
+.members :is(.user-form,.admin-box,.lvl-box,.ev-detail-box,.callout,.req-card,.award-opt,.slide-form,.managed-content-form,.sp-form-card,.site-copy-group,.pq-edit,.review-edit-panel,.sp-clear-panel,.level-admin-row,.ev-hero,.u-crown-toggle){
+  background:transparent;border:0;border-top:1px solid var(--ds-line);border-radius:0;box-shadow:none;padding-left:0;padding-right:0}
+/* destaques (avisos, link da temporada, otimização): faixa suave em vez de cartão */
+.members :is(.media-migrate,.event-season-link,.sp-import){border:0;border-left:3px solid var(--accent);border-radius:0;box-shadow:none;background:var(--ds-soft)}
+/* resumos em cartões (ex.: "Em andamento" / "Líder agora") viram colunas com divisória */
+.award-now{gap:0;border-top:1px solid var(--ds-line);border-bottom:1px solid var(--ds-line)}
+.award-now>div{background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:var(--ds-s3) var(--ds-s4) var(--ds-s3) 0!important}
+.award-now>div+div{border-left:1px solid var(--ds-line)!important;padding-left:var(--ds-s4)!important}
+/* ---------- listas: sem moldura externa, linhas finas entre itens ---------- */
+.members :is(.admin-list,.rank-list){border:0;border-radius:0;background:transparent;border-top:1px solid var(--ds-line);border-bottom:1px solid var(--ds-line)}
+.members .admin-list>li+li{border-top:1px solid var(--ds-line)}
+.members .rank-row{background:transparent}
+/* ---------- cartões que continuam necessários (publicações, mapa, janelas) ---------- */
+.post{border-color:var(--ds-line);border-radius:var(--ds-radius);box-shadow:none}
+.spm-panel{border:0;border-radius:0;background:transparent;padding:0 0 0 var(--ds-s5);border-left:1px solid var(--ds-line)}
+.modal-card{border-radius:10px;box-shadow:var(--ds-shadow-pop)}
+/* ---------- controles: cantos discretos e consistentes ---------- */
+.btn{border-radius:var(--ds-radius)}
+.icon-btn{border-radius:var(--ds-radius);border-color:var(--ds-line)}
+.seg{border-radius:var(--ds-radius);border-color:var(--ds-line)}
+.chip-check{border-radius:var(--ds-radius-pill);border-color:var(--ds-line)}
+.members .empty{border:0;background:transparent;box-shadow:none}
+/* texto corrido (regulamento): sem caixa, largura confortável de leitura */
+.members .regulation-text{border:0;border-radius:0;background:transparent;padding:0;box-shadow:none}
+/* ---------- páginas públicas que seguem o mesmo padrão ---------- */
+.contact-card{border:0;box-shadow:none;border-radius:0;background:transparent;padding-left:0;padding-right:0}
+.managed-article{border:0;border-radius:0;box-shadow:none;background:transparent;border-top:1px solid var(--ds-line)}
+/* ---------- responsividade ---------- */
+@media (max-width:760px){
+  /* carta do perfil: espaço para a coroa, que fica fora do canto da carta */
+  .members .tcard-stage{padding:14px 16px 0 0}
+  /* menus em grade (Administração, Solicitações, Conteúdo do site): igual às abas — só a opção ativa destacada */
+  .admin-main-nav button:not([aria-current="true"]),.req-subnav button:not([aria-current="true"]){background:transparent}
+  .admin-main-nav button,.req-subnav button{border-radius:var(--ds-radius)}
+  .members .panel{padding:var(--ds-s4) 0}
+  .spm-panel{padding:var(--ds-s4) 0 0;border-left:0;border-top:1px solid var(--ds-line)}
+  .award-now{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+}
 </style>
 <script>
 (() => {
