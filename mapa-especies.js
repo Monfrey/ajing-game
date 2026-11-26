@@ -122,7 +122,7 @@ export function createSpeciesMap({ root, mun, getSpecies, getPosts, isCounted, e
         + `<button type="button" class="link-btn spm-back">← Todos os estados</button>`;
     } else {
       const rows = [...byUf.entries()].sort((a, b) => b[1] - a[1]);
-      panel.innerHTML = `<div class="spm-ph"><h4>Estados</h4><span>toque num estado do mapa</span></div>`
+      panel.innerHTML = `<div class="spm-ph"><h4>Estados</h4><span>Toque em um estado no mapa</span></div>`
         + (rows.length ? `<div class="spm-th"><span>Estado</span><span>Capturas</span></div><ul class="spm-rows">${rows.map(([uf, n]) => `<li><button type="button" data-uf="${uf}"><span class="spm-mn">${esc(ufName(uf))}</span><span class="spm-bar"><i style="width:${Math.max(6, Math.round(n / rows[0][1] * 100))}%"></i></span><b>${n}</b></button></li>`).join('')}</ul>`
           : '<p class="spm-empty">Sem capturas para mostrar.</p>');
     }
