@@ -1831,12 +1831,16 @@ html.boot-member #membersPage [data-panel="social"][hidden]{display:block!import
 @keyframes ds-view-in{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
 .post-view.open{animation:ds-fade-in .18s ease-out}
 .post-view.open .post-view-box{animation:ds-view-in .2s cubic-bezier(.2,.7,.3,1)}
-@media (max-width:720px){@keyframes ds-view-in{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}}
+@media (max-width:720px){.post-view.open .post-view-box{animation:ds-fade-in .16s ease-out}}
 @media (prefers-reduced-motion:reduce){
   .post-view.open,.post-view.open .post-view-box{animation:none!important}
   .members [data-panel],.members [data-prof-panel],.members [data-admin-panel],.members [data-req-panel],.members [data-sc-panel],
   #memberPortfolio,#membersDirectory,#inicio,#ajing-game,#contato{animation:none!important}
 }
+
+/* Cliques rápidos nas publicações: sem seleção azul da foto nem realce de toque */
+.post .post-photo,.post .post-photo img,.post-media-wrap{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.post .post-photo img{-webkit-user-drag:none}
 </style>
 <script>
 (() => {
@@ -4388,7 +4392,11 @@ startupDone = true;
     }
     const data = await postsDB.media(img.dataset.postMedia, Number(img.dataset.mediaV) || 1, img.dataset.mediaSize);
     delete img.dataset.mediaBusy;
-    if (data) { img.src = safeImageSrc(data); img.dataset.mediaLoaded = '1'; img.classList.remove('media-loading', 'media-preview'); }
+    if (data) {
+      const src = safeImageSrc(data);
+      try { const pre = new Image(); pre.src = src; if (pre.decode) await pre.decode(); } catch (_) {}  // prepara antes de trocar: sem piscar
+      img.src = src; img.dataset.mediaLoaded = '1'; img.classList.remove('media-loading', 'media-preview');
+    }
   };
   const mediaObserver = 'IntersectionObserver' in window ? new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) { mediaObserver.unobserve(e.target); loadMediaImg(e.target); } }), { rootMargin: '600px 0px' }) : null;
   const hydrateMedia = root => (root || document).querySelectorAll('img[data-post-media]:not([data-media-loaded])').forEach(img => {
@@ -4485,6 +4493,10 @@ startupDone = true;
 
   // Publicação completa em janela
   const postView = $('postView'); let postViewFocus = null;
+  // última interação: mouse/toque ou teclado (o foco só volta ao cartão para quem navega pelo teclado)
+  let lastInputKeyboard = false;
+  document.addEventListener('pointerdown', () => { lastInputKeyboard = false; }, { capture: true, passive: true });
+  document.addEventListener('keydown', e => { if (e.key === 'Tab' || e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') lastInputKeyboard = true; }, { capture: true });
   // Como no Instagram: a publicação abre numa rolagem com as demais da mesma lista (feed, portfólio, minhas capturas).
   // Só a foto tocada carrega na hora; as outras carregam ao se aproximar da tela.
   const openPostView = (id, container = null) => {
@@ -4500,8 +4512,8 @@ startupDone = true;
     if (!postView.classList.contains('open')) navPush({ kind: 'post', back: closePostViewRaw });
     postView.classList.add('open'); postView.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden';
     const box = postView.querySelector('.post-view-box'), first = $('postViewBody').querySelector('.pv-first'), bar = postView.querySelector('.pv-bar');
-    box.scrollTop = 0;
-    if (first) requestAnimationFrame(() => { box.scrollTop = Math.max(0, first.offsetTop - (bar ? bar.offsetHeight : 0)); });
+    // já no primeiro quadro, a publicação tocada aparece no lugar (sem mostrar o topo da lista antes)
+    box.scrollTop = first ? Math.max(0, first.offsetTop - (bar ? bar.offsetHeight : 0)) : 0;
     setTimeout(() => $('postViewClose').focus({ preventScroll: true }), 30);
   };
   const openPostEdit = id => {
@@ -4528,7 +4540,8 @@ startupDone = true;
   const closePostView = () => { const was = postView.classList.contains('open'); closePostViewRaw(); if (was) navConsume('post'); };
   const closePostViewRaw = () => {
     postView.classList.remove('open'); postView.setAttribute('aria-hidden', 'true'); document.body.style.overflow = '';
-    postViewFocus && postViewFocus.focus && postViewFocus.focus();
+    if (lastInputKeyboard) postViewFocus && postViewFocus.focus && postViewFocus.focus();
+    else if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   };
   document.addEventListener('pointerdown', e => {
     const open = e.target.closest && e.target.closest('[data-open-post]'); if (!open) return;
