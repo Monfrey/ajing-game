@@ -1794,6 +1794,11 @@ input[type="search"]::-webkit-search-decoration,input[type="search"]::-webkit-se
   .spm-panel{padding:var(--ds-s4) 0 0;border-left:0;border-top:1px solid var(--ds-line)}
   .award-now{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 }
+
+/* Abertura como app: para quem estava logado, a base por trás da tela de carregamento é o Social Fish, não a página inicial */
+html.boot-member #home{display:none!important}
+html.boot-member #membersPage[hidden]{display:block!important}
+html.boot-member #membersPage [data-panel="social"][hidden]{display:block!important}
 </style>
 <script>
 (() => {
@@ -1837,7 +1842,7 @@ input[type="search"]::-webkit-search-decoration,input[type="search"]::-webkit-se
 </head>
 <body>
 
-<script>(function(){var hint=false;try{hint=localStorage.getItem("ajing-session-hint")==="1";}catch(e){}setTimeout(function(){var s=document.getElementById("startupLoading");if(s&&!s.classList.contains("is-done")){s.classList.add("is-done");setTimeout(function(){s.hidden=true;},240);}},hint?9000:4000);})();</script>
+<script>(function(){var hint=false;try{hint=localStorage.getItem("ajing-session-hint")==="1";}catch(e){}if(hint)document.documentElement.classList.add("boot-member");setTimeout(function(){var s=document.getElementById("startupLoading");if(s&&!s.classList.contains("is-done")){s.classList.add("is-done");setTimeout(function(){s.hidden=true;},240);}},hint?9000:4000);})();</script>
 <div class="startup-loading" id="startupLoading" role="status" aria-live="polite" aria-label="Carregando Ajing Game">
   <div class="startup-loading-content">
     <span class="logo-img startup-loading-logo" role="img" aria-label="Logo Ajing Game"></span>
@@ -3224,7 +3229,12 @@ const authReady = new Promise(resolve => {
     authSeq = authSeq.then(async () => {
       authUid = user ? user.uid : null;
       if (user && !C.users[user.uid]) {
-        try { const account = await getDoc(fsDoc(fdb, 'users', user.uid)); if (account.exists()) C.users = { ...C.users, [user.uid]: account.data() }; }
+        try {
+          const ref = fsDoc(fdb, 'users', user.uid); let account = null;
+          try { account = await getDocFromCache(ref); if (!account.exists()) account = null; } catch (_) { account = null; }
+          if (!account) account = await getDoc(ref);
+          if (account.exists()) C.users = { ...C.users, [user.uid]: account.data() };
+        }
         catch (err) { console.warn('Firestore: usuário autenticado', err && err.code); }
       }
       const u = fbUser();
@@ -3558,7 +3568,7 @@ startupDone = true;
 
   /* ===== Navegação entre site e área de membros ===== */
   const home = $('home'), membersPage = $('membersPage');
-  const showHome = () => { navReset(); membersPage.hidden = true; home.hidden = false; $('newPostBtn').hidden = true; $('feedSearchToggle').hidden = true; };
+  const showHome = () => { navReset(); document.documentElement.classList.remove('boot-member'); membersPage.hidden = true; home.hidden = false; $('newPostBtn').hidden = true; $('feedSearchToggle').hidden = true; };
   const showMembers = (initialTab = null) => {
     home.hidden = true; membersPage.hidden = false;
     document.querySelectorAll('.admin-only').forEach(el => el.hidden = !isAdmin());
@@ -7755,11 +7765,12 @@ startupDone = true;
     // Login confirmado depois da abertura da página: ajusta o botão e abre a área de membros (se a pessoa ainda não navegou)
     if (awaitingLateAuth && fb.authKnown()) {
       awaitingLateAuth = false;
-      if (!currentUser()) store.del('ajing-session-hint');
+      if (!currentUser()) { store.del('ajing-session-hint'); document.documentElement.classList.remove('boot-member'); }
       if (currentUser()) {
         store.set('ajing-session-hint', '1');
         $('membersBtnLabel').textContent = 'Minha área'; $('membersBtn').setAttribute('aria-label', 'Minha área');
         if (membersPage.hidden && !document.querySelector('.modal.open') && window.scrollY < 80) { await loadPosts(); renderAll(); showMembers('social'); }
+        document.documentElement.classList.remove('boot-member');
       }
     }
     const changed = [...refreshCollections]; refreshCollections.clear();
@@ -7848,10 +7859,13 @@ startupDone = true;
   Promise.all([loadPosts(), loadSpeciesPhotos(), loadReqPhotos(), loadChampBanners(), loadSlides()]).then(async () => {
     reloadLevels(); if (!rankAwardDirty) { rankAwardConfig = readRankAwardConfig(); renderRankAwardForm(); }
     renderChampion();
-    if (fb.authUid() && !currentUser()) await fb.signOut().catch(() => {});
+    // só encerra a sessão quando o login já foi confirmado e a conta realmente não existe (nunca no meio da espera)
+    if (fb.authKnown() && fb.authUid() && !currentUser()) await fb.signOut().catch(() => {});
     // Uma sessão ativa abre direto no Social Fish.
     if (currentUser()) { store.set('ajing-session-hint', '1'); $('membersBtnLabel').textContent = 'Minha área'; $('membersBtn').setAttribute('aria-label', 'Minha área'); showMembers('social'); }
     else { showTab('social'); if (!fb.authKnown()) awaitingLateAuth = true; else store.del('ajing-session-hint'); }
+    // abertura decidida: a área de membros (ou a página inicial, se a sessão terminou) assume o lugar da base provisória
+    if (currentUser() || !awaitingLateAuth) document.documentElement.classList.remove('boot-member');
     finishStartupLoading();
   });
 })();
