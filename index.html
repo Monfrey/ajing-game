@@ -1826,7 +1826,14 @@ html.boot-member #membersPage [data-panel="social"][hidden]{display:block!import
 .members [data-sc-panel]:not([hidden]),
 #memberPortfolio:not([hidden]),#membersDirectory:not([hidden]),
 #inicio:not([hidden]),#ajing-game:not([hidden]),#contato:not([hidden]){animation:ds-screen-in .18s ease-out}
+/* Abertura das publicações: fundo escurece suavemente e a publicação aparece com leve aproximação */
+@keyframes ds-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes ds-view-in{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+.post-view.open{animation:ds-fade-in .18s ease-out}
+.post-view.open .post-view-box{animation:ds-view-in .2s cubic-bezier(.2,.7,.3,1)}
+@media (max-width:720px){@keyframes ds-view-in{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}}
 @media (prefers-reduced-motion:reduce){
+  .post-view.open,.post-view.open .post-view-box{animation:none!important}
   .members [data-panel],.members [data-prof-panel],.members [data-admin-panel],.members [data-req-panel],.members [data-sc-panel],
   #memberPortfolio,#membersDirectory,#inicio,#ajing-game,#contato{animation:none!important}
 }
@@ -4406,8 +4413,7 @@ startupDone = true;
   });
   const feedSignature = (p, pointsByUser) => {
     const profile = readProfileOf(p.user), account = getUsers().find(u => u.username === p.user), level = levelInfo(pointsByUser.get(p.user) || 0).cur;
-    const likes = Array.isArray(p.likes) ? [...new Set(p.likes)].sort().join('\u001f') : '';
-    return [p.id, p.user, p.photo, p.photoV, p.speciesName, p.speciesId, p.place, p.created, p.captureDate, p.caption, p.status, postPoints(p), likes,
+    return [p.id, p.user, p.photo, p.photoV, p.speciesName, p.speciesId, p.place, p.created, p.captureDate, p.caption, p.status, postPoints(p),
       currentUser(), displayName(p.user), profile.name, profile.fishingName, profile.photo, account?.seasonChampion, account?.goldHooks,
       level?.n, level?.name, level?.symbol, level?.image, timeAgo(p.created)];
   };
@@ -7835,17 +7841,16 @@ startupDone = true;
     if (fb.authUid() && !currentUser()) { await logout(); return; } // conta desativada ou excluída
     const touches = (...names) => changed.includes('*') || names.some(name => changed.includes(name));
     if (changed.length === 1 && changed[0] === 'postLikes') {
+      // só as curtidas mudaram: atualiza apenas os botões de curtir na tela (feed, minhas capturas, portfólio,
+      // publicação aberta), sem redesenhar os cartões — a foto não pisca
       await loadPosts();
-      renderFeed();
-      if (currentUser()) renderMyCaptures();
-      if (portfolioUser && !$('memberPortfolio').hidden) openPortfolio(portfolioUser, false);
-      if (postView.classList.contains('open')) {
-        $('postViewBody').querySelectorAll('.pv-item').forEach(it => {
-          const post = posts.find(item => item.id === it.dataset.pv); if (!post) return;
-          const likes = Array.isArray(post.likes) ? post.likes : [];
-          updateLikeButtons(post.id, likes.includes(currentUser()), likes.length, false);
-        });
-      }
+      const me = currentUser(), onScreen = new Set([...document.querySelectorAll('[data-like-post]')].map(b => b.dataset.likePost));
+      onScreen.forEach(id => {
+        if (pendingLikePosts.has(id)) return;
+        const post = posts.find(item => item.id === id); if (!post) return;
+        const likes = Array.isArray(post.likes) ? post.likes : [];
+        updateLikeButtons(post.id, likes.includes(me), likes.length, false);
+      });
       return;
     }
     if (changed.every(name => name === 'contactMessages' || name === 'contactUnread')) {
