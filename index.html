@@ -1845,6 +1845,30 @@ html.boot-member #membersPage [data-panel="social"][hidden]{display:block!import
 /* Lista de níveis (Meu perfil): abre sobre o conteúdo, então tem fundo próprio, contorno fino e sombra suave */
 .members .lvl-pop{background:var(--surface)!important;border:1px solid var(--ds-line)!important;border-radius:var(--ds-radius)!important;padding:14px 16px!important;box-shadow:0 14px 34px rgba(8,30,45,.18)!important;z-index:40}
 @media (max-width:720px){.members .lvl-pop{width:calc(100vw - 32px)!important;max-width:none}}
+
+/* Publicação aberta no estilo Instagram: perfil sobre a foto, informações numa linha fina, legenda recolhida */
+.post-view .post:not(.compact){position:relative;border:0;border-radius:0;box-shadow:none;background:var(--surface)}
+.post-view .post:not(.compact) .post-head{position:absolute;left:0;right:0;top:0;z-index:3;margin:0;padding:10px 12px 28px;border:0;
+  background:linear-gradient(to bottom,rgba(0,0,0,.5),rgba(0,0,0,.18) 60%,rgba(0,0,0,0));pointer-events:none}
+.post-view .post:not(.compact) .post-head>*{pointer-events:auto}
+/* publicação única (computador): espaço para o botão fechar no canto */
+.post-view:not(.pv-feed) .post:not(.compact) .post-head{padding-right:58px}
+.post-view .post:not(.compact) .post-head .mcard{transform:scale(.8);transform-origin:left center;margin-right:-7px}
+.post-view .post:not(.compact) .post-head .who b{color:#fff;font-size:.9rem;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.post-view .post:not(.compact) .post-head .who small{color:rgba(255,255,255,.9);text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.post-view .post:not(.compact) .post-head .who small svg{stroke:currentColor;color:#fff}
+.post-view .post:not(.compact) .post-owner-actions .icon-btn{background:rgba(0,0,0,.3);border-color:transparent;color:#fff;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.post-view .post:not(.compact) .post-body{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:8px 12px 10px;margin:0}
+.post-view .post:not(.compact) .post-body>*{margin:0}
+.post-view .post:not(.compact) .pb-row,.post-view .post:not(.compact) .post-meta-row{display:inline-flex;align-items:center;gap:8px;order:1}
+.post-view .post:not(.compact) .post-meta-row{order:2}
+.post-view .post:not(.compact) .post-body>time{order:3;font-size:.76rem;color:var(--muted)}
+.post-view .post:not(.compact) .post-points-detail{order:4;margin-left:auto}
+.post-view .post:not(.compact) .caption{order:10;flex:1 1 calc(100% - 56px);min-width:0;font-size:.9rem;line-height:1.4;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+.post-view .post:not(.compact) .caption.expanded{flex-basis:100%;display:block;-webkit-line-clamp:unset;overflow:visible;cursor:auto}
+.post-view .caption-more{order:11;margin:-2px 0 0!important;padding:0;border:0;background:none;color:var(--muted);font:inherit;font-size:.84rem;font-weight:600;cursor:pointer}
+.post-view .post:not(.compact) .portfolio-pick{order:12;flex:1 1 100%}
+.post-view .pv-item+.pv-item{border-top:1px solid var(--ds-line)}
 </style>
 <script>
 (() => {
@@ -4503,6 +4527,17 @@ startupDone = true;
   document.addEventListener('keydown', e => { if (e.key === 'Tab' || e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') lastInputKeyboard = true; }, { capture: true });
   // Como no Instagram: a publicação abre numa rolagem com as demais da mesma lista (feed, portfólio, minhas capturas).
   // Só a foto tocada carrega na hora; as outras carregam ao se aproximar da tela.
+  // legenda recolhida (1 linha): mostra "mais" só quando o texto não cabe; tocar expande
+  const markCaptions = root => (root || document).querySelectorAll('.post:not(.compact) .caption:not([data-clamp])').forEach(c => {
+    c.dataset.clamp = '1';
+    if (c.scrollHeight > c.clientHeight + 2) { const b = document.createElement('button'); b.type = 'button'; b.className = 'caption-more'; b.textContent = 'mais'; b.setAttribute('aria-label', 'Ler a descrição completa'); c.after(b); }
+  });
+  $('postViewBody').addEventListener('click', e => {
+    const more = e.target.closest('.caption-more'), cap = e.target.closest('.caption');
+    const target = more ? more.previousElementSibling : cap && !cap.classList.contains('expanded') && cap.nextElementSibling && cap.nextElementSibling.classList.contains('caption-more') ? cap : null;
+    if (!target) return;
+    e.stopPropagation(); target.classList.add('expanded'); (more || target.nextElementSibling).remove();
+  });
   const openPostView = (id, container = null) => {
     const p = posts.find(x => x.id === id); if (!p) return;
     const phone = matchMedia('(max-width:720px), (hover:none) and (pointer:coarse)').matches;
@@ -4518,6 +4553,7 @@ startupDone = true;
     const box = postView.querySelector('.post-view-box'), first = $('postViewBody').querySelector('.pv-first'), bar = postView.querySelector('.pv-bar');
     // já no primeiro quadro, a publicação tocada aparece no lugar (sem mostrar o topo da lista antes)
     box.scrollTop = first ? Math.max(0, first.offsetTop - (bar ? bar.offsetHeight : 0)) : 0;
+    markCaptions($('postViewBody'));
     setTimeout(() => $('postViewClose').focus({ preventScroll: true }), 30);
   };
   const openPostEdit = id => {
