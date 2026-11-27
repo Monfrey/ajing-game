@@ -1841,6 +1841,10 @@ html.boot-member #membersPage [data-panel="social"][hidden]{display:block!import
 /* Cliques rápidos nas publicações: sem seleção azul da foto nem realce de toque */
 .post .post-photo,.post .post-photo img,.post-media-wrap{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 .post .post-photo img{-webkit-user-drag:none}
+
+/* Lista de níveis (Meu perfil): abre sobre o conteúdo, então tem fundo próprio, contorno fino e sombra suave */
+.members .lvl-pop{background:var(--surface)!important;border:1px solid var(--ds-line)!important;border-radius:var(--ds-radius)!important;padding:14px 16px!important;box-shadow:0 14px 34px rgba(8,30,45,.18)!important;z-index:40}
+@media (max-width:720px){.members .lvl-pop{width:calc(100vw - 32px)!important;max-width:none}}
 </style>
 <script>
 (() => {
@@ -5120,7 +5124,7 @@ startupDone = true;
     document.querySelectorAll('[data-req-panel]').forEach(p => { p.hidden = p.dataset.reqPanel !== sec; });
     store.set('ajing-req-sec', sec, true);
   };
-  document.querySelectorAll('[data-req-sec]').forEach(b => b.addEventListener('click', () => { $('reqAdminSaved').textContent = ''; $('reqAdminError').textContent = ''; toTop(); showReqSec(b.dataset.reqSec); }));
+  document.querySelectorAll('[data-req-sec]').forEach(b => b.addEventListener('click', () => { $('reqAdminSaved').textContent = ''; $('reqAdminError').textContent = ''; showReqSec(b.dataset.reqSec); }));
   const HIST_PAGE = 50;
   const histState = { posts: { q: '', st: 'all', limit: HIST_PAGE }, events: { q: '', st: 'all', limit: HIST_PAGE }, species: { q: '', st: 'all', limit: HIST_PAGE } };
   const histNorm = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -5471,7 +5475,7 @@ startupDone = true;
     document.querySelectorAll('[data-sc-panel]').forEach(p => { p.hidden = p.dataset.scPanel !== view; });
     store.set('ajing-sc-view', view, true);
   };
-  document.querySelectorAll('[data-sc-view]').forEach(b => b.addEventListener('click', () => { showScView(b.dataset.scView); toTop(); }));
+  document.querySelectorAll('[data-sc-view]').forEach(b => b.addEventListener('click', () => showScView(b.dataset.scView)));
   const updateManagedCount = () => { const el = $('cntManagedContent'); if (el) el.textContent = managedAll().length || ''; };
   const renderManagedContent = () => {
     updateManagedCount();
@@ -5650,7 +5654,7 @@ startupDone = true;
     store.set('ajing-admin-sec', sec, true);
     if (sec === 'requests' && isAdmin() && !membersPage.hidden) { fb.ensure('postAudits'); if (requestsStale) renderRequests(); }
   };
-  document.querySelectorAll('[data-admin-sec]').forEach(b => b.addEventListener('click', () => { showAdminSec(b.dataset.adminSec); toTop(); }));
+  document.querySelectorAll('[data-admin-sec]').forEach(b => b.addEventListener('click', () => showAdminSec(b.dataset.adminSec)));
   const delIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
   const renderAdmin = () => {
     if (!isAdmin()) return;
