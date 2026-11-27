@@ -1869,6 +1869,33 @@ html.boot-member #membersPage [data-panel="social"][hidden]{display:block!import
 .post-view .caption-more{order:11;margin:-2px 0 0!important;padding:0;border:0;background:none;color:var(--muted);font:inherit;font-size:.84rem;font-weight:600;cursor:pointer}
 .post-view .post:not(.compact) .portfolio-pick{order:12;flex:1 1 100%}
 .post-view .pv-item+.pv-item{border-top:1px solid var(--ds-line)}
+
+/* Grade de publicações (feed, minhas capturas, portfólio): perfil e tempo sobre a foto, informações numa linha */
+.post.compact{position:relative}
+.post.compact .post-head{position:absolute;left:0;right:0;top:0;z-index:3;margin:0;padding:7px 8px 22px;border:0;align-items:flex-start;gap:6px;
+  background:linear-gradient(to bottom,rgba(0,0,0,.5),rgba(0,0,0,.16) 62%,rgba(0,0,0,0));pointer-events:none}
+.post.compact .post-head>*{pointer-events:auto}
+.post.compact .post-head .who{min-width:0;padding-left:9px}
+.post-view .post:not(.compact) .post-head .who{padding-left:8px}
+.post.compact .post-head .who b{color:#fff;font-size:.8rem;text-shadow:0 1px 2px rgba(0,0,0,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.post.compact .post-head .who small{color:rgba(255,255,255,.9);font-size:.68rem;text-shadow:0 1px 2px rgba(0,0,0,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.post.compact .post-head .who small svg{stroke:currentColor;color:#fff}
+.post.compact .post-head .post-time{margin-left:auto;flex:none;font-size:.66rem;color:rgba(255,255,255,.9);text-shadow:0 1px 2px rgba(0,0,0,.45);line-height:1.6}
+.post.compact .post-owner-actions .icon-btn{background:rgba(0,0,0,.3);border-color:transparent;color:#fff}
+.post.compact .post-body{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;padding:6px 8px;margin:0}
+.post.compact .post-body>*{margin:0}
+.post.compact .pb-row{order:2;flex:1 1 0;min-width:0;display:flex}
+.post.compact .pb-row .species-tag{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.post.compact .post-meta-row{order:1;display:contents}
+.post.compact .post-meta-row .score-fish{order:1;flex:none}
+.post.compact .post-meta-row .capture-date{order:3;flex:none;font-size:.7rem;color:var(--muted)}
+.post.compact .portfolio-pick{order:9;flex:1 1 100%}
+/* pontuação reduzida na publicação aberta: uma linha só */
+.post-points-detail.reduced{white-space:nowrap}
+
+/* publicação aberta: tempo no canto superior da foto, como na grade */
+.post-view .post:not(.compact) .post-head .post-time{margin-left:auto;flex:none;align-self:flex-start;font-size:.72rem;color:rgba(255,255,255,.92);text-shadow:0 1px 2px rgba(0,0,0,.45);line-height:1.6}
+.post-view .post:not(.compact) .post-owner-actions{margin-left:8px}
 </style>
 <script>
 (() => {
@@ -4377,17 +4404,17 @@ startupDone = true;
         <header class="post-head">
           ${miniCard(p.user, compact ? 'sm' : '')}
           <div class="who"><b>${esc(name)}</b>${p.place ? `<small>${pinIcon}${esc(p.place)}</small>` : ''}</div>
+          <span class="post-time">${time}</span>
           ${canManage ? `<div class="post-owner-actions">${editBtn(p.id)}${delBtn(p.id)}</div>` : ''}
         </header>
         ${compact
           ? `<div class="post-media-wrap"><button class="post-photo" type="button" data-open-post="${esc(p.id)}" aria-label="Abrir publicação de ${esc(name)}: ${esc(p.speciesName)}${isPostScored(p) ? ', ' + ptsLabel(postPoints(p)) : ''}"><img ${postImgAttrs(p, 'thumb')} alt="${alt}" loading="lazy">${isPostScored(p) ? `<span class="post-points-badge${catchNote(p) ? ' reduced' : ''}" aria-hidden="true">+${ptsLabel(postPoints(p))}${catchNote(p) ? ` · ${Math.round(catchInfo(p).factor * 100)}%` : ''}</span>` : ''}</button>${likeButton}</div>`
           : `<div class="post-media-wrap"><div class="post-photo"><img ${postImgAttrs(p, 'full')} alt="${alt}"></div>${likeButton}</div>`}
         <div class="post-body">
-          <div class="pb-row"><span class="species-tag has-score-fish">${esc(p.speciesName)}</span>${compact ? time : ''}</div>
+          <div class="pb-row"><span class="species-tag has-score-fish">${esc(p.speciesName)}</span></div>
           <div class="post-meta-row"><span class="score-fish ${scoreStatus}" role="img" aria-label="${scoreLabel}" title="${scoreLabel}">${fishIcon}</span>${p.captureDate ? `<small class="capture-date">${captureDateShort(p.captureDate)}</small>` : ''}</div>
           ${!compact && p.caption ? `<p class="caption"><b>${esc(name)}</b> ${esc(p.caption)}</p>` : ''}
-          ${compact ? '' : time}
-          ${!compact && isPostScored(p) ? `<span class="post-points-detail">+${ptsLabel(postPoints(p))}${catchNote(p) ? `<small class="catch-note">${esc(catchNote(p))} (de ${ptsLabel(basePoints(p))})</small>` : ''}</span>` : ''}
+          ${!compact && isPostScored(p) ? `<span class="post-points-detail${catchNote(p) ? ' reduced' : ''}"${catchNote(p) ? ` title="${esc(catchNote(p))} (de ${ptsLabel(basePoints(p))})"` : ''}>+${ptsLabel(postPoints(p))}${catchNote(p) ? ` · ${Math.round(catchInfo(p).factor * 100)}%` : ''}</span>` : ''}
           ${portfolioControl}
         </div>
       </article>`;
